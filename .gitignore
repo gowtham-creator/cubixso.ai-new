@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude / agent tooling (project-local, not portable)
+.agents/
+.claude/
+skills-lock.json
+node-compile-cache/
+
+# Scratch dirs from MCP installers
+bunx-*-mcp@latest/
+
+# Local backups + raw uploads (heavy or private)
+*.bak
+uploads/
