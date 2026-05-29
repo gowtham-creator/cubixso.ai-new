@@ -47,9 +47,9 @@ export function Manifesto() {
           className="mt-16 grid grid-cols-1 gap-px bg-(--color-line) sm:grid-cols-3"
         >
           {[
-            { stat: "10+", label: "Enterprise clients" },
-            { stat: "15+", label: "Accelerators & partners" },
-            { stat: "5",   label: "Cities · IN · OM · AE · UK · US" },
+            { stat: "10+",  label: "Enterprise clients" },
+            { stat: "15+",  label: "Accelerators & partners" },
+            { stat: "2+1",  label: "Cities · IN · UAE · US opening" },
           ].map((row) => (
             <div key={row.label} className="bg-(--color-bg) p-8">
               <dt className="font-serif italic text-[clamp(38px,5vw,68px)] leading-none tracking-tight text-(--color-fg) tabular-nums">

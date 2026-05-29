@@ -240,14 +240,13 @@ export const GlobeWire = forwardRef<OverlayHandle>(function GlobeWire(_, ref) {
   const wireMat = useRef<THREE.LineBasicMaterial>(null);
   const dotMat = useRef<THREE.PointsMaterial>(null);
 
-  // 5 city dots — same coords as PRESENCE in data.ts (radius normalized)
+  // City dots — same coords as PRESENCE in data.ts (radius normalized).
+  // 2 active (Hyderabad, Dubai) + 1 opening soon (NY) — addresses pending.
   const cityPoints = useMemo(() => {
     const cities: [number, number][] = [
-      [17.385,  78.486], // Hyderabad
-      [23.585,  58.405], // Muscat
-      [25.276,  55.296], // Dubai
-      [51.507,  -0.127], // London
-      [40.712, -74.005], // New York
+      [17.385,  78.486], // Hyderabad — HQ
+      [25.276,  55.296], // Dubai — UAE
+      [40.712, -74.005], // New York — coming soon
     ];
     const r = 0.95;
     const arr = new Float32Array(cities.length * 3);

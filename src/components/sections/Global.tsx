@@ -27,7 +27,7 @@ export function Global() {
           {...reveal(0.1)}
           className="font-display text-[length:var(--text-display-lg)] leading-[0.95] tracking-[-0.04em] text-balance text-(--color-fg) max-w-4xl"
         >
-          Five cities,
+          Two cities,
           <br />
           one{" "}
           <em
@@ -43,9 +43,8 @@ export function Global() {
           {...reveal(0.25)}
           className="mt-8 max-w-prose text-[clamp(15px,1.15vw,17px)] leading-relaxed text-(--color-fg-2)"
         >
-          Headquartered at T-Hub Hyderabad, operating across India, the Middle
-          East, the UK, and the Americas. 24/7 coverage, region-aware compliance,
-          one accountability line.
+          Headquartered at T-Hub Hyderabad, operating across India and the UAE.
+          United States office opening soon.
         </motion.p>
 
         <ul className="mt-20 flex flex-col">
@@ -58,14 +57,28 @@ export function Global() {
               <span className="mono text-[10px] md:text-[11px] text-(--color-muted)">
                 0{i + 1}
               </span>
-              <span className="font-serif italic text-[clamp(26px,3.4vw,46px)] leading-none tracking-tight text-(--color-fg) group-hover:translate-x-1 transition-transform">
+              <span
+                className={`font-serif italic text-[clamp(26px,3.4vw,46px)] leading-none tracking-tight group-hover:translate-x-1 transition-transform ${
+                  p.status === "soon" ? "text-(--color-fg-2)" : "text-(--color-fg)"
+                }`}
+              >
                 {p.city}
               </span>
               <span className="mono text-[10px] md:text-[11px] text-(--color-fg-2)">{p.country}</span>
               <span className="hidden md:inline mono text-(--color-muted)">
                 {p.coords}
               </span>
-              <span className="col-start-2 col-span-2 md:col-span-3 mono text-[10px] md:text-[11px] text-(--color-muted)">
+              <span
+                className={`col-start-2 col-span-2 md:col-span-3 mono text-[10px] md:text-[11px] inline-flex items-center gap-2 ${
+                  p.status === "soon" ? "text-(--color-accent-2)" : "text-(--color-muted)"
+                }`}
+              >
+                {p.status === "soon" && (
+                  <span
+                    className="inline-block w-1.5 h-1.5 rounded-full bg-(--color-accent-2) animate-pulse"
+                    aria-hidden
+                  />
+                )}
                 {p.role}
               </span>
             </motion.li>

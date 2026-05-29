@@ -45,11 +45,9 @@ export const STATS = [
 ] as const;
 
 export const PRESENCE = [
-  { city: "Hyderabad", country: "India", role: "HQ · T-Hub",  coords: "17.385°N · 78.486°E" },
-  { city: "Muscat",    country: "Oman",  role: "Field office", coords: "23.585°N · 58.405°E" },
-  { city: "Dubai",     country: "UAE",   role: "Middle East",  coords: "25.276°N · 55.296°E" },
-  { city: "London",    country: "UK",    role: "EU partner",   coords: "51.507°N · 0.127°W"  },
-  { city: "New York",  country: "USA",   role: "Americas",     coords: "40.712°N · 74.005°W" },
+  { city: "Hyderabad", country: "India", role: "HQ · T-Hub",   coords: "17.385°N · 78.486°E", status: "active" },
+  { city: "Dubai",     country: "UAE",   role: "Middle East",   coords: "25.276°N · 55.296°E", status: "active" },
+  { city: "New York",  country: "USA",   role: "Coming soon",   coords: "40.712°N · 74.005°W", status: "soon"   },
 ] as const;
 
 // Backers / accreditation strip — Epiminds-style press logo row.
