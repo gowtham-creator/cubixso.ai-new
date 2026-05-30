@@ -36,7 +36,7 @@ export const WHY = [
 ] as const;
 
 export const STATS = [
-  { num: "10+",    label: "Enterprise clients" },
+  { num: "2+",     label: "Enterprise clients" },
   { num: "15+",    label: "Accelerator partners" },
   { num: "95%",    label: "Model accuracy" },
   { num: "92%",    label: "On-time delivery" },

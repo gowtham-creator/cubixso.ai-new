@@ -11,7 +11,9 @@
 // still serves the cursor-follow gesture so the slot is honest.
 
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
+import Image from "next/image";
 import { motion, useMotionValue, useSpring } from "framer-motion";
+import { useTheme } from "@/components/providers/ThemeProvider";
 
 // Switch to a real URL once the Spline scene is authored.
 // e.g. process.env.NEXT_PUBLIC_SPLINE_SCENE_URL or a hard string.
@@ -82,36 +84,29 @@ export function SplineMascot() {
 }
 
 function Placeholder({ hover }: { hover: boolean }) {
+  // Use the REAL brand logo PNG (same asset as the Nav) so the mark is always
+  // pixel-accurate — the previous hand-traced SVG had the inner Y inverted.
+  const { resolved } = useTheme();
+  const src = resolved === "dark" ? "/logo-on-dark.png" : "/logo.png";
   return (
     <motion.div
       className="w-full h-full grid place-items-center"
-      animate={{ scale: hover ? 1.08 : 1, rotate: hover ? 18 : 0 }}
+      animate={{ scale: hover ? 1.1 : 1, rotate: hover ? 10 : 0 }}
       transition={{ type: "spring", stiffness: 140, damping: 12 }}
     >
-      <motion.svg
-        viewBox="0 0 100 100"
-        fill="none"
-        stroke="var(--color-fg)"
-        strokeWidth="6"
-        strokeLinecap="square"
-        className="w-full h-full"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
-        style={{ transformOrigin: "50% 50%" }}
+      <motion.div
+        className="w-[78%] h-[78%]"
+        animate={{ y: [0, -6, 0] }}
+        transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
       >
-        <path d="M51 7 L89 30" />
-        <path d="M91 33 L91 67" />
-        <path d="M89 70 L54 91" />
-        <path d="M46 91 L11 70" />
-        <path d="M9 67 L9 33" />
-        <path d="M11 30 L49 7" />
-        {/* Inner Y — literal cobalt (the --color-accent token is overridden
-            to near-white by the shadcn @theme inline block, so it would
-            vanish in light mode). */}
-        <path d="M17 32 L48 40" stroke="#1B4FFF" />
-        <path d="M83 32 L52 40" stroke="#1B4FFF" />
-        <path d="M50 43 L50 88" stroke="#1B4FFF" />
-      </motion.svg>
+        <Image
+          src={src}
+          alt="Cubixso"
+          width={120}
+          height={120}
+          className="w-full h-full object-contain drop-shadow-[0_4px_24px_rgba(27,79,255,0.35)]"
+        />
+      </motion.div>
     </motion.div>
   );
 }

@@ -47,7 +47,7 @@ export function Manifesto() {
           className="mt-16 grid grid-cols-1 gap-px bg-(--color-line) sm:grid-cols-3"
         >
           {[
-            { stat: "10+",  label: "Enterprise clients" },
+            { stat: "2+",   label: "Enterprise clients" },
             { stat: "15+",  label: "Accelerators & partners" },
             { stat: "2+1",  label: "Cities · IN · UAE · US opening" },
           ].map((row) => (
