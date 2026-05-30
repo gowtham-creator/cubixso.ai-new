@@ -94,7 +94,7 @@ export function WorkPreview({ index }: WorkPreviewProps) {
       <directionalLight position={[6, -3, -4]} intensity={1.0} color="#a8b8d8" />
       <pointLight position={[0, 0, 3]} intensity={1.4} color="#4ea6ff" distance={6} />
       <Mesh index={index} />
-      <EffectComposer multisampling={0} disableNormalPass>
+      <EffectComposer multisampling={0}>
         <Bloom intensity={0.7} luminanceThreshold={0.45} luminanceSmoothing={0.32} mipmapBlur />
         <Vignette eskil={false} offset={0.3} darkness={0.55} />
       </EffectComposer>

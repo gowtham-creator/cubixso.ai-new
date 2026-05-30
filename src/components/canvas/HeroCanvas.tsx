@@ -46,7 +46,7 @@ export function HeroCanvas() {
         style={{ width: "100vw", height: "100vh" }}
       >
         <HeroPlane scroll={scroll} />
-        <EffectComposer multisampling={0} disableNormalPass>
+        <EffectComposer multisampling={0}>
           <Bloom intensity={0.6} luminanceThreshold={0.55} luminanceSmoothing={0.4} mipmapBlur />
           <ChromaticAberration
             blendFunction={BlendFunction.NORMAL}

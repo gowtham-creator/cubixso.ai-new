@@ -171,8 +171,9 @@ export function Cube({ themeRef }: CubeProps) {
   const geom = useMemo(() => {
     const g = new THREE.BufferGeometry();
     const positions = new Float32Array(BASE_POSITIONS);
-    g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    g.attributes.position.usage = THREE.DynamicDrawUsage;
+    const posAttr = new THREE.BufferAttribute(positions, 3);
+    posAttr.usage = THREE.DynamicDrawUsage;        // updated every frame
+    g.setAttribute("position", posAttr);
     return g;
   }, []);
 

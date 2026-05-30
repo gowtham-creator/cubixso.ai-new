@@ -152,14 +152,17 @@ export function Scramble({
     return () => io.disconnect();
   }, [text, duration, stagger, threshold, replay, tick]);
 
-  const Component = As as keyof React.JSX.IntrinsicElements;
+  // Always a span — keeps typing simple and matches every current call site.
+  // (The `as` prop is retained on the interface for API compatibility but the
+  // polymorphic render caused a JSX 'never' children inference under strict TS.)
+  void As;
   return (
-    <Component
-      ref={ref as React.Ref<HTMLSpanElement>}
+    <span
+      ref={ref}
       className={`tabular-nums ${className}`}
       aria-label={text}
     >
       {display}
-    </Component>
+    </span>
   );
 }

@@ -116,10 +116,10 @@ export const ParticleEngine = forwardRef<ParticleEngineHandle, ParticleEnginePro
         H = window.innerHeight;
         CX = W / 2;
         CY = H / 2;
-        canvas.width = W * dpr;
-        canvas.height = H * dpr;
-        canvas.style.width = W + "px";
-        canvas.style.height = H + "px";
+        canvas!.width = W * dpr;
+        canvas!.height = H * dpr;
+        canvas!.style.width = W + "px";
+        canvas!.style.height = H + "px";
         ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
         if (stateRef.current === "sphere") initSphereTargets();
       }

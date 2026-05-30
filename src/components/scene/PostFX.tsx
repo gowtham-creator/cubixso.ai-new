@@ -55,7 +55,7 @@ export function PostFX({ enabled = true }: { enabled?: boolean }) {
   if (!enabled) return null;
 
   return (
-    <EffectComposer multisampling={0} disableNormalPass>
+    <EffectComposer multisampling={0}>
       <Bloom
         intensity={0.75}
         luminanceThreshold={0.78}
