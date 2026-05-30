@@ -4,6 +4,7 @@ import "./globals.css";
 import { SmoothScroll } from "@/components/providers/SmoothScroll";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Nav } from "@/components/layout/Nav";
+import { ConstructionNotice } from "@/components/layout/ConstructionNotice";
 import { Preloader } from "@/components/loader/Preloader";
 import { CubeScene } from "@/components/scene/CubeScene";
 import { CursorFollower } from "@/components/motion/CursorFollower";
@@ -70,6 +71,7 @@ export default function RootLayout({
           <SmoothScroll>
             <div className="hairline-grid" aria-hidden />
             <div className="grain" aria-hidden />
+            <ConstructionNotice />
             <Nav />
             <div id="main" tabIndex={-1}>{children}</div>
             <SplineMascot />

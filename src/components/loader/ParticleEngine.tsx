@@ -245,9 +245,11 @@ export const ParticleEngine = forwardRef<ParticleEngineHandle, ParticleEnginePro
           : `rgba(245,245,247,${trailA})`;
         ctx!.fillRect(0, 0, W, H);
 
-        // Additive blending on the particles themselves — brights stack
-        // cleanly into letterform cores and the cobalt feels luminous.
-        ctx!.globalCompositeOperation = "lighter";
+        // Additive ("lighter") stacks brights toward white — gorgeous on a
+        // black field, but it BLOWS OUT on the light background (everything
+        // washes to white). So only go additive in dark mode; light mode
+        // paints normally so the dark cobalt particles stay legible.
+        ctx!.globalCompositeOperation = themeIsDark ? "lighter" : "source-over";
 
         for (let i = 0; i < N; i++) {
           const zPos = pz[i] + CAMERA_Z;

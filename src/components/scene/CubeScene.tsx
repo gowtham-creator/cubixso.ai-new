@@ -8,11 +8,12 @@
 // post-hydration via useEffect. SSR keeps text content for crawlers,
 // hydration adds the cube on top.
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 import { Lighting } from "./Lighting";
-import { Cube } from "./Cube";
+import { Cube, type ThemeRef } from "./Cube";
 import { PostFX } from "./PostFX";
 import { useTheme } from "@/components/providers/ThemeProvider";
 
@@ -56,6 +57,15 @@ export function CubeScene() {
   const { resolved } = useTheme();
   const isDark = resolved === "dark";
   const bg = isDark ? "#000000" : "#f5f5f7";
+
+  // Stable theme ref — the Canvas subtree reads this IMPERATIVELY so a theme
+  // toggle never forces a React re-render of any R3F element. Re-rendering R3F
+  // primitives with inline `args={[new THREE.Geometry()]}` recreates them and
+  // serializes the cyclic scene graph → "cannot serialize cyclic structures".
+  // Mutating this ref + reading it in useFrame sidesteps that entirely.
+  const themeRef = useRef<ThemeRef["current"]>({ isDark, bg });
+  themeRef.current.isDark = isDark;
+  themeRef.current.bg = bg;
 
   // Bail on routes that need a clean canvas (e.g. /hero-test).
   if (pathname && SKIP_ROUTES.has(pathname)) return null;
@@ -111,25 +121,65 @@ export function CubeScene() {
     );
   }
 
-  // Mobile gets a lower DPR cap to keep frame budget sane
-  const dprCap: [number, number] = isMobile ? [1, 1.25] : [1, 1.75];
+  return <CanvasInner isMobile={isMobile} themeRef={themeRef} />;
+}
+
+// ThemeBridge — sets scene.background IMPERATIVELY from the theme ref each
+// frame (cheap: only allocates a Color when the value actually changes).
+function ThemeBridge({ themeRef }: { themeRef: ThemeRef }) {
+  const { scene } = useThree();
+  const last = useRef<string>("");
+  useFrame(() => {
+    const bg = themeRef.current.bg;
+    if (bg !== last.current) {
+      last.current = bg;
+      scene.background = new THREE.Color(bg);
+    }
+  });
+  return null;
+}
+
+// Stable Canvas — memoized so a theme toggle NEVER re-renders any R3F element.
+// Theme flows in only through `themeRef` (a stable object), read imperatively
+// by ThemeBridge (bg) and Cube (edge color). isMobile is the only prop that can
+// change, and it rarely does. No reconciled primitives on theme change ⇒ no
+// cyclic-structure crash.
+const CanvasInner = memo(function CanvasInner({
+  isMobile,
+  themeRef,
+}: {
+  isMobile: boolean;
+  themeRef: ThemeRef;
+}) {
+  const glOpts = useMemo(
+    () => ({ antialias: !isMobile, alpha: true, powerPreference: "high-performance" as const }),
+    [isMobile],
+  );
+  const cameraOpts = useMemo(
+    () => ({ position: [0, 0, 4] as [number, number, number], fov: 38, near: 0.1, far: 100 }),
+    [],
+  );
+  const dprCap = useMemo<[number, number]>(
+    () => (isMobile ? [1, 1.25] : [1, 1.75]),
+    [isMobile],
+  );
 
   return (
     <Canvas
-      gl={{ antialias: !isMobile, alpha: true, powerPreference: "high-performance" }}
+      gl={glOpts}
       dpr={dprCap}
-      camera={{ position: [0, 0, 4], fov: 38, near: 0.1, far: 100 }}
+      camera={cameraOpts}
       frameloop="always"
       style={FIXED_STYLE}
     >
-      <color attach="background" args={[bg]} />
+      <ThemeBridge themeRef={themeRef} />
       <Lighting />
-      <Cube themeIsDark={isDark} />
+      <Cube themeRef={themeRef} />
       <PostFX enabled={!isMobile} />
       <VisibilityGate />
     </Canvas>
   );
-}
+});
 
 // Pauses the canvas when the document tab is hidden — drops idle GPU usage
 // to zero. We rely on `frameloop="always"` + this gate rather than

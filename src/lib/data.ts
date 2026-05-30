@@ -45,7 +45,7 @@ export const STATS = [
 ] as const;
 
 export const PRESENCE = [
-  { city: "Hyderabad", country: "India", role: "HQ · T-Hub",   coords: "17.385°N · 78.486°E", status: "active" },
+  { city: "Hyderabad", country: "India", role: "HQ · T-Hub & WeWork", coords: "17.385°N · 78.486°E", status: "active" },
   { city: "Dubai",     country: "UAE",   role: "Middle East",   coords: "25.276°N · 55.296°E", status: "active" },
   { city: "New York",  country: "USA",   role: "Coming soon",   coords: "40.712°N · 74.005°W", status: "soon"   },
 ] as const;
@@ -68,5 +68,5 @@ export const CONTACT = {
   email: "contact@cubixso.com",
   phone1: "+91 83745 63012",
   phone2: "+91 92469 01689",
-  location: "T-Hub · Hyderabad · IN",
+  location: "T-Hub & WeWork · Hyderabad · IN",
 } as const;

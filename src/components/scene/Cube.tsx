@@ -135,18 +135,27 @@ function hingeAt(p: number): [number, number] {
   return [open, Math.max(0, hold)];
 }
 
+// Shared, stable theme handle read imperatively inside the Canvas so theme
+// toggles never re-render any R3F element (which would recreate inline-args
+// primitives and crash on the cyclic scene graph).
+export type ThemeRef = { current: { isDark: boolean; bg: string } };
+
 interface CubeProps {
   size?: number;            // visual reference, the geometry is hard-coded at HALF*2
-  themeIsDark?: boolean;    // edge color swap
+  themeRef?: ThemeRef;      // imperative theme source (edge color swap)
 }
 
-export function Cube({ themeIsDark = true }: CubeProps) {
+export function Cube({ themeRef }: CubeProps) {
+  // Read the initial theme once for first paint; live changes are applied
+  // imperatively in useFrame so this component never needs to re-render.
+  const initialDark = themeRef ? themeRef.current.isDark : true;
   const group = useRef<THREE.Group>(null);
   const yCoreGroup = useRef<THREE.Group>(null);
   const linesRef = useRef<THREE.LineSegments>(null);
   const matY    = useRef<THREE.MeshPhysicalMaterial>(null);
   const matCore = useRef<THREE.MeshPhysicalMaterial>(null);
   const edgeMat = useRef<THREE.LineBasicMaterial>(null);
+  const lastDark = useRef(initialDark);
 
   // Overlay handles — fragments / modules / liquid / particles / globe
   const fragRef    = useRef<OverlayHandle>(null);
@@ -277,6 +286,13 @@ export function Cube({ themeIsDark = true }: CubeProps) {
     const morphAmount = Math.max(wFragments, wLiquid, wModules, wParticles, wGlobe);
     if (edgeMat.current) {
       edgeMat.current.opacity = 0.92 - morphAmount * 0.75;
+      // Imperative theme swap — only touch the material when it actually
+      // flips, so there's no per-frame string parse.
+      const dark = themeRef ? themeRef.current.isDark : true;
+      if (dark !== lastDark.current) {
+        lastDark.current = dark;
+        edgeMat.current.color.set(dark ? EDGE_COLOR_DARK : EDGE_COLOR_LIGHT);
+      }
     }
     // Y core hides during particles + globe (where it would clip visually)
     if (yCoreGroup.current) {
@@ -296,7 +312,7 @@ export function Cube({ themeIsDark = true }: CubeProps) {
     facesRef.current?.setOpen(hingeOpen, hingeHold);
   });
 
-  const edgeColor = themeIsDark ? EDGE_COLOR_DARK : EDGE_COLOR_LIGHT;
+  const edgeColor = initialDark ? EDGE_COLOR_DARK : EDGE_COLOR_LIGHT;
 
   return (
     <group ref={group}>
@@ -311,7 +327,7 @@ export function Cube({ themeIsDark = true }: CubeProps) {
       </lineSegments>
 
       {/* Hubtown-signature hinged face panels — mechanical bloom */}
-      <CubeFaces ref={facesRef} themeIsDark={themeIsDark} />
+      <CubeFaces ref={facesRef} themeIsDark={initialDark} />
 
       {/* Morph overlays — each fades in around its state checkpoint */}
       <FragmentsGrid     ref={fragRef} />

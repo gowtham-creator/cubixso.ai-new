@@ -95,8 +95,9 @@ function Placeholder({ hover }: { hover: boolean }) {
         strokeWidth="6"
         strokeLinecap="square"
         className="w-full h-full"
-        animate={{ rotateY: 360 }}
-        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+        animate={{ rotate: 360 }}
+        transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
+        style={{ transformOrigin: "50% 50%" }}
       >
         <path d="M51 7 L89 30" />
         <path d="M91 33 L91 67" />
@@ -104,9 +105,12 @@ function Placeholder({ hover }: { hover: boolean }) {
         <path d="M46 91 L11 70" />
         <path d="M9 67 L9 33" />
         <path d="M11 30 L49 7" />
-        <path d="M17 32 L48 40" stroke="var(--color-accent)" />
-        <path d="M83 32 L52 40" stroke="var(--color-accent)" />
-        <path d="M50 43 L50 88" stroke="var(--color-accent)" />
+        {/* Inner Y — literal cobalt (the --color-accent token is overridden
+            to near-white by the shadcn @theme inline block, so it would
+            vanish in light mode). */}
+        <path d="M17 32 L48 40" stroke="#1B4FFF" />
+        <path d="M83 32 L52 40" stroke="#1B4FFF" />
+        <path d="M50 43 L50 88" stroke="#1B4FFF" />
       </motion.svg>
     </motion.div>
   );

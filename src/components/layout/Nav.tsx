@@ -80,10 +80,10 @@ function BrandGlyph() {
     <Image
       src={src}
       alt="Cubixso"
-      width={28}
-      height={28}
+      width={44}
+      height={44}
       priority
-      className="object-contain"
+      className="object-contain w-9 h-9 md:w-11 md:h-11"
     />
   );
 }
@@ -117,7 +117,8 @@ export function Nav() {
         opacity: mounted ? 1 : 0,
       }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      className="fixed top-0 left-0 right-0 z-50 pointer-events-none"
+      style={{ top: "var(--notice-h, 0px)" }}
+      className="fixed left-0 right-0 z-50 pointer-events-none transition-[top] duration-300"
     >
       {/* Subtle frosted backdrop — theme-aware via bg-soft, only visible when scrolled past hero */}
       <div className="absolute inset-0 bg-(--color-bg)/55 backdrop-blur-xl border-b border-(--color-line)/60 pointer-events-none" aria-hidden />
@@ -129,7 +130,7 @@ export function Nav() {
           className="inline-flex items-center gap-2.5 text-(--color-fg) hover:text-(--color-accent-2) transition-colors"
         >
           <BrandGlyph />
-          <span className="font-display text-[15px] font-semibold tracking-[-0.012em] leading-none">
+          <span className="font-display text-[19px] md:text-[22px] font-semibold tracking-[-0.015em] leading-none">
             Cubixso<span className="text-(--color-accent-2)">.</span>
           </span>
         </Link>
@@ -174,7 +175,8 @@ export function Nav() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="md:hidden fixed inset-0 top-[64px] z-40 bg-(--color-bg)/96 backdrop-blur-2xl pointer-events-auto"
+            style={{ top: "calc(var(--notice-h, 0px) + 64px)" }}
+            className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-(--color-bg)/96 backdrop-blur-2xl pointer-events-auto"
           >
             <nav className="flex flex-col gap-2 px-[var(--pad-x)] pt-10 pb-12">
               {ROUTES.map((r, i) => (
