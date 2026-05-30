@@ -26,21 +26,25 @@ const FIXED_STYLE: React.CSSProperties = {
   pointerEvents: "none",
 };
 
-// Low-power detection. When ANY of these are true we skip the R3F Canvas
-// and serve a pre-rendered MP4 loop instead — keeps the visual rhythm of the
-// hero cube without the WebGL frame budget.
+// Low-power detection → would swap the R3F Canvas for a pre-rendered MP4 loop.
+// DISABLED until the cube-loop MP4s are actually recorded: the previous version
+// triggered on normal phones (width ≤ 420, ≤2 cores/GB) and pointed at
+// /video/cube-loop-*.mp4 which don't exist yet — so the cube vanished on mobile.
+// Phones now render the real (lightweight wireframe) cube with the mobile DPR
+// cap + postprocessing off. Re-enable the heuristics once the MP4s exist AND
+// you've confirmed the files are in /public/video.
+const HAS_FALLBACK_VIDEO = false;
 type NavExt = Navigator & {
   deviceMemory?: number;
   connection?: { saveData?: boolean; effectiveType?: string };
 };
 function detectLiteMode(): boolean {
+  if (!HAS_FALLBACK_VIDEO) return false;
   if (typeof navigator === "undefined") return false;
   const n = navigator as NavExt;
   if (n.connection?.saveData) return true;
-  if (n.connection?.effectiveType && /^(slow-2g|2g|3g)$/.test(n.connection.effectiveType)) return true;
-  if (typeof n.deviceMemory === "number" && n.deviceMemory <= 2) return true;
-  if (typeof n.hardwareConcurrency === "number" && n.hardwareConcurrency <= 2) return true;
-  if (typeof window !== "undefined" && window.innerWidth <= 420) return true;
+  if (n.connection?.effectiveType && /^(slow-2g|2g)$/.test(n.connection.effectiveType)) return true;
+  if (typeof n.deviceMemory === "number" && n.deviceMemory <= 1) return true;
   return false;
 }
 

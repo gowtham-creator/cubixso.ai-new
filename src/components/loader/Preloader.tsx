@@ -61,6 +61,7 @@ export function Preloader({ durationMs = 2400 }: { durationMs?: number }) {
   const [statusIdx, setStatusIdx] = useState(0);
   const [done, setDone] = useState(true); // start hidden, flip ON via useEffect
   const [usesParticles, setUsesParticles] = useState(false);
+  const [particleCount, setParticleCount] = useState(6000);
   const engineRef = useRef<ParticleEngineHandle>(null);
   const { resolved } = useTheme();
   const isDark = resolved === "dark";
@@ -74,11 +75,13 @@ export function Preloader({ durationMs = 2400 }: { durationMs?: number }) {
     }
     setDone(false);
 
-    // Decide whether to use the particle finale or the SVG fallback
+    // Particle finale runs on mobile too (just fewer particles); only
+    // reduced-motion users get the static SVG glyph fallback.
     const mobile = window.matchMedia("(max-width: 768px)").matches;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const useParticles = !mobile && !reduced;
+    const useParticles = !reduced;
     setUsesParticles(useParticles);
+    setParticleCount(mobile ? 2800 : 6000);
 
     const start = performance.now();
     let raf = 0;
@@ -183,7 +186,7 @@ export function Preloader({ durationMs = 2400 }: { durationMs?: number }) {
           {usesParticles ? (
             <ParticleEngine
               ref={engineRef}
-              count={6000}
+              count={particleCount}
               themeIsDark={isDark}
               className="z-0"
             />
