@@ -1,22 +1,37 @@
 "use client";
 
-// Nav — editorial top-fixed navigation. Brand mark left, route links right,
-// magnetic micro-interactions, fades up on mount, hides on scroll-down to
-// give the canvas + content full breathing room.
+// Nav — Tier-1 Liquid-Glass chrome for the "Cobalt Aperture over a Living Void"
+// system. The bar is a single floating <LiquidGlass tier="nav"> pill: NO opaque
+// fill, so the cobalt cube + editorial headline behind it bend and brighten
+// THROUGH the glass — refraction is the page's first impression.
+//
+// WOW-MOMENT (hero first-impression refraction):
+//   • On scroll-DOWN the pill COMPRESSES height (py 18→8px) and RAISES its blur
+//     (20→28px) + saturation, so whatever scrolls under it visibly bends and
+//     brightens — driven by a useScroll listener writing --nav-py/--nav-blur.
+//   • A single 120° specular sweep crosses it ONCE on load (LiquidGlass lg-sweep
+//     entrance), "light catching the lens".
+//   • Logo, all route links, theme toggle preserved; START is now a cobalt
+//     GlassButton (Tier-4 CTA) — the only cobalt-filled chrome.
+//
+// GPU-only (transform/opacity/filter), reduced-motion safe via LiquidGlass +
+// matchMedia. The bar still slips up out of view on deep scroll-down for air.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-motion";
 import { Magnetic } from "@/components/motion/Magnetic";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { LiquidGlass, GlassButton } from "@/components/glass/LiquidGlass";
 
 const ROUTES = [
-  { href: "/services",   label: "Services" },
-  { href: "/products",   label: "Products" },
-  { href: "/industries", label: "Industries" },
-  { href: "/about",      label: "About" },
-  { href: "/contact",    label: "Contact" },
+  { href: "/services",     label: "Services" },
+  { href: "/products",     label: "Products" },
+  { href: "/industries",   label: "Industries" },
+  { href: "/case-studies", label: "Case Studies" },
+  { href: "/about",        label: "About" },
+  { href: "/contact",      label: "Contact" },
 ];
 
 // Theme toggle — sun / moon / system, cycles on click. Visible on all viewports.
@@ -29,7 +44,7 @@ function ThemeToggle() {
       onClick={cycle}
       aria-label={`Theme: ${label}. Click to cycle.`}
       title={`Theme: ${label}`}
-      className="grid place-items-center w-9 h-9 rounded-full border border-(--color-line-2) text-(--color-fg) hover:border-(--color-fg) hover:bg-(--color-surface) transition-all"
+      className="grid place-items-center w-9 h-9 rounded-full border border-(--color-line-2) text-(--color-fg) hover:border-(--color-fg) hover:bg-(--color-surface)/40 transition-all"
     >
       {resolved === "dark" ? (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -91,10 +106,21 @@ function BrandGlyph() {
 export function Nav() {
   const [mounted, setMounted] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [compact, setCompact] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollY } = useScroll();
+  const reducedRef = useRef(false);
 
   useEffect(() => setMounted(true), []);
+
+  // Track reduced-motion once so the scroll listener can keep the pill at rest.
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const apply = () => { reducedRef.current = mq.matches; };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -102,10 +128,15 @@ export function Nav() {
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
-  // Hide nav when scrolling down past 100px, show when scrolling up
+  // WOW: on scroll-DOWN the pill compresses + raises blur so content bends
+  // brighter behind it; on scroll-UP it relaxes. Deep scroll-down slips it away.
   useMotionValueEvent(scrollY, "change", (current) => {
     const prev = scrollY.getPrevious() ?? 0;
-    if (current > 120 && current > prev) setHidden(true);
+    const goingDown = current > prev;
+    // Compact (refraction-up) state engages the moment we leave the very top.
+    setCompact(current > 24);
+    if (reducedRef.current) { setHidden(false); return; }
+    if (current > 120 && goingDown) setHidden(true);
     else setHidden(false);
   });
 
@@ -113,58 +144,78 @@ export function Nav() {
     <motion.header
       initial={{ y: -28, opacity: 0 }}
       animate={{
-        y: hidden ? -80 : 0,
+        y: hidden ? -96 : 0,
         opacity: mounted ? 1 : 0,
       }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       style={{ top: "var(--notice-h, 0px)" }}
       className="fixed left-0 right-0 z-50 pointer-events-none transition-[top] duration-300"
     >
-      {/* Subtle frosted backdrop — theme-aware via bg-soft, only visible when scrolled past hero */}
-      <div className="absolute inset-0 bg-(--color-bg)/55 backdrop-blur-xl border-b border-(--color-line)/60 pointer-events-none" aria-hidden />
-      <div className="relative mx-auto flex max-w-[var(--col-w)] items-center justify-between gap-6 px-[var(--pad-x)] py-4 pointer-events-auto">
-        {/* Brand */}
-        <Link
-          href="/"
-          aria-label="Cubixso home"
-          className="inline-flex items-center gap-2.5 text-(--color-fg) hover:text-(--color-accent-2) transition-colors"
+      {/* 12–24px void gutter rings the pill so the cobalt light always lives
+          behind the glass — never an edge-to-edge opaque bar. */}
+      <div className="mx-auto w-full max-w-[var(--col-w)] px-[var(--pad-x)] pt-3 md:pt-4">
+        {/* Tier-1 NAV glass pill. Compresses height + raises blur on scroll-down;
+            120° specular sweep crosses once on load (lg-sweep entrance). The
+            --nav-pad / --nav-backdrop vars animate via the parent style below. */}
+        <LiquidGlass
+          tier="nav"
+          radius={22}
+          className="lg-nav-bar pointer-events-auto"
+          style={{
+            // Drive height + blur from the compact state. CSS transitions these.
+            ["--nav-py" as string]: compact ? "8px" : "16px",
+            ["--nav-backdrop" as string]: compact
+              ? "blur(28px) saturate(180%) brightness(1.1)"
+              : "blur(20px) saturate(160%) brightness(1.06)",
+          }}
         >
-          <BrandGlyph />
-          <span className="font-display text-[19px] md:text-[22px] font-semibold tracking-[-0.015em] leading-none">
-            Cubixso<span className="text-(--color-accent-2)">.</span>
-          </span>
-        </Link>
-
-        {/* Route links — desktop */}
-        <nav className="hidden md:flex items-center gap-1">
-          {ROUTES.map((r) => (
-            <Magnetic key={r.href} strength={0.18}>
-              <Link
-                href={r.href}
-                className="mono px-4 py-2 text-(--color-fg-2) hover:text-(--color-fg) transition-colors"
-              >
-                {r.label}
-              </Link>
-            </Magnetic>
-          ))}
-        </nav>
-
-        {/* Right cluster — theme + CTA (desktop) + hamburger (mobile) */}
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-
-          <Magnetic strength={0.2}>
+          <div className="relative flex items-center justify-between gap-6 px-4 md:px-5 lg-nav-row">
+            {/* Brand */}
             <Link
-              href="/contact"
-              className="hidden md:inline-flex items-center gap-2 mono text-[11px] text-(--color-bg) bg-(--color-fg) px-4 py-2 rounded-full hover:scale-[1.03] transition-transform"
+              href="/"
+              aria-label="Cubixso home"
+              className="inline-flex items-center gap-2.5 text-(--color-fg) hover:text-(--color-accent-2) transition-colors"
             >
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-(--color-signal) animate-pulse" />
-              START
+              <BrandGlyph />
+              <span className="font-display text-[19px] md:text-[22px] font-semibold tracking-[-0.015em] leading-none">
+                Cubixso<span className="text-(--color-accent-2)">.</span>
+              </span>
             </Link>
-          </Magnetic>
 
-          <MenuButton open={menuOpen} onClick={() => setMenuOpen((v) => !v)} />
-        </div>
+            {/* Route links — desktop */}
+            <nav className="hidden md:flex items-center gap-1">
+              {ROUTES.map((r) => (
+                <Magnetic key={r.href} strength={0.18}>
+                  <Link
+                    href={r.href}
+                    className="mono px-4 py-2 text-(--color-fg-2) hover:text-(--color-fg) transition-colors"
+                  >
+                    {r.label}
+                  </Link>
+                </Magnetic>
+              ))}
+            </nav>
+
+            {/* Right cluster — theme + cobalt START CTA (desktop) + hamburger */}
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+
+              <Magnetic strength={0.2}>
+                <Link href="/contact" aria-label="Start — get in touch" className="hidden md:inline-flex">
+                  <GlassButton
+                    as="span"
+                    className="lg-nav-cta items-center gap-2 mono text-[11px] px-4 py-2"
+                  >
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-(--color-accent-2) animate-pulse" />
+                    START
+                  </GlassButton>
+                </Link>
+              </Magnetic>
+
+              <MenuButton open={menuOpen} onClick={() => setMenuOpen((v) => !v)} />
+            </div>
+          </div>
+        </LiquidGlass>
       </div>
 
       {/* Mobile sheet — full overlay with all routes + CTA */}
@@ -176,7 +227,7 @@ export function Nav() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
             style={{ top: "calc(var(--notice-h, 0px) + 64px)" }}
-            className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-(--color-bg)/96 backdrop-blur-2xl pointer-events-auto"
+            className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-(--color-bg)/90 backdrop-blur-2xl pointer-events-auto"
           >
             <nav className="flex flex-col gap-2 px-[var(--pad-x)] pt-10 pb-12">
               {ROUTES.map((r, i) => (
@@ -205,20 +256,43 @@ export function Nav() {
                 <Link
                   href="/contact"
                   onClick={() => setMenuOpen(false)}
-                  className="inline-flex items-center gap-3 bg-(--color-fg) text-(--color-bg) rounded-full pl-6 pr-2 py-2 font-medium tracking-tight"
+                  aria-label="Start the conversation"
                 >
-                  <span>Start the conversation</span>
-                  <span className="grid place-items-center w-9 h-9 rounded-full bg-(--color-bg) text-(--color-fg)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M7 17 L17 7 M9 7 L17 7 L17 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
+                  <GlassButton as="span" className="lg-nav-cta-mobile inline-flex items-center gap-3 pl-6 pr-2 py-2 font-medium tracking-tight">
+                    <span>Start the conversation</span>
+                    <span className="grid place-items-center w-9 h-9 rounded-full bg-(--color-bg)/30 text-(--color-fg)">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M7 17 L17 7 M9 7 L17 7 L17 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  </GlassButton>
                 </Link>
               </motion.div>
             </nav>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Self-contained chrome styles — animate the compress (height/blur) on the
+          Tier-1 pill without touching globals.css. Transform/filter only. */}
+      <style>{`
+        .lg-nav-bar{
+          -webkit-backdrop-filter:var(--nav-backdrop, blur(20px) saturate(160%) brightness(1.06));
+          backdrop-filter:var(--nav-backdrop, blur(20px) saturate(160%) brightness(1.06));
+          transition:-webkit-backdrop-filter .5s var(--ease-smooth), backdrop-filter .5s var(--ease-smooth);
+        }
+        .lg-nav-row{
+          padding-top:var(--nav-py, 16px);
+          padding-bottom:var(--nav-py, 16px);
+          transition:padding .5s var(--ease-smooth);
+        }
+        /* START CTA renders as a span (lives inside a Link) — keep it flex so the
+           pulse dot + label align like the original pill. */
+        .lg-nav-cta{ display:inline-flex; }
+        @media (prefers-reduced-motion: reduce){
+          .lg-nav-bar, .lg-nav-row{ transition:none; }
+        }
+      `}</style>
     </motion.header>
   );
 }

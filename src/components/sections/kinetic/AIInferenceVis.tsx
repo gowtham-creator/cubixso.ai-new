@@ -32,20 +32,44 @@ const STATUS_LINES = [
 
 const TARGET_FINAL = 99.74;
 
-export function AIInferenceVis() {
+interface AIInferenceVisProps {
+  /**
+   * When true the component drops its own opaque card chrome (border / bg /
+   * blur / radius / padding) because it is being hosted INSIDE a Tier-3
+   * LiquidGlass lens that supplies the surface — letting the lens refract the
+   * cube + nodes behind it instead of an opaque slab.
+   */
+  bare?: boolean;
+  /**
+   * Pause the internal RAF loops when the lens is off-screen (IO-driven by the
+   * KineticStack consumer) so the costly canvas + meters cost nothing.
+   */
+  paused?: boolean;
+  /**
+   * Fires once on every neural-net firing pulse so the consumer can ripple the
+   * displacement map outward from each inference event.
+   */
+  onPulse?: () => void;
+}
+
+export function AIInferenceVis({ bare = false, paused = false, onPulse }: AIInferenceVisProps = {}) {
   return (
     <div
       data-cursor="text"
-      className="relative w-full h-full min-h-[520px] flex flex-col gap-6 justify-between p-6 rounded-2xl border border-(--color-line) bg-(--color-bg-soft)/40 backdrop-blur-md"
+      className={
+        bare
+          ? "relative w-full h-full min-h-[520px] flex flex-col gap-6 justify-between"
+          : "relative w-full h-full min-h-[520px] flex flex-col gap-6 justify-between p-6 rounded-2xl border border-(--color-line) bg-(--color-bg-soft)/40 backdrop-blur-md"
+      }
     >
       {/* Top — terminal stream */}
-      <TerminalStream />
+      <TerminalStream paused={paused} />
 
       {/* Mid — neural net */}
-      <NeuralNetCanvas />
+      <NeuralNetCanvas paused={paused} onPulse={onPulse} />
 
       {/* Bottom — confidence meter */}
-      <ConfidenceMeter />
+      <ConfidenceMeter paused={paused} />
 
       {/* Corner runner — system label */}
       <div className="absolute top-3 right-4 flex items-center gap-2 mono text-[9px] text-(--color-muted)">
@@ -59,12 +83,13 @@ export function AIInferenceVis() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Terminal stream — types one status line, holds, rotates to the next
 // ─────────────────────────────────────────────────────────────────────────────
-function TerminalStream() {
+function TerminalStream({ paused = false }: { paused?: boolean }) {
   const [lineIdx, setLineIdx] = useState(0);
   const [typed, setTyped] = useState("");
   const [history, setHistory] = useState<string[]>([]);
 
   useEffect(() => {
+    if (paused) return;
     const line = STATUS_LINES[lineIdx];
     let i = 0;
     setTyped("");
@@ -81,7 +106,7 @@ function TerminalStream() {
       }
     }, 28);
     return () => clearInterval(tickType);
-  }, [lineIdx]);
+  }, [lineIdx, paused]);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -113,10 +138,21 @@ function TerminalStream() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Neural network canvas — 3 layers, firing wave propagates left→right
 // ─────────────────────────────────────────────────────────────────────────────
-function NeuralNetCanvas() {
+function NeuralNetCanvas({
+  paused = false,
+  onPulse,
+}: {
+  paused?: boolean;
+  onPulse?: () => void;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
+  // Latest-callback ref so the RAF effect never re-subscribes when the parent
+  // re-renders — the loop reads the current pulse handler each frame.
+  const pulseRef = useRef(onPulse);
+  pulseRef.current = onPulse;
 
   useEffect(() => {
+    if (paused) return;
     const canvas = ref.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -156,12 +192,18 @@ function NeuralNetCanvas() {
 
     let raf = 0;
     let t0 = performance.now();
+    let lastCycle = 0;          // tracks wrap so we fire onPulse once per fire
     const PERIOD = 2200;        // ms between fires
     const TRAVEL = 1400;        // ms for the wave to cross
     function loop() {
       const now = performance.now();
       const cycle = ((now - t0) % PERIOD) / PERIOD;        // 0..1
       const wave = Math.min(1, ((now - t0) % PERIOD) / TRAVEL);
+
+      // Fire an inference PULSE at the instant the wave restarts (cycle wraps
+      // from ~1 back to ~0) — the lens ripples its displacement outward here.
+      if (cycle < lastCycle) pulseRef.current?.();
+      lastCycle = cycle;
 
       ctx!.clearRect(0, 0, W, H);
 
@@ -235,10 +277,11 @@ function NeuralNetCanvas() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Confidence meter — counts up to a high % then resets
 // ─────────────────────────────────────────────────────────────────────────────
-function ConfidenceMeter() {
+function ConfidenceMeter({ paused = false }: { paused?: boolean }) {
   const [val, setVal] = useState(0);
 
   useEffect(() => {
+    if (paused) return;
     const PERIOD = 5000;
     const start = performance.now();
     let raf = 0;
@@ -252,7 +295,7 @@ function ConfidenceMeter() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [paused]);
 
   const pct = val.toFixed(2);
 
