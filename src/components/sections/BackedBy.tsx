@@ -1,104 +1,125 @@
 "use client";
 
-// BackedBy — Epiminds-style trust strip. Sits between Testimonial (PROOF)
-// and Global (REACH) in the master scroll. Greyscale-by-default mark wall;
-// hovering an item brings it to full contrast. Horizontal marquee on mobile,
-// 4-col static grid on desktop.
+// BackedBy — accreditation row reborn as a GLASS SLAB over the living void.
+// Sits between Testimonial (PROOF) and Global (REACH) in the master scroll.
+// The section no longer paints an opaque bg — the cobalt cube/void shows through
+// a 12–24px gutter ringing a single Tier-2 panel. Each accreditation becomes its
+// own Tier-4 chip glass pill (greyscale text that lifts to full contrast on
+// hover). Desktop = a static wrapped row of pills inside the focal panel; mobile
+// = a gentle marquee of the same glass pills. Entrance is the signature 3-beat
+// <Reveal>; the headline cluster and the pill strip ride two depth planes.
 
 import { motion } from "framer-motion";
 import { BACKERS } from "@/lib/data";
 import { ChapterLabel } from "@/components/shared/ChapterLabel";
-
-const reveal = (delay: number) => ({
-  initial: { opacity: 0, y: 18, filter: "blur(6px)" },
-  whileInView: { opacity: 1, y: 0, filter: "blur(0px)" },
-  viewport: { once: true, amount: 0.3 },
-  transition: { duration: 0.9, delay, ease: [0.16, 1, 0.3, 1] as const },
-});
+import { LiquidGlass, GlassChip } from "@/components/glass/LiquidGlass";
+import { Reveal } from "@/components/scroll/Reveal";
+import { useDepthParallax } from "@/components/scroll/useDepthParallax";
 
 export function BackedBy() {
-  // Doubled for seamless marquee loop
+  // Doubled for the seamless marquee loop (mobile).
   const loop = [...BACKERS, ...BACKERS];
+
+  // Two layered elements drift on their own depth planes for antigravity feel:
+  // the headline cluster slightly overtakes scroll (foreground, plane 3); the
+  // pill strip rides the content baseline-plus (plane 2).
+  const headTransform = useDepthParallax(3);
+  const stripTransform = useDepthParallax(2);
 
   return (
     <section
       id="backed-by"
-      className="relative z-10 bg-(--color-bg) px-[var(--pad-x)] py-[clamp(80px,12vh,160px)]"
+      className="relative z-10 px-[var(--pad-x)] py-[clamp(80px,12vh,160px)]"
     >
-      <div className="mx-auto w-full max-w-[var(--col-w)]">
-        <ChapterLabel num="09" word="TRUSTED INFRASTRUCTURE" />
-
-        <motion.h2
-          {...reveal(0.1)}
-          className="font-display text-[length:var(--text-display-lg)] leading-[0.95] tracking-[-0.04em] text-balance text-(--color-fg) max-w-4xl"
-        >
-          Built on the{" "}
-          <em
-            className="font-serif not-italic italic"
-            style={{ letterSpacing: "-0.02em", fontWeight: 400 }}
+      {/* Void GUTTER: the panel never paints edge-to-edge — the cobalt light
+          lives behind its rim. */}
+      <div className="mx-auto w-full max-w-[var(--col-w)] px-[clamp(12px,1.6vw,24px)]">
+        <Reveal direction="up">
+          <LiquidGlass
+            tier="panel"
+            focal
+            className="px-[clamp(20px,4vw,56px)] py-[clamp(40px,6vh,72px)]"
           >
-            shoulders
-          </em>
-          <br />
-          of giants.
-        </motion.h2>
+            <motion.div style={{ transform: headTransform }}>
+              <ChapterLabel num="09" word="TRUSTED INFRASTRUCTURE" />
 
-        <motion.p
-          {...reveal(0.25)}
-          className="mt-8 max-w-prose text-[clamp(15px,1.15vw,17px)] leading-relaxed text-(--color-fg-2)"
-        >
-          Programmes, partners and infrastructure stacks Cubixso ships on top of
-          — credentials earned, not bought.
-        </motion.p>
+              {/* Real semantic heading; spread copy preserved verbatim. */}
+              <h2 className="font-display text-[length:var(--text-display-lg)] leading-[0.95] tracking-[-0.04em] text-balance text-(--color-fg) max-w-4xl">
+                Built on the{" "}
+                <em
+                  className="font-serif not-italic italic"
+                  style={{ letterSpacing: "-0.02em", fontWeight: 400 }}
+                >
+                  shoulders
+                </em>
+                <br />
+                of giants.
+              </h2>
 
-        {/* ── Desktop static grid ───────────────────────────────────── */}
-        <motion.div
-          {...reveal(0.4)}
-          className="mt-20 hidden md:grid grid-cols-2 gap-px bg-(--color-line) lg:grid-cols-4"
-        >
-          {BACKERS.map((label) => (
-            <div
-              key={label}
-              className="group flex items-center justify-center bg-(--color-bg) px-6 py-10 transition-colors hover:bg-(--color-bg-soft)"
+              <p className="mt-8 max-w-prose text-[clamp(15px,1.15vw,17px)] leading-relaxed text-(--color-fg-2)">
+                The programmes, partners and stacks we ship on &mdash; earned, not bought.
+              </p>
+            </motion.div>
+
+            {/* ── Desktop: wrapped row of glass chip pills ─────────────────── */}
+            <motion.div
+              style={{ transform: stripTransform }}
+              className="mt-16 hidden md:flex flex-wrap gap-[clamp(8px,0.9vw,14px)]"
             >
-              <span className="mono text-[11px] text-(--color-muted) opacity-60 group-hover:opacity-100 group-hover:text-(--color-fg) transition-all">
-                {label}
-              </span>
-            </div>
-          ))}
-        </motion.div>
+              {BACKERS.map((label) => (
+                <GlassChip
+                  key={label}
+                  className="group px-[clamp(12px,1.1vw,18px)] py-[clamp(8px,0.9vh,12px)]"
+                >
+                  <span className="mono text-[11px] text-(--color-fg-2) opacity-70 transition-all duration-300 group-hover:opacity-100 group-hover:text-(--color-fg)">
+                    {label}
+                  </span>
+                </GlassChip>
+              ))}
+            </motion.div>
 
-        {/* ── Mobile marquee ────────────────────────────────────────── */}
-        <motion.div
-          {...reveal(0.4)}
-          className="mt-16 md:hidden relative overflow-hidden border-y border-(--color-line)"
-        >
-          <div className="flex gap-10 py-6 animate-[marquee_30s_linear_infinite] whitespace-nowrap">
-            {loop.map((label, i) => (
-              <span
-                key={`${label}-${i}`}
-                className="mono text-[10.5px] text-(--color-muted) shrink-0"
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-          {/* Edge fades */}
-          <div
-            className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-(--color-bg) to-transparent"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-(--color-bg) to-transparent"
-            aria-hidden
-          />
-        </motion.div>
+            {/* ── Mobile: gentle marquee of the same glass pills ──────────── */}
+            <div className="mt-12 md:hidden relative overflow-hidden">
+              <div className="flex gap-3 py-1 animate-[backed-marquee_34s_linear_infinite] whitespace-nowrap will-change-transform">
+                {loop.map((label, i) => (
+                  <GlassChip
+                    key={`${label}-${i}`}
+                    className="shrink-0 px-3.5 py-2"
+                    sweep={false}
+                  >
+                    <span className="mono text-[10.5px] text-(--color-fg-2)">
+                      {label}
+                    </span>
+                  </GlassChip>
+                ))}
+              </div>
+              {/* Edge fades to the void, not to an opaque bg. */}
+              <div
+                className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-(--color-bg-soft)/60 to-transparent"
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-(--color-bg-soft)/60 to-transparent"
+                aria-hidden
+              />
+            </div>
+          </LiquidGlass>
+        </Reveal>
       </div>
 
       <style jsx>{`
-        @keyframes marquee {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+        @keyframes backed-marquee {
+          0% {
+            transform: translate3d(0, 0, 0);
+          }
+          100% {
+            transform: translate3d(-50%, 0, 0);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-\\[backed-marquee_34s_linear_infinite\\] {
+            animation: none !important;
+          }
         }
       `}</style>
     </section>

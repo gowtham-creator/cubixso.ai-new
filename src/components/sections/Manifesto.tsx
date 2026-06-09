@@ -1,77 +1,121 @@
 "use client";
 
 // Manifesto — chapter 02 INTELLIGENCE. Editorial declaration of what
-// Cubixso is. Line-broken poetic copy, serif italic accents on the verbs
-// that carry the philosophical weight.
+// Cubixso is, transformed into ONE tall focal GLASS SLAB over the living void.
+// Line-broken poetic copy, serif italic accents on the verbs that carry the
+// philosophical weight; the headline mask-wipes line by line over the cobalt cube.
+//
+// Cobalt-Aperture pass:
+//   • the opaque section bg is GONE — the fixed VoidCube spine shows through.
+//   • the statement lives inside a single <LiquidGlass tier="panel" focal> slab,
+//     ringed by a ~16–20px void gutter so the cube light lives behind its edges.
+//   • the 3-beat <Reveal> replaces the old whileInView fade on the headline
+//     (line-by-line mask-wipe), the stat grid, and the verb row.
+//   • subtle depth parallax floats the headline (foreground) against the inner
+//     stat grid (baseline). Primitives handle reduced-motion + GPU safety.
 
 import { motion } from "framer-motion";
 import { ChapterLabel } from "@/components/shared/ChapterLabel";
+import { LiquidGlass } from "@/components/glass/LiquidGlass";
+import { Reveal } from "@/components/scroll/Reveal";
+import { useDepthParallax } from "@/components/scroll/useDepthParallax";
 
-const reveal = (delay: number) => ({
-  initial: { opacity: 0, y: 18, filter: "blur(6px)" },
-  whileInView: { opacity: 1, y: 0, filter: "blur(0px)" },
-  viewport: { once: true, amount: 0.4 },
-  transition: { duration: 0.9, delay, ease: [0.16, 1, 0.3, 1] as const },
-});
+// Headline lines wipe in line-by-line via staggered Reveals (direction "up"),
+// keeping the kinetic editorial cadence reserved for this Manifesto moment.
+const HEADLINE_LINES = [
+  { text: "We build", em: false },
+  { text: "intelligent", em: true },
+  { text: "systems", em: false },
+  { text: "that shape the future", em: false },
+  { text: "of your business.", em: false },
+] as const;
+
+const STATS = [
+  { stat: "2+", label: "Enterprise clients" },
+  { stat: "15+", label: "Accelerators & partners" },
+  { stat: "2+1", label: "Cities · IN · UAE · US opening" },
+] as const;
 
 export function Manifesto() {
+  // Foreground type slightly overtakes scroll; inner grid rides the baseline.
+  const headlineParallax = useDepthParallax(3);
+  const gridParallax = useDepthParallax(2);
+
   return (
     <section
       id="manifesto"
-      className="relative z-10 bg-(--color-bg) px-[var(--pad-x)] py-[clamp(96px,16vh,200px)]"
+      className="relative z-10 px-[var(--pad-x)] py-[clamp(96px,16vh,200px)]"
     >
-      <div className="mx-auto w-full max-w-[var(--col-w)]">
-        <ChapterLabel num="02" word="INTELLIGENCE" />
-
-        <motion.h2
-          {...reveal(0.1)}
-          className="font-display text-[length:var(--text-display-xl)] leading-[0.94] tracking-[-0.045em] text-balance text-(--color-fg) max-w-5xl"
+      {/* Void GUTTER: the panel is inset ~16–20px so the cobalt cube light
+          lives behind its edges, never painting the section edge-to-edge. */}
+      <div className="mx-auto w-full max-w-[var(--col-w)] p-[clamp(16px,2vw,20px)]">
+        <LiquidGlass
+          tier="panel"
+          focal
+          radius={18}
+          className="block p-[clamp(28px,5vw,72px)]"
         >
-          We build
-          <br />
-          <em
-            className="font-serif not-italic italic"
-            style={{ letterSpacing: "-0.02em", fontWeight: 400 }}
+          <ChapterLabel num="02" word="INTELLIGENCE" />
+
+          {/* Headline — mask-wipes line by line over the cube. aria-label
+              carries the full statement; visible lines are decorative. */}
+          <motion.h2
+            aria-label="We build intelligent systems that shape the future of your business."
+            style={{ transform: headlineParallax }}
+            className="font-display text-[length:var(--text-display-xl)] leading-[0.94] tracking-[-0.045em] text-balance text-(--color-fg) max-w-5xl"
           >
-            intelligent
-          </em>{" "}
-          systems
-          <br />
-          that shape the future
-          <br />
-          of your business.
-        </motion.h2>
+            {HEADLINE_LINES.map((line, i) => (
+              <Reveal
+                key={line.text}
+                direction="up"
+                delay={i * 0.08}
+                amount={0.4}
+                className="block overflow-hidden"
+              >
+                <span aria-hidden className="block">
+                  {line.em ? (
+                    <em
+                      className="font-serif not-italic italic"
+                      style={{ letterSpacing: "-0.02em", fontWeight: 400 }}
+                    >
+                      {line.text}
+                    </em>
+                  ) : (
+                    line.text
+                  )}
+                </span>
+              </Reveal>
+            ))}
+          </motion.h2>
 
-        <motion.dl
-          {...reveal(0.4)}
-          className="mt-16 grid grid-cols-1 gap-px bg-(--color-line) sm:grid-cols-3"
-        >
-          {[
-            { stat: "2+",   label: "Enterprise clients" },
-            { stat: "15+",  label: "Accelerators & partners" },
-            { stat: "2+1",  label: "Cities · IN · UAE · US opening" },
-          ].map((row) => (
-            <div key={row.label} className="bg-(--color-bg) p-8">
-              <dt className="font-serif italic text-[clamp(38px,5vw,68px)] leading-none tracking-tight text-(--color-fg) tabular-nums">
-                {row.stat}
-              </dt>
-              <dd className="mt-4 mono text-(--color-muted)">
-                {row.label}
-              </dd>
+          <Reveal direction="up" delay={0.3} amount={0.4}>
+            <motion.dl
+              style={{ transform: gridParallax }}
+              className="mt-16 grid grid-cols-1 gap-px bg-(--color-line) sm:grid-cols-3"
+            >
+              {STATS.map((row) => (
+                <div key={row.label} className="bg-(--color-bg)/40 p-8">
+                  <dt className="font-serif italic text-[clamp(38px,5vw,68px)] leading-none tracking-tight text-(--color-fg) tabular-nums">
+                    {row.stat}
+                  </dt>
+                  <dd className="mt-4 mono text-(--color-muted)">
+                    {row.label}
+                  </dd>
+                </div>
+              ))}
+            </motion.dl>
+          </Reveal>
+
+          <Reveal direction="up" delay={0.42} amount={0.4}>
+            <div className="mt-16 flex flex-wrap gap-x-12 gap-y-4 mono text-(--color-muted)">
+              <span>STRATEGIZE</span>
+              <span className="text-(--color-line-2)">·</span>
+              <span>BUILD</span>
+              <span className="text-(--color-line-2)">·</span>
+              <span>DEPLOY</span>
             </div>
-          ))}
-        </motion.dl>
-
-        <motion.div
-          {...reveal(0.55)}
-          className="mt-16 flex flex-wrap gap-x-12 gap-y-4 mono text-(--color-muted)"
-        >
-          <span>STRATEGIZE</span>
-          <span className="text-(--color-line-2)">·</span>
-          <span>BUILD</span>
-          <span className="text-(--color-line-2)">·</span>
-          <span>DEPLOY</span>
-        </motion.div>
+          </Reveal>
+        </LiquidGlass>
       </div>
     </section>
   );
