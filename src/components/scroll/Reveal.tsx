@@ -17,13 +17,8 @@
 // Direction controls the clip-wipe origin (headlines wipe up; columns from
 // their leading edge), matching the cube edge-frame language.
 
-import {
-  motion,
-  useInView,
-  useReducedMotion,
-  type Variants,
-} from "framer-motion";
-import { useRef } from "react";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
 // Tokenized eases (mirror globals.css --ease-*) — never inline ad-hoc curves.
 export const easeOutExpo = [0.16, 1, 0.3, 1] as const;
@@ -58,8 +53,36 @@ export function Reveal({
   as?: "div" | "section" | "article" | "li" | "header";
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, amount });
+  const [inView, setInView] = useState(false);
   const reduced = useReducedMotion();
+
+  // Trigger via a RAW IntersectionObserver — NOT framer's useInView.
+  // Verified in this codebase: framer-motion's useInView never fired here
+  // (0/62 slabs revealed after a full scroll-through) while a plain
+  // IntersectionObserver with identical options fired reliably (46 hits).
+  // So we own the observer: reveal ONCE as the slab crosses a line ~12% up
+  // from the viewport bottom. Size-INDEPENDENT — a visible-fraction threshold
+  // can never be met by a panel taller than the viewport, which would
+  // otherwise mask its content forever. `amount` is kept for API compatibility.
+  useEffect(() => {
+    void amount;
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            setInView(true);
+            io.disconnect(); // once
+            break;
+          }
+        }
+      },
+      { rootMargin: "0px 0px -12% 0px", threshold: 0 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [amount]);
 
   const MotionTag = motion[Tag] as typeof motion.div;
 
