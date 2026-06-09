@@ -1,167 +1,123 @@
 "use client";
 
-// Hero — editorial composition for the landing screen.
-// Backdrop: by default the global persistent <CubeScene /> in layout.tsx
-// drives the cube. Flip USE_EXPLORATION_SCENE = true to swap in the 60-line
-// HeroScene exploration (Float + MeshReflectorMaterial + Stars + Bloom)
-// so you can A/B-test the Hubtown vibe in-place.
+// Hero — reference-style: pure-black field, central particle sphere (swappable
+// <HeroParticles/>), headline SPREAD around it (upper-left + lower-right).
 //
-// When ON, the layout-level CubeScene visually competes; toggle it off
-// in src/app/layout.tsx for a clean side-by-side. Or just visit /hero-test
-// for an isolated full-screen view.
+// Headline motion: animate-text › kinetic-center-build — per-word, soft blur,
+// enter-from-right, sequential build with the signature easing. Adapted to the
+// spread layout (each word builds into its resting position, in order, rather
+// than re-centering one line). The build is GATED to start when the loader
+// reveals the page, so it isn't wasted behind the loader overlay.
 
-import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { WordReveal } from "@/components/motion/WordReveal";
-import { Magnetic } from "@/components/motion/Magnetic";
 import { ScrollIndicator } from "@/components/motion/ScrollIndicator";
-import { ChapterLabel } from "@/components/shared/ChapterLabel";
 
-const USE_EXPLORATION_SCENE = false;       // flip to true to swap
+const SIG = [0.2, 0.8, 0.2, 1] as const; // kinetic-center-build signature easing
 
-const HeroScene = dynamic(
-  () => import("@/components/scene/HeroScene").then((m) => m.HeroScene),
-  { ssr: false, loading: () => null },
-);
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 16, filter: "blur(6px)" },
-  show: (delay: number) => ({
+const word = {
+  hidden: { opacity: 0, x: 88, y: 6, scale: 0.992, filter: "blur(3.5px)" },
+  show: (i: number) => ({
     opacity: 1,
+    x: 0,
     y: 0,
+    scale: 1,
     filter: "blur(0px)",
-    transition: { duration: 0.9, delay, ease: [0.16, 1, 0.3, 1] as const },
+    transition: { duration: 0.36, ease: SIG, delay: i * 0.22 },
   }),
 };
 
-export function Hero() {
+function W({ children, i }: { children: string; i: number }) {
   return (
-    <section className="relative min-h-svh overflow-hidden">
-      {/* 3D cube backdrop — default lives globally via <CubeScene /> in layout.tsx.
-          Exploration: set USE_EXPLORATION_SCENE = true above to swap in HeroScene. */}
-      {USE_EXPLORATION_SCENE && (
-        <div className="absolute inset-0 z-0" aria-hidden>
-          <HeroScene />
-        </div>
-      )}
+    <motion.span
+      variants={word}
+      custom={i}
+      className="inline-block will-change-transform"
+    >
+      {children}
+    </motion.span>
+  );
+}
 
-      {/* Foreground content — Nav (fixed-top) handles brand + theme + CTA */}
-      <div className="relative z-10 flex min-h-svh flex-col justify-end gap-[clamp(40px,8vh,80px)] px-[var(--pad-x)] pt-[clamp(120px,18vh,180px)] pb-[clamp(40px,5vh,64px)]">
-        {/* Sub-runner telemetry — single line below Nav, desktop only */}
+const H =
+  "font-display font-bold uppercase tracking-[-0.01em] leading-[0.92] " +
+  "text-[clamp(34px,6.6vw,116px)] text-[#e9e9ec]";
+
+export function Hero() {
+  // Start the build only once the page is revealed (loader gone / already seen).
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let seen = false;
+    try {
+      seen = sessionStorage.getItem("cubixso.seen") === "1";
+    } catch {}
+    if (seen) {
+      setRevealed(true);
+      return;
+    }
+    const onReveal = () => setRevealed(true);
+    window.addEventListener("cubixso:revealed", onReveal);
+    const safety = window.setTimeout(() => setRevealed(true), 4500);
+    return () => {
+      window.removeEventListener("cubixso:revealed", onReveal);
+      clearTimeout(safety);
+    };
+  }, []);
+  const state = revealed ? "show" : "hidden";
+
+  return (
+    <section className="relative min-h-svh overflow-hidden text-[#e9e9ec]">
+      {/* Spine cube + void render behind via the global <VoidCube/> (layout) */}
+
+      {/* SEO/a11y heading (visible spread type below is decorative) */}
+      <h1 className="sr-only">Generative AI for the autonomous enterprise</h1>
+
+      <div className="relative z-10 min-h-svh" aria-hidden>
+        {/* Upper-left — words 0..3 */}
         <motion.div
-          className="hidden md:flex items-center gap-3 mono text-(--color-muted) -mt-[clamp(60px,12vh,140px)]"
-          variants={fadeUp}
-          custom={0.05}
           initial="hidden"
-          animate="show"
+          animate={state}
+          className={`absolute left-[var(--pad-x)] top-[33%] ${H}`}
         >
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-(--color-signal) animate-pulse" />
-          <span>SYS//LIVE</span>
-          <span className="w-3 h-px bg-(--color-line-2)" aria-hidden />
-          <span>BUILD//0.1</span>
-          <span className="w-3 h-px bg-(--color-line-2)" aria-hidden />
-          <span>NODE//HYD-01</span>
+          <span className="block">
+            <W i={0}>Generative</W> <W i={1}>AI</W>
+          </span>
+          <span className="block">
+            <W i={2}>for</W> <W i={3}>the</W>
+          </span>
         </motion.div>
 
-        {/* ── Center — editorial display ───────────────────────────── */}
-        <div className="mx-auto w-full max-w-[var(--col-w)]">
-          <ChapterLabel num="01" word="FUTURE" />
-
-          <h1 className="mt-8 font-display text-[length:var(--text-display-2xl)] leading-[0.9] tracking-[-0.045em] text-balance text-(--color-fg)">
-            <WordReveal delay={0.35} className="block">Generative AI</WordReveal>
-            <span className="block">
-              <motion.em
-                className="font-serif not-italic italic mr-2"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(110deg, var(--color-fg) 25%, var(--color-accent-2) 50%, var(--color-fg) 75%)",
-                  backgroundSize: "220% auto",
-                  WebkitBackgroundClip: "text",
-                  backgroundClip: "text",
-                  color: "transparent",
-                  letterSpacing: "-0.02em",
-                  fontWeight: 400,
-                }}
-                initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  filter: "blur(0px)",
-                  backgroundPosition: ["220% center", "-120% center"],
-                }}
-                transition={{
-                  opacity: { duration: 1.0, delay: 0.55, ease: [0.16, 1, 0.3, 1] },
-                  y:       { duration: 1.0, delay: 0.55, ease: [0.16, 1, 0.3, 1] },
-                  filter:  { duration: 1.0, delay: 0.55, ease: [0.16, 1, 0.3, 1] },
-                  backgroundPosition: {
-                    duration: 5.5,
-                    delay: 1.5,
-                    repeat: Infinity,
-                    ease: "linear",
-                  },
-                }}
-              >
-                for the
-              </motion.em>
-              <WordReveal delay={0.75} className="inline-block">autonomous</WordReveal>
-            </span>
-            <WordReveal delay={0.95} className="block">enterprise.</WordReveal>
-          </h1>
-
-          <motion.p
-            className="mt-10 max-w-[60ch] text-[clamp(15px,1.2vw,18px)] leading-relaxed text-(--color-fg-2)"
-            variants={fadeUp}
-            custom={1.15}
-            initial="hidden"
-            animate="show"
-          >
-            Cubixso.ai is the AI-first company building intelligent systems, agentic
-            products, and enterprise platforms — engineered for scale, impact, and the
-            decade that&rsquo;s coming.
-          </motion.p>
-
-          <motion.div
-            className="mt-12 flex flex-wrap items-center gap-6"
-            variants={fadeUp}
-            custom={1.35}
-            initial="hidden"
-            animate="show"
-          >
-            <Magnetic>
-              <a
-                href="#contact"
-                className="group inline-flex items-center gap-3 bg-(--color-fg) text-(--color-bg) rounded-full pl-6 pr-2 py-2 font-medium tracking-tight transition-transform hover:scale-[1.02]"
-              >
-                <span>Start the conversation</span>
-                <span className="grid place-items-center w-9 h-9 rounded-full bg-(--color-bg) text-(--color-fg) transition-transform group-hover:rotate-45">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M7 17 L17 7 M9 7 L17 7 L17 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-              </a>
-            </Magnetic>
-            <a
-              href="#work"
-              className="mono pb-1 border-b border-(--color-line-2) hover:border-(--color-fg) text-(--color-fg-2) hover:text-(--color-fg) transition-colors"
-            >
-              EXPLORE PRODUCTS →
-            </a>
-          </motion.div>
-        </div>
-
-        {/* ── Bottom runner — coords left · scroll indicator right ──── */}
-        <motion.footer
-          className="flex items-center justify-between gap-4"
-          variants={fadeUp}
-          custom={1.6}
+        {/* Lower-right — words 4..5 */}
+        <motion.div
           initial="hidden"
-          animate="show"
+          animate={state}
+          className={`absolute right-[var(--pad-x)] top-[49%] text-right ${H}`}
         >
-          <span className="mono text-[10px] md:text-[11px] text-(--color-muted)">
+          <span className="block">
+            <W i={4}>Autonomous</W>
+          </span>
+          <span className="block">
+            <W i={5}>Enterprise</W>
+          </span>
+        </motion.div>
+
+        {/* Bottom runner — coords left · scroll indicator right */}
+        <motion.div
+          initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
+          animate={
+            revealed
+              ? { opacity: 1, y: 0, filter: "blur(0px)" }
+              : { opacity: 0, y: 16, filter: "blur(6px)" }
+          }
+          transition={{ duration: 1.0, delay: 1.5, ease: SIG }}
+          className="absolute inset-x-0 bottom-[clamp(24px,5vh,56px)] flex items-center justify-between px-[var(--pad-x)]"
+        >
+          <span className="mono text-[10px] md:text-[11px] text-white/40">
             17.385°N · 78.486°E — T-HUB · HYDERABAD
           </span>
           <ScrollIndicator />
-        </motion.footer>
+        </motion.div>
       </div>
     </section>
   );

@@ -5,11 +5,15 @@ import { SmoothScroll } from "@/components/providers/SmoothScroll";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Nav } from "@/components/layout/Nav";
 import { ConstructionNotice } from "@/components/layout/ConstructionNotice";
-import { Preloader } from "@/components/loader/Preloader";
-import { CubeScene } from "@/components/scene/CubeScene";
+import { IntroSequence } from "@/components/loader/IntroSequence";
 import { CursorFollower } from "@/components/motion/CursorFollower";
 import { AudioToggle } from "@/components/audio/AudioToggle";
 import { SplineMascot } from "@/components/scene/SplineMascot";
+import { Footer } from "@/components/layout/Footer";
+import { VoidCube } from "@/components/scene/VoidCube";
+import { ScrollProvider } from "@/components/scroll/ScrollProvider";
+import { ScrollRail } from "@/components/scroll/ScrollRail";
+import { GlassCounter } from "@/components/scroll/GlassCounter";
 
 // Clean Apple-inspired stack: Inter (display + UI body, very SF-Pro adjacent)
 // + Instrument Serif for editorial italic counterpoint
@@ -65,18 +69,24 @@ export default function RootLayout({
       <body className="min-h-full">
         <a href="#main" className="skip-link">Skip to main content</a>
         <ThemeProvider>
-          <Preloader />
-          <CubeScene />
+          <IntroSequence />
           <CursorFollower />
-          <SmoothScroll>
-            <div className="hairline-grid" aria-hidden />
-            <div className="grain" aria-hidden />
-            <ConstructionNotice />
-            <Nav />
-            <div id="main" tabIndex={-1}>{children}</div>
-            <SplineMascot />
-            <AudioToggle />
-          </SmoothScroll>
+          <ScrollProvider>
+            {/* Global spine — the living void + cobalt cube, behind everything */}
+            <VoidCube />
+            <SmoothScroll>
+              <div className="hairline-grid" aria-hidden />
+              <div className="grain" aria-hidden />
+              <ConstructionNotice />
+              <Nav />
+              <div id="main" tabIndex={-1}>{children}</div>
+              <Footer />
+              <SplineMascot />
+              <AudioToggle />
+            </SmoothScroll>
+            <ScrollRail />
+            <GlassCounter />
+          </ScrollProvider>
         </ThemeProvider>
       </body>
     </html>
