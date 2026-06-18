@@ -64,7 +64,7 @@ function makeYGeometry(): THREE.ExtrudeGeometry {
   return g;
 }
 
-function CubeRig({ dark }: { dark: boolean }) {
+function CubeRig({ dark, fit = 0.92 }: { dark: boolean; fit?: number }) {
   const yGeom = useMemo(makeYGeometry, []);
   const sway = useRef<THREE.Group>(null);
   const reduced = useMemo(
@@ -85,7 +85,7 @@ function CubeRig({ dark }: { dark: boolean }) {
       {/* logo orientation: the glass CAGE turns 45° so a vertical edge faces
           the camera, and the look-down camera reveals the top → the front-top
           vertex peaks at centre, exactly like the Cubixso logo mark. */}
-      <group ref={sway} scale={0.92}>
+      <group ref={sway} scale={fit}>
         {/* glass CAGE — vertical edge toward the camera */}
         <group rotation={[0, Math.PI / 4, 0]}>
         <mesh>
@@ -189,6 +189,18 @@ export function HeroGlassCube({
   useEffect(() => setWebgl(hasWebGL()), []);
   const low = tier === "low";
 
+  // On mobile/tablet the Canvas is constrained to a small box (see Hero), so the
+  // cube's bloom would clip at the box edge and show a faint rectangle. Scale the
+  // cube down there to leave glow margin inside the canvas. Desktop = full bleed.
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const update = () => setCompact(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
   // High tier keeps the approved adaptive DPR; low tier clamps to 1.
   const dpr: 1 | [number, number] = low ? 1 : [1, 2];
 
@@ -226,7 +238,7 @@ export function HeroGlassCube({
           <pointLight position={[-3, 1, 2]} intensity={dark ? 10 : 4} color={ACCENT_GLOW} distance={16} />
           <pointLight position={[0, 0, 0]} intensity={dark ? 7 : 1.4} color={ACCENT} distance={7} />
           <Suspense fallback={null}>
-            <CubeRig dark={dark} />
+            <CubeRig dark={dark} fit={compact ? 0.7 : 0.92} />
             <Environment resolution={128} frames={1} environmentIntensity={dark ? 0.45 : 0.9}>
               <Lightformer intensity={dark ? 1.6 : 2.4} color="#ffffff" position={[0, 3, 3]} scale={[8, 3, 1]} />
               <Lightformer intensity={dark ? 1.0 : 1.6} color="#cfe0ff" position={[-4, 1, 2]} scale={[3, 5, 1]} />

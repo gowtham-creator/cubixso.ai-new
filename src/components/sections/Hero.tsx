@@ -51,9 +51,20 @@ export function Hero() {
       style={{ background: "transparent" }}
     >
       <div className={`${reduced ? "relative" : "sticky top-0"} h-svh overflow-hidden`}>
-        {/* glass cube + cobalt Y — the hero centerpiece (Vercel-faithful) */}
+        {/* glass cube + cobalt Y — the hero centerpiece (Vercel-faithful).
+            DESKTOP (lg): large, vertically centred — the headline reads over it.
+            MOBILE/TABLET: there is no horizontal room, so the cube is smaller and
+            sits in the UPPER band, leaving the lower half clear for the headline +
+            copy (instead of the cube filling the whole screen behind the text). */}
         <motion.div style={reduced ? undefined : { y: cubeY }} className="absolute inset-0 z-[1] will-change-transform">
-          <HeroGlassCube />
+          <HeroGlassCube
+            className="pointer-events-none absolute inset-0 z-0 flex justify-center items-start pt-[8vh] lg:items-center lg:pt-0"
+            // `relative` on mobile/tablet CONSTRAINS the inner Canvas (which is
+            // absolute inset-0) to this box, so the cube actually scales down to
+            // the box size. `lg:static` lets the Canvas escape to the full-screen
+            // ancestor on desktop — keeping the approved large centred cube there.
+            boxClassName="relative lg:static aspect-square w-[min(56vw,250px)] sm:w-[min(48vw,380px)] lg:w-[min(80vw,680px)]"
+          />
         </motion.div>
 
         {/* legibility vignette — blends the cube's edges into the pure
@@ -69,10 +80,16 @@ export function Hero() {
 
         <h1 className="sr-only">Generative AI for the autonomous enterprise</h1>
 
+        {/* MOBILE/TABLET: headline + copy flow as one grouped column anchored in
+            the lower band (under the cube) so there are no messy overlaps or dead
+            gaps. DESKTOP (lg): the wrapper becomes display:contents and each block
+            resumes its original absolute position (headline centred, copy bottom). */}
+        <div className="absolute inset-0 z-10 flex flex-col justify-end gap-6 px-[var(--pad-x)] pb-[15vh] lg:contents">
+
         {/* headline */}
         <motion.div
           style={headStyle}
-          className="absolute inset-0 z-10 flex flex-col justify-center px-[var(--pad-x)] will-change-transform"
+          className="z-10 will-change-transform lg:absolute lg:inset-0 lg:flex lg:flex-col lg:justify-center lg:px-[var(--pad-x)]"
           aria-hidden
         >
           <motion.span
@@ -95,7 +112,7 @@ export function Hero() {
         {/* bottom-left copy + CTAs */}
         <motion.div
           style={copyStyle}
-          className="absolute inset-x-0 bottom-[clamp(28px,6vh,64px)] z-10 px-[var(--pad-x)] will-change-transform"
+          className="z-10 will-change-transform lg:absolute lg:inset-x-0 lg:bottom-[clamp(28px,6vh,64px)] lg:px-[var(--pad-x)]"
         >
           <motion.div
             initial={{ opacity: 0, y: 18, filter: "blur(6px)" }}
@@ -126,6 +143,7 @@ export function Hero() {
             </div>
           </motion.div>
         </motion.div>
+        </div>
 
         {!reduced && (
           <motion.div

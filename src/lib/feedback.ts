@@ -274,12 +274,19 @@ interface AmbientNodes {
 
 let ambient: AmbientNodes | null = null; // module singleton — StrictMode-safe
 
+// Background ambient is DISABLED per the client's request — no synthesized pad
+// plays. To re-enable a REAL audio track later, drop an .mp3/.ogg in public/
+// (see sourcing notes) and wire an <audio loop> element gated by the toggle,
+// or flip this flag back to true to restore the synthesized pad below.
+const AMBIENT_ENABLED = false;
+
 /**
  * Start (or resume) the ambient pad. Idempotent: a second call while running
  * (React StrictMode double-effects, rapid toggling) only re-ramps the gain —
  * it never stacks a second oscillator bank.
  */
 export function startAmbient() {
+  if (!AMBIENT_ENABLED) return; // background sound removed per request
   if (!enabled) return;
   const ac = ensureContext(); // inside the opt-in gesture — autoplay-legal
   if (!ac || !master) return;

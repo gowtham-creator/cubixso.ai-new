@@ -21,17 +21,15 @@ const MODEL = cdn("/models/cubixso-cube.glb");
 const DRACO = cdn("/draco/");
 const DURATION = 3600; // a calm partial turn before the lift
 
-// Capability keywords that float in the margins AROUND the cube while it spins.
-// `style` is the desktop orbit (words sit to the sides of the cube). On phones
-// and tablet-portrait the cube fills most of the width, so the side words would
-// land ON the cube — `mobile` re-stacks them into the clear zones ABOVE and
-// BELOW the centred cube (and above the wordmark) so nothing overlaps.
-const WORDS: { t: string; style: React.CSSProperties; mobile: React.CSSProperties }[] = [
-  { t: "Agentic Orchestration", style: { top: "15%", left: "50%", transform: "translateX(-50%)" }, mobile: { top: "7%", left: "50%", transform: "translateX(-50%)" } },
-  { t: "Agent Teams", style: { top: "37%", right: "7%" }, mobile: { top: "13.5%", left: "50%", transform: "translateX(-50%)" } },
-  { t: "Agentic AI", style: { top: "42%", left: "7%" }, mobile: { bottom: "30%", left: "50%", transform: "translateX(-50%)" } },
-  { t: "LLMOps", style: { bottom: "28%", left: "17%" }, mobile: { bottom: "23.5%", left: "50%", transform: "translateX(-50%)" } },
-  { t: "RAG · MCP", style: { bottom: "26%", right: "17%" }, mobile: { bottom: "17%", left: "50%", transform: "translateX(-50%)" } },
+// Capability keywords. DESKTOP: each floats at its own spot in the wide margins
+// AROUND the cube (`style`). MOBILE/TABLET: there is no room beside the cube, so
+// the render cycles them one-at-a-time in a band below it (no per-word position).
+const WORDS: { t: string; style: React.CSSProperties }[] = [
+  { t: "Agentic Orchestration", style: { top: "15%", left: "50%", transform: "translateX(-50%)" } },
+  { t: "Agent Teams", style: { top: "37%", right: "7%" } },
+  { t: "Agentic AI", style: { top: "42%", left: "7%" } },
+  { t: "LLMOps", style: { bottom: "28%", left: "17%" } },
+  { t: "RAG · MCP", style: { bottom: "26%", right: "17%" } },
 ];
 
 function PreloaderCube({ dark }: { dark: boolean }) {
@@ -81,6 +79,7 @@ export function IntroSequence() {
   const [exiting, setExiting] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [compact, setCompact] = useState(false); // phone / tablet-portrait
+  const [wordIdx, setWordIdx] = useState(0); // cycling keyword on compact screens
   const done = useRef(false);
 
   const finish = () => {
@@ -107,6 +106,14 @@ export function IntroSequence() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, reduced]);
 
+  // On compact screens the keywords cycle one-at-a-time (see render) — advance
+  // the index on a gentle interval.
+  useEffect(() => {
+    if (!show || !compact || reduced) return;
+    const id = window.setInterval(() => setWordIdx((i) => (i + 1) % WORDS.length), 1150);
+    return () => clearInterval(id);
+  }, [show, compact, reduced]);
+
   if (!show) return null;
 
   return (
@@ -124,7 +131,9 @@ export function IntroSequence() {
         >
           <Canvas
             orthographic
-            camera={{ position: [3.4, 3.4, 3.4], zoom: 118, near: 0.1, far: 100 }}
+            // Smaller zoom on phones/tablets so the cube isn't oversized and the
+            // keyword caption + wordmark below it keep clear air.
+            camera={{ position: [3.4, 3.4, 3.4], zoom: compact ? 88 : 118, near: 0.1, far: 100 }}
             gl={{ antialias: true, alpha: true }}
             dpr={[1, 2]}
             onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
@@ -145,12 +154,15 @@ export function IntroSequence() {
             </EffectComposer>
           </Canvas>
 
-          {/* capability keywords orbiting the cube — clean editorial type
-              (font-display, NOT mono), blur-in reveal + a slow continuous float */}
-          {!reduced && WORDS.map((w, i) => (
+          {/* Capability keywords. DESKTOP: scattered, orbiting in the wide
+              margins AROUND the cube. MOBILE/TABLET: there is no horizontal room
+              beside the cube, so instead of 5 scattered words colliding with it
+              we cycle ONE keyword at a time in a clean band BELOW the cube — it
+              never touches the cube. */}
+          {!reduced && !compact && WORDS.map((w, i) => (
             <motion.div
               key={w.t}
-              style={compact ? w.mobile : w.style}
+              style={w.style}
               className="pointer-events-none absolute whitespace-nowrap"
               initial={{ opacity: 0, y: 18, filter: "blur(9px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -166,7 +178,27 @@ export function IntroSequence() {
             </motion.div>
           ))}
 
-          {/* bold brand wordmark — gradient ".ai" (cobalt → violet → cyan) */}
+          {!reduced && compact && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-[24%] flex justify-center px-8">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={wordIdx}
+                  initial={{ opacity: 0, y: 8, filter: "blur(6px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
+                  transition={{ duration: 0.5, ease: SIG }}
+                  className={`text-center font-display text-[15px] font-medium tracking-[0.04em] ${dark ? "text-white/85" : "text-black/80"}`}
+                >
+                  {WORDS[wordIdx].t}
+                </motion.span>
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* bold brand wordmark — ".ai" is a SOFT, FLOWING gradient (the colour
+              gently drifts left→right forever). Palindrome stops + 200% size make
+              the loop seamless. */}
+          <style>{`@keyframes cbx-ai-flow { to { background-position: 200% center; } }`}</style>
           <motion.div
             initial={{ opacity: 0, y: 12, filter: "blur(6px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -177,10 +209,13 @@ export function IntroSequence() {
             cubixso
             <span
               style={{
-                backgroundImage: "linear-gradient(95deg,#4A7BFF,#9B6BFF 55%,#37E5FF)",
+                backgroundImage:
+                  "linear-gradient(90deg,#6EA8FF,#9C8CFF,#5FD7FF,#9C8CFF,#6EA8FF)",
+                backgroundSize: "200% auto",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",
+                animation: reduced ? undefined : "cbx-ai-flow 4s linear infinite",
               }}
             >
               .ai
