@@ -36,9 +36,8 @@ const COMPANY = [
 
 // TODO: drop in the real profile URLs (placeholders for now).
 const SOCIALS = [
-  { name: "LinkedIn", icon: "linkedin-logo", href: "#" },
-  { name: "X", icon: "x-logo", href: "#" },
-  { name: "Instagram", icon: "instagram-logo", href: "#" },
+  { name: "LinkedIn", icon: "linkedin-logo", href: "https://www.linkedin.com/company/cubixso/" },
+  { name: "Instagram", icon: "instagram-logo", href: "https://www.instagram.com/cubixso.ai/" },
 ];
 
 const LEGAL = [
@@ -138,6 +137,8 @@ export function Footer() {
             <a
               key={s.name}
               href={s.href}
+              target="_blank"
+              rel="noopener noreferrer"
               onPointerEnter={hoverTick}
               aria-label={s.name}
               className="group/link inline-flex items-center gap-1.5 mono text-[12px] text-(--color-fg-2) transition-colors hover:text-(--color-fg)"
