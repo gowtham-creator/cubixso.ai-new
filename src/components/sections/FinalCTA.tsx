@@ -271,12 +271,12 @@ export function FinalCTA() {
 
           <a
             href={`mailto:${CONTACT.email}`}
-            className="group relative mono inline-flex items-center gap-2 pb-2 text-(--color-fg-2) hover:text-(--color-fg) transition-colors"
+            className="group relative mono inline-flex min-h-[44px] items-center gap-2 py-2.5 text-(--color-fg-2) hover:text-(--color-fg) transition-colors"
           >
             <Ph name="envelope" weight="light" size={14} />
             OR EMAIL · {CONTACT.email.toUpperCase()}
             {/* neon hover-underline — cobalt gradient, theme-independent */}
-            <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px w-3/4 mx-auto bg-gradient-to-r from-transparent via-[var(--color-cobalt)] to-transparent opacity-0 transition-opacity duration-500 ease-in-out group-hover:opacity-100" />
+            <span className="pointer-events-none absolute inset-x-0 bottom-2 h-px w-3/4 mx-auto bg-gradient-to-r from-transparent via-[var(--color-cobalt)] to-transparent opacity-0 transition-opacity duration-500 ease-in-out group-hover:opacity-100" />
           </a>
         </motion.div>
 
@@ -286,7 +286,7 @@ export function FinalCTA() {
         <motion.div {...reveal(0.6)} className="mt-8">
           <Link
             href="/newsletter"
-            className="inline-flex items-center gap-1.5 text-[13px] tracking-tight text-(--color-fg-2) hover:text-(--color-cobalt-glow) transition-colors"
+            className="inline-flex min-h-[44px] items-center gap-1.5 py-2 text-[13px] tracking-tight text-(--color-fg-2) hover:text-(--color-cobalt-glow) transition-colors"
           >
             Subscribe to our newsletter
             <span aria-hidden>→</span>

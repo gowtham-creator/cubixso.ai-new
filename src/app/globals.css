@@ -35,8 +35,8 @@
   --font-script:  var(--font-caveat), 'Brush Script MT', cursive;
 
   /* Fluid type ramp */
-  --text-display-2xl: clamp(64px, 11vw, 200px);
-  --text-display-xl:  clamp(52px, 8.4vw, 144px);
+  --text-display-2xl: clamp(48px, 11vw, 200px);
+  --text-display-xl:  clamp(38px, 8.4vw, 144px);
   --text-display-lg:  clamp(40px, 6vw, 92px);
   --text-display-md:  clamp(32px, 4.8vw, 64px);
 
@@ -88,6 +88,9 @@ html[data-theme="light"] {
 
   *, *::before, *::after { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; height: 100%; scroll-behavior: auto;
+    /* clip (not hidden) kills any stray sub-pixel horizontal scroll without
+       creating a scroll container that would break Lenis smooth-scroll / sticky. */
+    overflow-x: clip;
     @apply font-sans; }
   body {
     background: var(--color-bg);
