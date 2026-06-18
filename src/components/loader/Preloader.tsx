@@ -203,7 +203,7 @@ export function Preloader({ durationMs = 2400 }: { durationMs?: number }) {
                 animate={progress >= 100
                   ? { scale: 1.8, opacity: 0, filter: "blur(12px)" }
                   : { scale: 1, opacity: 1, filter: "blur(0px)" }}
-                variants={{ hidden: { scale: 1 }, visible: { scale: 1 } }}
+                variants={{ hidden: { scale: 1, opacity: 1 }, visible: { scale: 1, opacity: 1 } }}
                 transition={{
                   scale:   { duration: 1.2, ease: [0.16, 1, 0.3, 1] },
                   opacity: { duration: 0.9, delay: 0.15, ease: [0.16, 1, 0.3, 1] },

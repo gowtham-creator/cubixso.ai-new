@@ -60,3 +60,7 @@ When spawning subagents (Agent/Task tool), the routing block is automatically in
 | `ctx stats` | Call the `ctx_stats` MCP tool and display the full output verbatim |
 | `ctx doctor` | Call the `ctx_doctor` MCP tool, run the returned shell command, display as checklist |
 | `ctx upgrade` | Call the `ctx_upgrade` MCP tool, run the returned shell command, display as checklist |
+
+## Coding discipline — ALWAYS apply
+
+Invoke the `andrej-karpathy-skills:karpathy-guidelines` skill at the start of any coding session in this repo and follow it: state assumptions, simplest solution that works, surgical diffs only, define success criteria and verify before claiming done.

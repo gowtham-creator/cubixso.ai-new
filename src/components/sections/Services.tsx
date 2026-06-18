@@ -1,19 +1,21 @@
 "use client";
 
-// Services — editorial bento grid of the 6 AI services.
-// Each tile has a procedural geometric icon, hover lift, and an asymmetric
-// span pattern that breaks the perfect 3x2 grid.
+// Services — editorial bento grid of the 6 AI services, transformed into a
+// GLASS SLAB over the living void. The section paints no opaque bg (the cobalt
+// cube light shows through the 12–24px void gutter ringing each panel). Each
+// tile is its own Tier-2 LiquidGlass panel with the pointer-tracked cobalt
+// rim-light + cobalt corner-mark; the headline block rides a Reveal mask-wipe
+// and the tiles stagger their Reveals. Subtle depth parallax floats the
+// headline (foreground) and grid (baseline) on layered planes.
 
 import { motion } from "framer-motion";
 import { SERVICES } from "@/lib/data";
 import { ChapterLabel } from "@/components/shared/ChapterLabel";
-
-const reveal = (delay: number) => ({
-  initial: { opacity: 0, y: 18, filter: "blur(6px)" },
-  whileInView: { opacity: 1, y: 0, filter: "blur(0px)" },
-  viewport: { once: true, amount: 0.3 },
-  transition: { duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] as const },
-});
+import { LiquidGlass } from "@/components/glass/LiquidGlass";
+import { Reveal } from "@/components/scroll/Reveal";
+import { useDepthParallax } from "@/components/scroll/useDepthParallax";
+import { Icon3D, type Icon3DName } from "@/components/icons/Icon3D";
+import { Ph } from "@/components/icons/Ph";
 
 // Tiny procedural icons per service (kept lightweight, themable)
 function ServiceIcon({ index }: { index: number }) {
@@ -52,6 +54,16 @@ function ServiceIcon({ index }: { index: number }) {
   return <div className="w-7 h-7 text-(--color-fg)">{icons[index] ?? icons[0]}</div>;
 }
 
+// Aurora v3 §3 — meaning-matched 3D accents, ONLY on cards whose copy earns
+// them: computer = LLMOps (0), rocket = full-scale apps that ship end-to-end
+// (3, deployment/launch). Two per section max; the rest keep the quiet
+// procedural line icons — no decoration spam. (mobile is reserved for the
+// Products story per the v3 icon map.)
+const ACCENT_3D: Partial<Record<number, { name: Icon3DName; size: number }>> = {
+  0: { name: "computer", size: 72 },
+  3: { name: "rocket", size: 56 },
+};
+
 // Bento spans — break the uniform grid for visual rhythm
 const SPANS = [
   "lg:col-span-4 lg:row-span-2", // featured wide
@@ -62,61 +74,93 @@ const SPANS = [
   "lg:col-span-4",               // wide bottom
 ];
 
-export function Services() {
+export function Services({ bare = false }: { bare?: boolean } = {}) {
+  // Antigravity depth: headline leads slightly (plane 3), grid rides baseline
+  // (plane 2). Pure translate3d, reduced-motion safe (hook handles it).
+  const headParallax = useDepthParallax(3);
+  const gridParallax = useDepthParallax(2);
+
   return (
     <section
       id="services"
-      className="relative z-10 bg-(--color-bg) px-[var(--pad-x)] py-[clamp(80px,12vh,160px)]"
+      className="relative z-10 px-[var(--pad-x)] py-[clamp(56px,8vh,112px)]"
     >
       <div className="mx-auto w-full max-w-[var(--col-w)]">
-        <ChapterLabel num="04" word="CAPABILITIES" />
+        {!bare && (
+          // Headline block as a refractive slab over the void, ringed by a void
+          // gutter (p-* leaves the cube light living behind its edges).
+          <motion.div style={{ transform: headParallax }}>
+            <Reveal direction="up">
+              <LiquidGlass
+                tier="panel"
+                focal
+                className="p-[clamp(20px,3vw,40px)]"
+              >
+                <ChapterLabel num="04" word="CAPABILITIES" />
 
-        <motion.h2
-          {...reveal(0.1)}
-          className="mt-6 font-display text-[length:var(--text-display-lg)] leading-[0.95] tracking-[-0.035em] text-balance text-(--color-fg) max-w-4xl"
+                <h2 className="mt-6 font-display text-[length:var(--text-display-lg)] leading-[0.95] tracking-[-0.035em] text-balance text-(--color-fg) max-w-4xl">
+                  Generative AI{" "}
+                  <em
+                    className="font-serif not-italic italic"
+                    style={{ letterSpacing: "-0.02em", fontWeight: 400 }}
+                  >
+                    services
+                  </em>
+                  ,<br />engineered for{" "}
+                  {/* Solid cobalt ink — gradient-to-white text vanished in light
+                      mode; a single accent word reads in both themes. */}
+                  <span className="text-(--color-cobalt-glow)">scale</span>.
+                </h2>
+
+                <p className="mt-8 max-w-prose text-[clamp(15px,1.1vw,17px)] leading-relaxed text-(--color-fg-2)">
+                  Enterprise AI, from model ops to autonomous systems.
+                </p>
+              </LiquidGlass>
+            </Reveal>
+          </motion.div>
+        )}
+
+        {/* Bento grid — each tile is its own Tier-2 glass panel. */}
+        <motion.div
+          style={{ transform: gridParallax }}
+          className={`${bare ? "" : "mt-16"} grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 lg:grid-rows-3`}
         >
-          Generative AI{" "}
-          <em
-            className="font-serif not-italic italic"
-            style={{ letterSpacing: "-0.02em", fontWeight: 400 }}
-          >
-            services
-          </em>
-          ,<br />engineered for scale.
-        </motion.h2>
-
-        <motion.p
-          {...reveal(0.22)}
-          className="mt-8 max-w-prose text-[clamp(15px,1.1vw,17px)] leading-relaxed text-(--color-fg-2)"
-        >
-          A comprehensive suite of enterprise AI services — from foundational model
-          ops to fully autonomous systems.
-        </motion.p>
-
-        {/* Bento grid */}
-        <div className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 lg:grid-rows-3">
-          {SERVICES.map((s, i) => (
-            <motion.article
+          {SERVICES.map((s, i) => {
+            const accent = ACCENT_3D[i];
+            return (
+            <Reveal
               key={s.name}
-              {...reveal(0.3 + i * 0.06)}
-              className={`group relative flex flex-col gap-4 rounded-2xl border border-(--color-line) bg-(--color-bg-soft)/40 backdrop-blur-sm p-7 transition-all duration-500 hover:bg-(--color-bg-soft) hover:border-(--color-line-2) hover:-translate-y-1 ${SPANS[i]}`}
+              direction="up"
+              delay={i * 0.07}
+              className={`group ${SPANS[i]}`}
             >
-              <ServiceIcon index={i} />
-              <h3 className="font-display text-[clamp(18px,1.4vw,22px)] font-medium tracking-tight text-(--color-fg)">
-                {s.name}
-              </h3>
-              <p className="text-[14.5px] leading-relaxed text-(--color-fg-2) group-hover:text-(--color-fg-elev) transition-colors">
-                {s.body}
-              </p>
-              <span className="mt-auto inline-flex items-center gap-1.5 mono text-(--color-muted) opacity-0 group-hover:opacity-100 transition-opacity">
-                EXPLORE
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M7 17 L17 7 M9 7 L17 7 L17 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-            </motion.article>
-          ))}
-        </div>
+              <LiquidGlass
+                tier="panel"
+                as="article"
+                className="flex h-full flex-col gap-4 p-7"
+              >
+                {/* Meaning-matched 3D accent where one exists; otherwise the
+                    quiet procedural line icon. */}
+                {accent ? (
+                  <Icon3D name={accent.name} size={accent.size} float glow />
+                ) : (
+                  <ServiceIcon index={i} />
+                )}
+                <h3 className="font-display text-[clamp(18px,1.4vw,22px)] font-medium tracking-tight text-(--color-fg)">
+                  {s.name}
+                </h3>
+                <p className="text-[14.5px] leading-relaxed text-(--color-fg-2) group-hover:text-(--color-fg) transition-colors">
+                  {s.body}
+                </p>
+                <span className="mt-auto inline-flex items-center gap-1.5 mono text-(--color-muted) opacity-0 group-hover:opacity-100 transition-opacity">
+                  EXPLORE
+                  <Ph name="arrow-up-right" weight="light" size={14} />
+                </span>
+              </LiquidGlass>
+            </Reveal>
+            );
+          })}
+        </motion.div>
       </div>
     </section>
   );

@@ -2,11 +2,16 @@
 
 // SmoothScroll — Lenis-powered inertial scroll for the whole document.
 // Mounts once at the root layout; safe to suspend during route transitions.
-// GSAP ScrollTrigger components can hook into Lenis via `lenis.on('scroll', ...)`
-// — exported context lets descendants reach the instance if needed.
+//
+// Lenis is driven by gsap.ticker (NOT a private rAF) and every Lenis scroll
+// emit calls ScrollTrigger.update() — see connectLenisToScrollTrigger in
+// src/lib/gsap.ts. One clock + lockstep updates is what makes ScrollTrigger
+// pins (KineticStack / Global) jank-free over smooth scroll.
+// Exported context lets descendants reach the instance if needed.
 
 import { createContext, useContext, useEffect, useRef } from "react";
 import Lenis from "lenis";
+import { connectLenisToScrollTrigger } from "@/lib/gsap";
 
 const LenisCtx = createContext<Lenis | null>(null);
 export const useLenis = () => useContext(LenisCtx);
@@ -26,15 +31,11 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
     });
     lenisRef.current = lenis;
 
-    let rafId = 0;
-    const tick = (time: number) => {
-      lenis.raf(time);
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
+    // gsap.ticker drives lenis.raf + Lenis scroll → ScrollTrigger.update().
+    const disconnect = connectLenisToScrollTrigger(lenis);
 
     return () => {
-      cancelAnimationFrame(rafId);
+      disconnect();
       lenis.destroy();
       lenisRef.current = null;
     };

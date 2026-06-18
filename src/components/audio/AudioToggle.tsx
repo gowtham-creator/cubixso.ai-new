@@ -1,95 +1,110 @@
 "use client";
 
-// AudioToggle — bottom-right toggle pill that controls a single ambient drone
-// loop. Off by default per locked decision. Uses native HTMLAudioElement (not
-// PositionalAudio) because there's no scene-distance cue we want to reflect;
-// the drone is pure atmosphere.
+// AudioToggle — bottom-right toggle pill for the site's audio gate. Off by
+// default per locked decision. The ambient itself is the synthesized cinematic
+// pad in src/lib/feedback.ts (startAmbient/stopAmbient) — no asset files; this
+// component only flips the shared gate via setAudioEnabled() and mirrors
+// external changes (the intro's "ENTER WITH SOUND" choice) via the
+// `cubixso:audio` event, so there is exactly ONE source of truth.
 //
-// Wiring:
-//   - User clicks → first interaction unlocks audio (some browsers block
-//     autoplay until a gesture). We load the loop lazily on first toggle-on
-//     and keep it warm thereafter.
-//   - The loop file is /audio/ambient-drone.mp3. If the file is missing
-//     (which it is during this scaffold), the toggle still renders + cycles
-//     state; the play() call simply rejects and we silently fall back.
+// It also hosts the SECTION-WHOOSH subscriber: a single IntersectionObserver
+// over every `section[id]` fires whoosh() on each section's FIRST reveal
+// (whoosh is internally throttled ≥2s and gated on the audio toggle). A
+// childList MutationObserver re-scans after route changes. Both observers are
+// torn down in the effect cleanup, so React StrictMode's double-mount never
+// leaks a second instance.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-
-const LOOP_URL = "/audio/ambient-drone.mp3";
-const TARGET_VOLUME = 0.18; // ≈ -15 dB equivalent
+import {
+  AUDIO_EVENT,
+  click,
+  isAudioEnabled,
+  setAudioEnabled,
+  whoosh,
+} from "@/lib/feedback";
 
 export function AudioToggle() {
   const [on, setOn] = useState(false);
-  const [available, setAvailable] = useState(false); // becomes true after first successful play
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Hide entirely on touch devices — sound on mobile is intrusive
-  const [show, setShow] = useState(false);
+  // Adopt the engine's current state and stay in sync with any other
+  // publisher of the shared audio gate.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.matchMedia("(pointer: fine)").matches) setShow(true);
+    setOn(isAudioEnabled());
+    const sync = (e: Event) =>
+      setOn(Boolean((e as CustomEvent<{ on: boolean }>).detail?.on));
+    window.addEventListener(AUDIO_EVENT, sync);
+    return () => window.removeEventListener(AUDIO_EVENT, sync);
   }, []);
 
-  // Lazily create the audio element + handle play/pause
+  // prefers-reduced-motion — freeze the pulsing bars (static tall state).
+  const [reduced, setReduced] = useState(false);
+
   useEffect(() => {
-    if (!on) {
-      audioRef.current?.pause();
-      return;
-    }
-    if (!audioRef.current) {
-      const a = new Audio(LOOP_URL);
-      a.loop = true;
-      a.volume = 0;
-      audioRef.current = a;
-    }
-    const a = audioRef.current;
-    a.play()
-      .then(() => {
-        setAvailable(true);
-        // Fade in to target
-        const start = performance.now();
-        const tick = (now: number) => {
-          const t = Math.min(1, (now - start) / 800);
-          a.volume = t * TARGET_VOLUME;
-          if (t < 1) requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-      })
-      .catch(() => {
-        // 404 or autoplay block — keep UI state but silently fail
-        setAvailable(false);
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  // SECTION WHOOSH — first reveal per section[id], app-wide, observers only.
+  useEffect(() => {
+    const tracked = new WeakSet<Element>(); // observed once, whooshed once
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          io.unobserve(entry.target); // first reveal only
+          whoosh(); // gated on the audio toggle + throttled ≥2s internally
+        }
+      },
+      { threshold: 0.22 }
+    );
+    const scan = () => {
+      document.querySelectorAll("section[id]").forEach((s) => {
+        if (tracked.has(s)) return;
+        tracked.add(s);
+        io.observe(s);
       });
+    };
+    scan();
+
+    // Route changes swap the page tree — re-scan on childList mutations,
+    // coalesced to one scan per frame.
+    let raf = 0;
+    const mo = new MutationObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(scan);
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
 
     return () => {
-      // Fade-out before pause to avoid click pop
-      if (!audioRef.current) return;
-      const a2 = audioRef.current;
-      const startV = a2.volume;
-      const start = performance.now();
-      const tick = (now: number) => {
-        const t = Math.min(1, (now - start) / 400);
-        a2.volume = startV * (1 - t);
-        if (t < 1) requestAnimationFrame(tick);
-        else a2.pause();
-      };
-      requestAnimationFrame(tick);
+      cancelAnimationFrame(raf);
+      mo.disconnect();
+      io.disconnect();
     };
-  }, [on]);
-
-  if (!show) return null;
+  }, []);
 
   return (
     <motion.button
       type="button"
-      onClick={() => setOn((v) => !v)}
-      aria-label={on ? "Mute ambient drone" : "Play ambient drone"}
+      onClick={() => {
+        const next = !on;
+        setOn(next);
+        // Gate + ambient flip INSIDE this click gesture (autoplay-legal);
+        // click() after so turning ON answers audibly, OFF stays haptic-only.
+        setAudioEnabled(next);
+        click();
+      }}
+      aria-label={on ? "Mute ambient sound" : "Play ambient sound"}
       aria-pressed={on}
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 2.4, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      title={on ? "Sound on" : "Sound off"}
       data-cursor="cta"
-      className="fixed bottom-6 right-6 z-40 group flex items-center gap-2 rounded-full border border-(--color-line-2) bg-(--color-bg)/60 backdrop-blur-md px-3.5 py-2 mono text-[10.5px] text-(--color-fg-2) hover:text-(--color-fg) hover:border-(--color-fg) transition-colors"
+      // hubtown placement: a compact pill living in the nav's top-right
+      // cluster (rendered by Nav). Label collapses to bars-only on small
+      // screens so the cluster never crowds the hamburger.
+      className="group flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-(--color-line-2) px-3 py-2 mono text-[10.5px] text-(--color-fg-2) hover:text-(--color-fg) hover:border-(--color-fg) hover:bg-(--color-surface)/40 transition-colors"
     >
       {/* Animated bars — three rectangles that pulse when sound is on */}
       <span className="inline-flex items-end gap-[2px] w-[14px] h-[12px]" aria-hidden>
@@ -97,11 +112,11 @@ export function AudioToggle() {
           <motion.span
             key={i}
             className="block w-[3px] rounded-sm bg-current"
-            animate={on
+            animate={on && !reduced
               ? { scaleY: [0.35, 1, 0.55, 0.85, 0.4], originY: 1 }
-              : { scaleY: 0.35 }
+              : { scaleY: on ? 0.85 : 0.35 }
             }
-            transition={on
+            transition={on && !reduced
               ? { duration: 1.2, repeat: Infinity, ease: "easeInOut", delay: i * 0.12 }
               : { duration: 0.3 }
             }
@@ -109,10 +124,7 @@ export function AudioToggle() {
           />
         ))}
       </span>
-      <span>{on ? "SOUND ON" : "SOUND OFF"}</span>
-      {on && !available && (
-        <span className="text-(--color-muted-2)">· LOADING</span>
-      )}
+      <span className="hidden md:inline">{on ? "SOUND ON" : "SOUND OFF"}</span>
     </motion.button>
   );
 }

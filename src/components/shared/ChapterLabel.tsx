@@ -22,7 +22,7 @@ export function ChapterLabel({ num, word, className = "" }: ChapterLabelProps) {
       transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
       className={`mono text-[12px] tracking-[0.2em] text-(--color-muted) mb-8 inline-flex items-center gap-3 ${className}`}
     >
-      <Scramble text={num} duration={500} stagger={20} className="text-(--color-muted-2)" />
+      <Scramble text={num} duration={500} stagger={20} className="text-(--color-muted)" />
       <Scramble text={`[ ${word} ]`} duration={620} stagger={22} />
     </motion.p>
   );

@@ -20,10 +20,12 @@ const ThemeCtx = createContext<ThemeCtxValue | null>(null);
 const LS_KEY = "cubixso.theme";
 
 function readStored(): Theme {
-  if (typeof window === "undefined") return "system";
+  // Brand default is DARK — the Cobalt Aperture is a dark, immersive system.
+  // The toggle still lets users pick light/system, which then persists.
+  if (typeof window === "undefined") return "dark";
   const v = window.localStorage.getItem(LS_KEY);
   if (v === "light" || v === "dark" || v === "system") return v;
-  return "system";
+  return "dark";
 }
 
 function systemPref(): Resolved {
