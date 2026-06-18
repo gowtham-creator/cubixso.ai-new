@@ -1,23 +1,26 @@
 "use client";
 
-// AIInferenceVis — temporary "the AI is thinking right now" panel that
-// sits in the empty right half of the KineticStack section.
+// AIInferenceVis — the LIVING inference console in KineticStack's right half.
+// Rebuilt (user: "what is that beside it? there's nothing!!"): the old panel
+// stretched three small widgets across 520px+ of empty glass and drew its
+// neural net near-invisible (dark-on-dark). Now the console is content-sized
+// and every layer is unmissable:
 //
-// Three layers, top → bottom:
-//   1. TerminalStream  — typewriter status lines that rotate every ~3s
-//   2. NeuralNetCanvas — a procedural 3-layer net with a firing wave
-//                       that propagates left→right every ~2.2s. Nodes
-//                       pulse, active edges glow cobalt.
-//   3. ConfidenceMeter — a horizontal bar that ticks up to a high number
-//                       (always different) then resets — feels like a
-//                       live ML model converging.
+//   1. Header row    — ● CBX.INFERENCE / v0.1 · status chip (no absolute
+//                      positioning, can never collide with the stream)
+//   2. TerminalStream— typewriter log of what the model is doing
+//   3. NeuralNetCanvas — 4-layer net, bright cobalt nodes/edges, a radial
+//                      glow under the firing wave, signal pulses you can
+//                      see from across the room
+//   4. ResultCard    — a DMN-output chip that MATERIALIZES on every firing
+//                      pulse and fades — inference produces a visible artifact
+//   5. ConfidenceMeter — converging % bar (scrub-driven during the pin)
 //
-// Designed to read as "wow, the AI is actually decomposing the problem
-// right now" rather than a static infographic. Mobile-hidden via the
-// caller (KineticStack adds md:block).
+// Hosted bare inside the Tier-3 LiquidGlass lens (KineticStack). RAF loops
+// pause when off-screen via `paused`.
 
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 const STATUS_LINES = [
   "DECOMPOSING corporate ruleset · 247 nodes",
@@ -30,58 +33,99 @@ const STATUS_LINES = [
   "RANKING candidates · top-k = 7",
 ];
 
+const RESULTS = [
+  { label: "DMN TABLE", value: "247 rules → deployable" },
+  { label: "AGENT PLAN", value: "4 steps · 2 tools bound" },
+  { label: "RETRIEVAL", value: "top-7 · 0.91 recall" },
+  { label: "DECISION", value: "auto-approve · 92.4%" },
+];
+
 const TARGET_FINAL = 99.74;
 
 interface AIInferenceVisProps {
-  /**
-   * When true the component drops its own opaque card chrome (border / bg /
-   * blur / radius / padding) because it is being hosted INSIDE a Tier-3
-   * LiquidGlass lens that supplies the surface — letting the lens refract the
-   * cube + nodes behind it instead of an opaque slab.
-   */
+  /** Hosted inside a LiquidGlass lens — drop own card chrome. */
   bare?: boolean;
-  /**
-   * Pause the internal RAF loops when the lens is off-screen (IO-driven by the
-   * KineticStack consumer) so the costly canvas + meters cost nothing.
-   */
+  /** Pause RAF loops when the lens is off-screen. */
   paused?: boolean;
-  /**
-   * Fires once on every neural-net firing pulse so the consumer can ripple the
-   * displacement map outward from each inference event.
-   */
+  /** Fires on every neural firing pulse (lens ripples + result card). */
   onPulse?: () => void;
+  /** Scrub-driven confidence during the KineticStack pin. */
+  confidence?: number | null;
 }
 
-export function AIInferenceVis({ bare = false, paused = false, onPulse }: AIInferenceVisProps = {}) {
+export function AIInferenceVis({
+  bare = false,
+  paused = false,
+  onPulse,
+  confidence = null,
+}: AIInferenceVisProps = {}) {
+  // Result card cycling — advances on each net pulse.
+  const [resultIdx, setResultIdx] = useState(-1);
+  const pulseCount = useRef(0);
+
+  const handlePulse = () => {
+    pulseCount.current += 1;
+    setResultIdx((i) => (i + 1) % RESULTS.length);
+    onPulse?.();
+  };
+
   return (
     <div
       data-cursor="text"
       className={
         bare
-          ? "relative w-full h-full min-h-[520px] flex flex-col gap-6 justify-between"
-          : "relative w-full h-full min-h-[520px] flex flex-col gap-6 justify-between p-6 rounded-2xl border border-(--color-line) bg-(--color-bg-soft)/40 backdrop-blur-md"
+          ? "relative flex w-full flex-col gap-5"
+          : "relative flex w-full flex-col gap-5 rounded-2xl border border-(--color-line) bg-(--color-bg-soft)/40 p-6 backdrop-blur-md"
       }
     >
-      {/* Top — terminal stream */}
+      {/* 1 · Header row — flexbox, collision-proof */}
+      <div className="flex items-center justify-between gap-4 border-b border-white/8 pb-3 mono text-[9.5px] text-(--color-muted)">
+        <span className="inline-flex items-center gap-2">
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-(--color-accent-2)" />
+          CBX.INFERENCE / v0.1
+        </span>
+        <span className="rounded-full border border-(--color-cobalt)/40 bg-(--color-cobalt)/10 px-2.5 py-0.5 text-(--color-powder)">
+          LIVE RUN
+        </span>
+      </div>
+
+      {/* 2 · Terminal stream */}
       <TerminalStream paused={paused} />
 
-      {/* Mid — neural net */}
-      <NeuralNetCanvas paused={paused} onPulse={onPulse} />
+      {/* 3 · Neural net — the centerpiece, bright + fixed height */}
+      <NeuralNetCanvas paused={paused} onPulse={handlePulse} />
 
-      {/* Bottom — confidence meter */}
-      <ConfidenceMeter paused={paused} />
-
-      {/* Corner runner — system label */}
-      <div className="absolute top-3 right-4 flex items-center gap-2 mono text-[9px] text-(--color-muted)">
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-(--color-accent-2) animate-pulse" />
-        <span>CBX.INFERENCE / v0.1</span>
+      {/* 4 · Result card — inference yields a visible artifact */}
+      <div className="h-[44px]">
+        <AnimatePresence mode="wait">
+          {resultIdx >= 0 && (
+            <motion.div
+              key={resultIdx}
+              initial={{ opacity: 0, y: 10, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              className="flex items-center justify-between rounded-lg border border-(--color-cobalt)/30 bg-(--color-cobalt)/8 px-4 py-2.5"
+            >
+              <span className="mono text-[9.5px] tracking-[0.16em] text-(--color-powder)">
+                {RESULTS[resultIdx].label}
+              </span>
+              <span className="mono text-[10.5px] text-(--color-fg)">
+                {RESULTS[resultIdx].value}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* 5 · Confidence meter */}
+      <ConfidenceMeter paused={paused} value={confidence} />
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Terminal stream — types one status line, holds, rotates to the next
+// Terminal stream — types one status line, holds, keeps a short history
 // ─────────────────────────────────────────────────────────────────────────────
 function TerminalStream({ paused = false }: { paused?: boolean }) {
   const [lineIdx, setLineIdx] = useState(0);
@@ -99,7 +143,7 @@ function TerminalStream({ paused = false }: { paused?: boolean }) {
       if (i >= line.length) {
         clearInterval(tickType);
         const hold = window.setTimeout(() => {
-          setHistory((h) => [line, ...h].slice(0, 3));
+          setHistory((h) => [line, ...h].slice(0, 2));
           setLineIdx((idx) => (idx + 1) % STATUS_LINES.length);
         }, 1500);
         return () => clearTimeout(hold);
@@ -109,23 +153,21 @@ function TerminalStream({ paused = false }: { paused?: boolean }) {
   }, [lineIdx, paused]);
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-h-[64px] flex-col justify-end gap-1.5">
       {history.map((h, i) => (
-        <motion.div
+        <div
           key={`${i}-${h}`}
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 0.45 - i * 0.12, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="mono text-[10.5px] text-(--color-fg-2)"
+          className="mono truncate text-[10px] text-(--color-fg-2)"
+          style={{ opacity: 0.5 - i * 0.18 }}
         >
           <span className="text-(--color-muted-2)">›</span> {h}
-        </motion.div>
+        </div>
       ))}
-      <div className="mono text-[11.5px] text-(--color-fg) flex items-center gap-2">
+      <div className="mono flex items-center gap-2 text-[11.5px] text-(--color-fg)">
         <span className="text-(--color-accent-2)">›</span>
-        <span>{typed}</span>
+        <span className="truncate">{typed}</span>
         <motion.span
-          className="inline-block w-[7px] h-[12px] bg-(--color-accent-2)"
+          className="inline-block h-[12px] w-[7px] shrink-0 bg-(--color-accent-2)"
           animate={{ opacity: [1, 0, 1] }}
           transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut" }}
           aria-hidden
@@ -136,7 +178,8 @@ function TerminalStream({ paused = false }: { paused?: boolean }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Neural network canvas — 3 layers, firing wave propagates left→right
+// Neural net canvas — 4 layers, BRIGHT: cobalt edges, glow backdrop under the
+// firing wave, white-hot active nodes. Fixed 260px tall so it owns its space.
 // ─────────────────────────────────────────────────────────────────────────────
 function NeuralNetCanvas({
   paused = false,
@@ -146,8 +189,6 @@ function NeuralNetCanvas({
   onPulse?: () => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  // Latest-callback ref so the RAF effect never re-subscribes when the parent
-  // re-renders — the loop reads the current pulse handler each frame.
   const pulseRef = useRef(onPulse);
   pulseRef.current = onPulse;
 
@@ -158,8 +199,10 @@ function NeuralNetCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const layers = [6, 10, 6]; // node counts per layer
-    let W = 0, H = 0, dpr = 1;
+    const layers = [5, 8, 8, 5];
+    let W = 0,
+      H = 0,
+      dpr = 1;
     type Node = { x: number; y: number; layer: number; idx: number };
     let nodes: Node[] = [];
     let edges: { a: Node; b: Node; weight: number }[] = [];
@@ -167,16 +210,20 @@ function NeuralNetCanvas({
     function resize() {
       const rect = canvas!.getBoundingClientRect();
       dpr = Math.min(window.devicePixelRatio || 1, 2);
-      W = rect.width; H = rect.height;
-      canvas!.width = W * dpr; canvas!.height = H * dpr;
+      W = rect.width;
+      H = rect.height;
+      canvas!.width = W * dpr;
+      canvas!.height = H * dpr;
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
       nodes = [];
-      const xPad = 28;
-      const xs = layers.map((_, l) =>
-        xPad + (l / (layers.length - 1)) * (W - 2 * xPad));
+      const xPad = 26;
+      const yPad = 18;
+      const xs = layers.map(
+        (_, l) => xPad + (l / (layers.length - 1)) * (W - 2 * xPad),
+      );
       layers.forEach((count, l) => {
         for (let i = 0; i < count; i++) {
-          const y = (H * (i + 0.5)) / count;
+          const y = yPad + ((H - 2 * yPad) * (i + 0.5)) / count;
           nodes.push({ x: xs[l], y, layer: l, idx: i });
         }
       });
@@ -184,70 +231,71 @@ function NeuralNetCanvas({
       for (let l = 0; l < layers.length - 1; l++) {
         const a = nodes.filter((n) => n.layer === l);
         const b = nodes.filter((n) => n.layer === l + 1);
-        a.forEach((na) => b.forEach((nb) => {
-          edges.push({ a: na, b: nb, weight: 0.15 + Math.random() * 0.85 });
-        }));
+        a.forEach((na) =>
+          b.forEach((nb) => {
+            edges.push({ a: na, b: nb, weight: 0.15 + Math.random() * 0.85 });
+          }),
+        );
       }
     }
 
     let raf = 0;
-    let t0 = performance.now();
-    let lastCycle = 0;          // tracks wrap so we fire onPulse once per fire
-    const PERIOD = 2200;        // ms between fires
-    const TRAVEL = 1400;        // ms for the wave to cross
+    const t0 = performance.now();
+    let lastCycle = 0;
+    const PERIOD = 2400;
+    const TRAVEL = 1500;
     function loop() {
       const now = performance.now();
-      const cycle = ((now - t0) % PERIOD) / PERIOD;        // 0..1
+      const cycle = ((now - t0) % PERIOD) / PERIOD;
       const wave = Math.min(1, ((now - t0) % PERIOD) / TRAVEL);
-
-      // Fire an inference PULSE at the instant the wave restarts (cycle wraps
-      // from ~1 back to ~0) — the lens ripples its displacement outward here.
       if (cycle < lastCycle) pulseRef.current?.();
       lastCycle = cycle;
 
       ctx!.clearRect(0, 0, W, H);
 
-      // edges
+      // Radial glow backdrop riding the wave — the canvas region reads ALIVE
+      const gx = wave * W;
+      const grad = ctx!.createRadialGradient(gx, H / 2, 0, gx, H / 2, H * 0.85);
+      grad.addColorStop(0, "rgba(27, 79, 255, 0.22)");
+      grad.addColorStop(1, "rgba(27, 79, 255, 0)");
+      ctx!.fillStyle = grad;
+      ctx!.fillRect(0, 0, W, H);
+
+      // edges — visible at rest, cobalt-hot when the wave crosses
       for (const e of edges) {
         const span = (e.b.x - e.a.x) / (W || 1);
-        const start = (e.a.x) / (W || 1);
+        const start = e.a.x / (W || 1);
         const edgeActive = wave > start && wave < start + span + 0.05;
-        const baseAlpha = 0.05 + e.weight * 0.10;
-        const fireAlpha = edgeActive ? 0.85 : 0;
         ctx!.beginPath();
         ctx!.moveTo(e.a.x, e.a.y);
         ctx!.lineTo(e.b.x, e.b.y);
         ctx!.strokeStyle = edgeActive
-          ? `rgba(74, 123, 255, ${fireAlpha})`
-          : `rgba(255, 255, 255, ${baseAlpha})`;
-        ctx!.lineWidth = edgeActive ? 1.5 : 0.5;
+          ? "rgba(122, 162, 255, 0.9)"
+          : `rgba(150, 170, 255, ${0.10 + e.weight * 0.10})`;
+        ctx!.lineWidth = edgeActive ? 1.6 : 0.7;
         ctx!.stroke();
       }
 
-      // nodes
+      // nodes — cobalt at rest, white-hot + haloed when firing
       for (const n of nodes) {
         const nx = n.x / W;
         const dist = Math.abs(nx - wave);
-        const active = dist < 0.08;
-        const pulse = active ? 1 - dist / 0.08 : 0;
-        const r = 3 + pulse * 4;
-        // halo when active
+        const active = dist < 0.09;
+        const pulse = active ? 1 - dist / 0.09 : 0;
+        const r = 3.5 + pulse * 4.5;
         if (active) {
           ctx!.beginPath();
-          ctx!.arc(n.x, n.y, r * 3.2, 0, Math.PI * 2);
-          ctx!.fillStyle = `rgba(74, 123, 255, ${0.20 * pulse})`;
+          ctx!.arc(n.x, n.y, r * 3.4, 0, Math.PI * 2);
+          ctx!.fillStyle = `rgba(74, 123, 255, ${0.28 * pulse})`;
           ctx!.fill();
         }
         ctx!.beginPath();
         ctx!.arc(n.x, n.y, r, 0, Math.PI * 2);
         ctx!.fillStyle = active
-          ? `rgba(255, 255, 255, ${0.95})`
-          : `rgba(255, 255, 255, ${0.32 + Math.sin(now / 700 + n.idx) * 0.05})`;
+          ? "rgba(255, 255, 255, 0.98)"
+          : `rgba(175, 210, 250, ${0.55 + Math.sin(now / 700 + n.idx) * 0.12})`;
         ctx!.fill();
       }
-
-      // unused but keep for future scroll-coupled gain
-      void cycle;
 
       raf = requestAnimationFrame(loop);
     }
@@ -259,15 +307,14 @@ function NeuralNetCanvas({
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
     };
-  }, []);
+  }, [paused]);
 
   return (
-    <div className="relative flex-1 min-h-[200px]">
-      <canvas ref={ref} className="absolute inset-0 w-full h-full" aria-hidden />
-      {/* Layer labels */}
-      <div className="absolute inset-x-0 -bottom-2 flex justify-between px-7 mono text-[9px] text-(--color-muted-2)">
+    <div className="relative h-[260px]">
+      <canvas ref={ref} className="absolute inset-0 h-full w-full" aria-hidden />
+      <div className="absolute inset-x-0 bottom-0 flex justify-between px-6 mono text-[9px] text-(--color-muted)">
         <span>INPUT</span>
-        <span>HIDDEN</span>
+        <span>HIDDEN ×2</span>
         <span>OUTPUT</span>
       </div>
     </div>
@@ -275,42 +322,50 @@ function NeuralNetCanvas({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Confidence meter — counts up to a high % then resets
+// Confidence meter — converges to a high % then resets; scrub-driven when
+// `value` is provided by the KineticStack pin.
 // ─────────────────────────────────────────────────────────────────────────────
-function ConfidenceMeter({ paused = false }: { paused?: boolean }) {
+function ConfidenceMeter({
+  paused = false,
+  value = null,
+}: {
+  paused?: boolean;
+  value?: number | null;
+}) {
   const [val, setVal] = useState(0);
+  const driven = value != null;
 
   useEffect(() => {
-    if (paused) return;
+    if (paused || driven) return;
     const PERIOD = 5000;
     const start = performance.now();
     let raf = 0;
     const tick = (now: number) => {
       const t = ((now - start) % PERIOD) / PERIOD;
-      const eased = t < 0.85
-        ? 1 - Math.pow(1 - t / 0.85, 3)              // ease-out to ~1 at 85%
-        : 1 - (t - 0.85) / 0.15;                     // sharp dip back to 0
+      const eased =
+        t < 0.85 ? 1 - Math.pow(1 - t / 0.85, 3) : 1 - (t - 0.85) / 0.15;
       setVal(Math.max(0, Math.min(1, eased)) * TARGET_FINAL);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [paused]);
+  }, [paused, driven]);
 
-  const pct = val.toFixed(2);
+  const shown = value ?? val;
+  const pct = shown.toFixed(2);
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between mono text-[10px] text-(--color-muted)">
         <span>CONFIDENCE</span>
-        <span className="text-(--color-fg) tabular-nums">{pct}%</span>
+        <span className="tabular-nums text-(--color-fg)">{pct}%</span>
       </div>
-      <div className="relative h-px bg-(--color-line-2) overflow-hidden">
+      <div className="relative h-[3px] overflow-hidden rounded-full bg-(--color-line-2)">
         <div
-          className="absolute inset-y-0 left-0 bg-(--color-accent-2)"
+          className="absolute inset-y-0 left-0 rounded-full bg-(--color-accent-2)"
           style={{
-            width: `${val}%`,
-            boxShadow: "0 0 12px var(--color-accent-2)",
+            width: `${shown}%`,
+            boxShadow: "0 0 14px var(--color-accent-2)",
             transition: "width 50ms linear",
           }}
         />

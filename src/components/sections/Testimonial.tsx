@@ -11,8 +11,13 @@
 // behind its edges. The quote text mask-wipes in via the 3-beat <Reveal>;
 // the attribution wipes from its leading edge. Subtle depth parallax floats
 // the slab against the void.
+//
+// Aurora Glass v3: a chat-bubble Icon3D sits where an opening quote mark
+// would — the section's single meaning-matched 3D accent. The pull-quote
+// keeps its serif counterpoint (aperios reference); no gradient text here.
 
 import { motion } from "framer-motion";
+import { Icon3D } from "@/components/icons/Icon3D";
 import { LiquidGlass } from "@/components/glass/LiquidGlass";
 import { Reveal } from "@/components/scroll/Reveal";
 import { useDepthParallax } from "@/components/scroll/useDepthParallax";
@@ -26,7 +31,7 @@ export function Testimonial() {
   return (
     <section
       id="testimonial"
-      className="relative z-10 px-[var(--pad-x)] py-[clamp(120px,18vh,240px)]"
+      className="relative z-10 px-[var(--pad-x)] py-[clamp(72px,10vh,136px)]"
     >
       {/* Void GUTTER: the slab is inset from the section edge so the cobalt
           light lives behind its rim. Depth-parallax floats it against the void. */}
@@ -40,8 +45,10 @@ export function Testimonial() {
           radius={18}
           className="block px-[clamp(28px,5vw,72px)] py-[clamp(40px,7vh,96px)]"
         >
-          {/* BEAT 1·2·3 — the quote mask-wipes UP, lifts, then settles. */}
+          {/* BEAT 1·2·3 — the quote mask-wipes UP, lifts, then settles. The
+              chat-bubble accent reads as the opening quotation mark. */}
           <Reveal direction="up" as="div">
+            <Icon3D name="chat-bubble" size={56} float glow className="mb-8" />
             <blockquote className="font-display text-[length:var(--text-display-md)] leading-[1.1] tracking-[-0.025em] text-balance text-(--color-fg) max-w-5xl">
               Cubixso turned a fifteen-year-old underwriting{" "}
               <em

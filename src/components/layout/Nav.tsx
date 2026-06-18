@@ -20,10 +20,20 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-motion";
 import { Magnetic } from "@/components/motion/Magnetic";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { LiquidGlass, GlassButton } from "@/components/glass/LiquidGlass";
+import { AudioToggle } from "@/components/audio/AudioToggle";
+import { Ph } from "@/components/icons/Ph";
+import { tick, click } from "@/lib/feedback";
+
+// Feedback bus — tick() only on a true mouse hover, so a touch tap never
+// stacks tick + click on the same gesture. Never wired to scroll.
+const hoverTick = (e: React.PointerEvent) => {
+  if (e.pointerType === "mouse") tick();
+};
 
 const ROUTES = [
   { href: "/services",     label: "Services" },
@@ -32,30 +42,57 @@ const ROUTES = [
   { href: "/case-studies", label: "Case Studies" },
   { href: "/about",        label: "About" },
   { href: "/contact",      label: "Contact" },
+  { href: "/newsletter",   label: "Newsletter" },
 ];
 
-// Theme toggle — sun / moon / system, cycles on click. Visible on all viewports.
+// Theme toggle — animated sun ↔ moon morph (Skiper-style, rebuilt on framer):
+// rays fade + the clip-path slides to carve a crescent. Binary light/dark, wired
+// to the ThemeProvider; icon rides --color-fg so it reads on either theme.
 function ThemeToggle() {
-  const { theme, resolved, cycle } = useTheme();
-  const label = theme === "system" ? `Auto · ${resolved}` : theme;
+  const { resolved, setTheme } = useTheme();
+  const isDark = resolved === "dark";
   return (
     <button
       type="button"
-      onClick={cycle}
-      aria-label={`Theme: ${label}. Click to cycle.`}
-      title={`Theme: ${label}`}
-      className="grid place-items-center w-9 h-9 rounded-full border border-(--color-line-2) text-(--color-fg) hover:border-(--color-fg) hover:bg-(--color-surface)/40 transition-all"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      aria-label={`Switch to ${isDark ? "light" : "dark"} theme`}
+      title={isDark ? "Switch to light" : "Switch to dark"}
+      className="grid place-items-center w-9 h-9 rounded-full border border-(--color-line-2) text-(--color-fg) hover:border-(--color-fg) hover:bg-(--color-surface)/40 transition-all active:scale-95"
     >
-      {resolved === "dark" ? (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        </svg>
-      ) : (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-        </svg>
-      )}
+      <svg width="17" height="17" viewBox="0 0 32 32" fill="currentColor" strokeLinecap="round" aria-hidden>
+        <clipPath id="nav-theme-moon">
+          <motion.path
+            animate={{ y: isDark ? 10 : 0, x: isDark ? -12 : 0 }}
+            transition={{ ease: "easeInOut", duration: 0.4 }}
+            d="M0-5h30a1 1 0 0 0 9 13v24H0Z"
+          />
+        </clipPath>
+        <g clipPath="url(#nav-theme-moon)">
+          <motion.circle
+            initial={{ r: isDark ? 10 : 7 }}
+            animate={{ r: isDark ? 10 : 7 }}
+            transition={{ ease: "easeInOut", duration: 0.4 }}
+            cx="16"
+            cy="16"
+          />
+          <motion.g
+            animate={{ rotate: isDark ? -100 : 0, scale: isDark ? 0.4 : 1, opacity: isDark ? 0 : 1 }}
+            transition={{ ease: "easeInOut", duration: 0.4 }}
+            style={{ transformOrigin: "center", transformBox: "fill-box" }}
+            stroke="currentColor"
+            strokeWidth="1.6"
+          >
+            <path d="M16 5.5v-4" />
+            <path d="M16 30.5v-4" />
+            <path d="M1.5 16h4" />
+            <path d="M26.5 16h4" />
+            <path d="m23.4 8.6 2.8-2.8" />
+            <path d="m5.7 26.3 2.9-2.9" />
+            <path d="m5.8 5.8 2.8 2.8" />
+            <path d="m23.4 23.4 2.9 2.9" />
+          </motion.g>
+        </g>
+      </svg>
     </button>
   );
 }
@@ -110,6 +147,10 @@ export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollY } = useScroll();
   const reducedRef = useRef(false);
+  // Active-route indicator — a cobalt dot that GLIDES between links via
+  // framer layoutId (no glide under reduced motion: layout anim is spring'd
+  // by framer, which respects the OS setting through MotionConfig defaults).
+  const pathname = usePathname();
 
   useEffect(() => setMounted(true), []);
 
@@ -174,7 +215,9 @@ export function Nav() {
             <Link
               href="/"
               aria-label="Cubixso home"
-              className="inline-flex items-center gap-2.5 text-(--color-fg) hover:text-(--color-accent-2) transition-colors"
+              onPointerEnter={hoverTick}
+              onClick={() => click()}
+              className="inline-flex shrink-0 items-center gap-2.5 text-(--color-fg) hover:text-(--color-accent-2) transition-colors"
             >
               <BrandGlyph />
               <span className="font-display text-[19px] md:text-[22px] font-semibold tracking-[-0.015em] leading-none">
@@ -182,37 +225,73 @@ export function Nav() {
               </span>
             </Link>
 
-            {/* Route links — desktop */}
-            <nav className="hidden md:flex items-center gap-1">
-              {ROUTES.map((r) => (
-                <Magnetic key={r.href} strength={0.18}>
-                  <Link
-                    href={r.href}
-                    className="mono px-4 py-2 text-(--color-fg-2) hover:text-(--color-fg) transition-colors"
-                  >
-                    {r.label}
-                  </Link>
-                </Magnetic>
-              ))}
+            {/* Route links — desktop. flex-1 + justify-center keeps the row
+                centered between the fixed-width brand and right cluster, so
+                it can never collide with either. */}
+            <nav className="hidden md:flex flex-1 min-w-0 items-center justify-center gap-0.5 px-6">
+              {ROUTES.map((r) => {
+                const active =
+                  pathname === r.href || pathname?.startsWith(r.href + "/");
+                return (
+                  <Magnetic key={r.href} strength={0.18}>
+                    <Link
+                      href={r.href}
+                      onPointerEnter={hoverTick}
+                      onClick={() => click()}
+                      aria-current={active ? "page" : undefined}
+                      className="group relative inline-flex items-center overflow-hidden whitespace-nowrap rounded-full px-4 py-1.5 text-[13px] font-medium tracking-[-0.01em]"
+                    >
+                      {/* swipe-mask fill — slides UP on hover (translate-y-full →
+                          0), theme-adaptive (white pill on dark, black pill on
+                          light); stays up for the active route like the apple
+                          active pill. NB: must be classes, not inline transform —
+                          an inline style would beat the group-hover utility. */}
+                      <span
+                        aria-hidden
+                        className={`absolute inset-0 rounded-full bg-(--color-fg) transition-transform duration-300 ease-out ${
+                          active ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"
+                        }`}
+                      />
+                      <span
+                        className={`relative z-10 transition-colors duration-300 ${
+                          active
+                            ? "text-(--color-bg)"
+                            : "text-(--color-fg-2) group-hover:text-(--color-bg)"
+                        }`}
+                      >
+                        {r.label}
+                      </span>
+                    </Link>
+                  </Magnetic>
+                );
+              })}
             </nav>
 
-            {/* Right cluster — theme + cobalt START CTA (desktop) + hamburger */}
-            <div className="flex items-center gap-3">
+            {/* Right cluster — sound (hubtown placement) + theme + cobalt
+                START CTA (desktop) + hamburger */}
+            <div className="flex shrink-0 items-center gap-3">
+              <AudioToggle />
               <ThemeToggle />
 
               <Magnetic strength={0.2}>
                 <Link href="/contact" aria-label="Start — get in touch" className="hidden md:inline-flex">
                   <GlassButton
                     as="span"
-                    className="lg-nav-cta items-center gap-2 mono text-[11px] px-4 py-2"
+                    className="lg-nav-cta items-center gap-2 mono whitespace-nowrap text-[11px] px-4 py-2 bg-(--color-cobalt)! text-white!"
                   >
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-(--color-accent-2) animate-pulse" />
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                     START
                   </GlassButton>
                 </Link>
               </Magnetic>
 
-              <MenuButton open={menuOpen} onClick={() => setMenuOpen((v) => !v)} />
+              <MenuButton
+                open={menuOpen}
+                onClick={() => {
+                  click();
+                  setMenuOpen((v) => !v);
+                }}
+              />
             </div>
           </div>
         </LiquidGlass>
@@ -239,7 +318,10 @@ export function Nav() {
                 >
                   <Link
                     href={r.href}
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => {
+                      click();
+                      setMenuOpen(false);
+                    }}
                     className="block py-4 font-display text-[clamp(32px,8vw,52px)] font-medium tracking-[-0.025em] text-(--color-fg) border-b border-(--color-line)"
                   >
                     {r.label}
@@ -258,12 +340,10 @@ export function Nav() {
                   onClick={() => setMenuOpen(false)}
                   aria-label="Start the conversation"
                 >
-                  <GlassButton as="span" className="lg-nav-cta-mobile inline-flex items-center gap-3 pl-6 pr-2 py-2 font-medium tracking-tight">
+                  <GlassButton as="span" className="lg-nav-cta-mobile group inline-flex items-center gap-3 pl-6 pr-2 py-2 font-medium tracking-tight">
                     <span>Start the conversation</span>
-                    <span className="grid place-items-center w-9 h-9 rounded-full bg-(--color-bg)/30 text-(--color-fg)">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M7 17 L17 7 M9 7 L17 7 L17 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                    <span className="grid place-items-center w-9 h-9 rounded-full bg-(--color-bg)/30 text-(--color-fg) transition-transform group-hover:rotate-45">
+                      <Ph name="arrow-up-right" weight="light" size={16} />
                     </span>
                   </GlassButton>
                 </Link>

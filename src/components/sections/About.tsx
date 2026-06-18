@@ -5,9 +5,17 @@
 // Framer Motion handles the reveal staggers.
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { STATS, WHY } from "@/lib/data";
+import { Ph } from "@/components/icons/Ph";
+import { tick, click } from "@/lib/feedback";
+
+// tick() only on true mouse hover — a touch tap must never stack tick+click.
+const hoverTick = (e: React.PointerEvent) => {
+  if (e.pointerType === "mouse") tick();
+};
 
 function Counter({ value, label, delay = 0 }: { value: string; label: string; delay?: number }) {
   const numRef = useRef<HTMLSpanElement>(null);
@@ -59,21 +67,33 @@ function Counter({ value, label, delay = 0 }: { value: string; label: string; de
   );
 }
 
-export function About() {
+export function About({ bare = false }: { bare?: boolean } = {}) {
   // Pin the manifesto headline while the right column scrolls past
   const pinRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!pinRef.current || !sectionRef.current) return;
-    const trigger = ScrollTrigger.create({
-      trigger: sectionRef.current,
-      start: "top top+=80",
-      end: "bottom bottom-=120",
-      pin: pinRef.current,
-      pinSpacing: false,
+    // Pin ONLY on desktop with motion allowed. The pin holds the LEFT editorial
+    // column fixed while the RIGHT column scrolls past — that only makes sense in
+    // the two-column (lg) grid. On mobile the grid collapses to ONE stacked
+    // column, so pinning the top block `position:fixed` makes it OVERLAP the
+    // stats/why-cards sliding up underneath → content is occluded and the page
+    // reads as un-scrollable past the hero. gsap.matchMedia auto-reverts the pin
+    // (and its pin-spacer) outside this range, mirroring the Global section.
+    const mm = gsap.matchMedia();
+    mm.add("(min-width: 1024px) and (prefers-reduced-motion: no-preference)", () => {
+      const trigger = ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: "top top+=80",
+        end: "bottom bottom-=120",
+        pin: pinRef.current,
+        pinSpacing: false,
+        invalidateOnRefresh: true,
+      });
+      return () => trigger.kill();
     });
-    return () => trigger.kill();
+    return () => mm.revert();
   }, []);
 
   return (
@@ -83,18 +103,20 @@ export function About() {
       className="relative z-10 bg-(--color-bg) px-[var(--pad-x)] py-[clamp(80px,14vh,200px)]"
     >
       <div className="mx-auto w-full max-w-[var(--col-w)]">
-        <motion.p
-          initial={{ opacity: 0, y: 18 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.5 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="mono text-(--color-muted)"
-        >
-          CHAPTER 003 — ABOUT
-        </motion.p>
+        {!bare && (
+          <motion.p
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.5 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="mono text-(--color-muted)"
+          >
+            CHAPTER 003 — ABOUT
+          </motion.p>
+        )}
 
         {/* Two-column: pinned editorial on left, stats + why cards scroll on right */}
-        <div className="mt-12 grid grid-cols-1 gap-16 lg:grid-cols-[1fr_1.3fr] lg:gap-24">
+        <div className={`${bare ? "" : "mt-12"} grid grid-cols-1 gap-16 lg:grid-cols-[1fr_1.3fr] lg:gap-24`}>
           {/* ── Pinned editorial ─────────────────────────────────────── */}
           <div ref={pinRef} className="self-start">
             <motion.h2
@@ -121,11 +143,22 @@ export function About() {
               transition={{ duration: 0.9, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
               className="mt-8 max-w-[44ch] text-[clamp(15px,1.15vw,17px)] leading-relaxed text-(--color-fg-2)"
             >
-              Cubixso.ai bridges practical AI implementation with proper business
-              strategy. End-to-end capabilities — from architecture and model selection
-              through deployment, observability, and ongoing support. One team, one
-              accountability line.
+              AI implementation and business strategy, end to end &mdash; architecture
+              through deployment and support.
             </motion.p>
+            {/* Aperios-style serif pull-quote — the mission line, set apart
+                with a hairline rule and generous whitespace. */}
+            <motion.blockquote
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.9, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-10 border-l border-(--color-line-2) pl-6"
+            >
+              <p className="max-w-[22ch] font-serif italic text-[clamp(24px,2.4vw,34px)] leading-[1.2] tracking-[-0.015em] text-(--color-fg)">
+                &ldquo;One team, one accountability&nbsp;line.&rdquo;
+              </p>
+            </motion.blockquote>
             <motion.div
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -135,6 +168,29 @@ export function About() {
             >
               <span className="block w-12 h-px bg-(--color-line-2)" aria-hidden />
               <span>T-HUB · HYDERABAD · IN</span>
+            </motion.div>
+
+            {/* The team behind the line — quiet cross-link to /leadership */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.9, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-6"
+            >
+              <Link
+                href="/leadership"
+                onClick={() => click()}
+                onPointerEnter={hoverTick}
+                className="group inline-flex items-center gap-2 text-[14px] text-(--color-powder) underline-offset-4 hover:underline"
+              >
+                Meet the people
+                <Ph
+                  name="arrow-up-right"
+                  size={15}
+                  className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                />
+              </Link>
             </motion.div>
           </div>
 

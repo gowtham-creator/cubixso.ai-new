@@ -9,12 +9,22 @@
 // roster (Hyderabad / Dubai / New York) reads as glass rows that, when hovered,
 // drive the lens focal point over their node so the globe behind responds. The
 // headline Reveals; the map's cobalt glow is coordinated with the globe behind.
-// "New York · Coming soon" pulses softly. No GSAP pin — the pinned feel comes
-// from the glass + Reveal + scroll-linked depth parallax + the cube morphing.
+// "New York · Coming soon" pulses softly.
+//
+// IMMERSIVE SCROLL PIN (altitude101): on desktop the section pins for ~1
+// viewport of scrub — the headline's letter-spacing cinches tight, the LIVE
+// city nodes (Hyderabad → Dubai) pulse in sequence under the magnify lens via
+// the existing focus system, and the content crawls up so the roster surfaces
+// before release into FinalCTA. gsap.matchMedia: mobile (<768px) and
+// prefers-reduced-motion get NO pin — normal flow. While the pin owns motion
+// the free depth-parallax plane is suspended (the timeline IS the parallax).
+// Aurora Glass v3: "one stack" carries the section's single aurora-gradient
+// text moment. No icons here — the globe IS the visual.
 
 import dynamic from "next/dynamic";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { gsap } from "@/lib/gsap";
 import { ChapterLabel } from "@/components/shared/ChapterLabel";
 import { LiquidGlass } from "@/components/glass/LiquidGlass";
 import { GlassLensFilter, lensFilterUrl } from "@/components/glass/GlassLensFilter";
@@ -32,6 +42,9 @@ const NODE_FOCUS: Record<string, { x: number; y: number }> = {
 };
 
 const LENS_ID = "reach-presence-lens";
+
+// Pin runs only where it can't trap anyone: desktop with motion allowed.
+const PIN_MEDIA = "(min-width: 768px) and (prefers-reduced-motion: no-preference)";
 
 // The globe is client + WebGL only — load it lazily, never on the server.
 const PresenceMap = dynamic(
@@ -59,6 +72,100 @@ export function Global() {
   const [lensInView, setLensInView] = useState(false);
   const paneRef = useRef<HTMLDivElement>(null);
 
+  // ── Pin state ──────────────────────────────────────────────────────────
+  const sectionRef = useRef<HTMLElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null); // content column (crawl)
+  const h2Ref = useRef<HTMLHeadingElement>(null);
+  const mapPlaneRef = useRef<HTMLDivElement>(null); // free-parallax wrapper
+  // True while the ScrollTrigger pin owns this section's motion — suspends
+  // the free depth-parallax plane so the two never fight over transforms.
+  const [pinActive, setPinActive] = useState(false);
+
+  // THE PIN — ~1 viewport of scrub. Letter-spacing cinches, live city nodes
+  // pulse in sequence through the existing focus/lens system, content crawls
+  // up so the roster surfaces before the release into FinalCTA.
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const mm = gsap.matchMedia();
+
+    mm.add(PIN_MEDIA, () => {
+      const inner = innerRef.current;
+      const h2 = h2Ref.current;
+      if (!inner || !h2) return;
+
+      setPinActive(true);
+
+      // Live hubs only — "coming soon" never pulses (it isn't a beat yet).
+      const liveCities = PRESENCE.filter((p) => p.status !== "soon").map(
+        (p) => p.city,
+      );
+
+      const tl = gsap.timeline({
+        defaults: { ease: "none" },
+        scrollTrigger: {
+          trigger: section,
+          start: "top 11%", // clears the fixed banner + nav pill
+          end: "+=100%", // ~1 viewport of scrub
+          scrub: true,
+          pin: true,
+          anticipatePin: 1,
+          invalidateOnRefresh: true,
+          onUpdate: (self) => {
+            // Sequential node pulses: each live city holds the lens focus for
+            // a band of the scrub, then hands off; everything released by
+            // p≈0.75 so the section exits clean into FinalCTA.
+            const p = self.progress;
+            let city: string | null = null;
+            liveCities.forEach((c, i) => {
+              const start = 0.12 + i * 0.34;
+              if (p >= start && p < start + 0.26) city = c;
+            });
+            setFocusCity((prev) => (prev === city ? prev : city));
+          },
+        },
+      });
+
+      // Headline cinch: tracking tightens from airy to the brand's -0.04em.
+      tl.fromTo(
+        h2,
+        { letterSpacing: "0.02em" },
+        { letterSpacing: "-0.04em", duration: 0.7 },
+        0,
+      );
+
+      // Internal crawl — lift the column by exactly the section's viewport
+      // overflow so the map + roster surface during the pin. Function-based
+      // + invalidateOnRefresh = resize-correct; 0 on tall viewports.
+      tl.to(
+        inner,
+        {
+          y: () => -Math.max(0, section.scrollHeight - window.innerHeight),
+          duration: 1,
+        },
+        0,
+      );
+
+      return () => {
+        setPinActive(false);
+        setFocusCity(null);
+        gsap.set(h2, { clearProps: "letterSpacing" });
+        gsap.set(inner, { clearProps: "transform" });
+      };
+    });
+
+    return () => mm.revert();
+  }, []);
+
+  // When the pin takes ownership, scrub any inline transform framer left on
+  // the parallax wrapper (removing a MotionValue from `style` unbinds it but
+  // does NOT reset the DOM) — runs after the re-render that unbinds.
+  useEffect(() => {
+    if (!pinActive || !mapPlaneRef.current) return;
+    gsap.set(mapPlaneRef.current, { clearProps: "transform" });
+  }, [pinActive]);
+
   const focus = focusCity ? NODE_FOCUS[focusCity] : null;
   const lensActive = !!focus && !reduced;
 
@@ -74,8 +181,9 @@ export function Global() {
 
   return (
     <section
+      ref={sectionRef}
       id="reach"
-      className="relative z-10 px-[var(--pad-x)] py-[clamp(96px,14vh,180px)]"
+      className="relative z-10 px-[var(--pad-x)] py-[clamp(64px,9vh,120px)]"
     >
       {/* Tier-3 refractive lens defs — paused when the pane is off-screen so
           the displacement map costs nothing. Reduced-motion freezes it too. */}
@@ -87,20 +195,30 @@ export function Global() {
         animate={!reduced}
       />
 
-      <div className="mx-auto w-full max-w-[var(--col-w)]">
+      <div
+        ref={innerRef}
+        className="mx-auto w-full max-w-[var(--col-w)] will-change-transform"
+      >
         <ChapterLabel num="10" word="REACH" />
 
         <Reveal direction="up">
-          <h2 className="font-display text-[length:var(--text-display-lg)] leading-[0.95] tracking-[-0.04em] text-balance text-(--color-fg) max-w-4xl">
+          <h2
+            ref={h2Ref}
+            className="font-display text-[length:var(--text-display-lg)] leading-[0.95] tracking-[-0.04em] text-balance text-(--color-fg) max-w-4xl"
+          >
             Two cities,
             <br />
-            one{" "}
-            <em
-              className="font-serif not-italic italic"
-              style={{ letterSpacing: "-0.02em", fontWeight: 400 }}
-            >
-              stack
-            </em>
+            {/* The ONE aurora-gradient text element allowed in this section —
+                the gradient lives INSIDE the glyphs, glass stays neutral. */}
+            <span className="text-(--color-accent-2)">
+              one{" "}
+              <em
+                className="font-serif not-italic italic"
+                style={{ letterSpacing: "-0.02em", fontWeight: 400 }}
+              >
+                stack
+              </em>
+            </span>
             .
           </h2>
         </Reveal>
@@ -116,8 +234,9 @@ export function Global() {
             A Tier-3 lens layer magnifies + brightens the hovered city node. */}
         <Reveal direction="up" delay={0.18}>
           <motion.div
+            ref={mapPlaneRef}
             className="mt-14 p-3 sm:p-4"
-            style={{ transform: mapPlane }}
+            style={pinActive ? undefined : { transform: mapPlane }}
           >
             <LiquidGlass
               tier="panel"

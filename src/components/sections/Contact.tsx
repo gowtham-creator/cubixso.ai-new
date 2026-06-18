@@ -7,6 +7,10 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { CONTACT } from "@/lib/data";
 import { Magnetic } from "@/components/motion/Magnetic";
+import { chime, tick } from "@/lib/feedback";
+import { Icon3D } from "@/components/icons/Icon3D";
+import { Ph } from "@/components/icons/Ph";
+import { GlassButton } from "@/components/glass/LiquidGlass";
 
 const reveal = (delay: number) => ({
   initial: { opacity: 0, y: 18, filter: "blur(6px)" },
@@ -15,12 +19,13 @@ const reveal = (delay: number) => ({
   transition: { duration: 0.9, delay, ease: [0.16, 1, 0.3, 1] as const },
 });
 
-export function Contact() {
+export function Contact({ bare = false }: { bare?: boolean } = {}) {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [status, setStatus] = useState<"idle" | "sending" | "ok" | "error">("idle");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (status === "sending") return; // GlassButton has no disabled attr — guard re-entry here
     if (!form.email || !form.name) return;
     setStatus("sending");
     try {
@@ -30,6 +35,7 @@ export function Contact() {
         body: JSON.stringify(form),
       });
       setStatus(res.ok ? "ok" : "error");
+      if (res.ok) chime(); // glass strike — success path only, never on error
     } catch {
       setStatus("error");
     }
@@ -41,11 +47,13 @@ export function Contact() {
       className="relative z-10 bg-(--color-bg) px-[var(--pad-x)] py-[clamp(80px,14vh,180px)]"
     >
       <div className="mx-auto w-full max-w-[var(--col-w)]">
-        <motion.p {...reveal(0)} className="mono text-(--color-muted)">
-          CHAPTER 004 — CONTACT
-        </motion.p>
+        {!bare && (
+          <motion.p {...reveal(0)} className="mono text-(--color-muted)">
+            CHAPTER 004 — CONTACT
+          </motion.p>
+        )}
 
-        <div className="mt-12 grid grid-cols-1 gap-16 lg:grid-cols-[1.2fr_1fr] lg:gap-24">
+        <div className={`${bare ? "" : "mt-12"} grid grid-cols-1 gap-16 lg:grid-cols-[1.2fr_1fr] lg:gap-24`}>
           {/* ── Left: big editorial CTA + direct contact ────────────── */}
           <div>
             <motion.h2
@@ -66,8 +74,7 @@ export function Contact() {
               {...reveal(0.25)}
               className="mt-8 max-w-[52ch] text-[clamp(15px,1.15vw,18px)] leading-relaxed text-(--color-fg-2)"
             >
-              Start the conversation &mdash; honest scoping, real timelines, pricing on
-              the call. We hand you a system, not a notebook.
+              Honest scoping, real timelines. We hand you a system, not a notebook.
             </motion.p>
 
             <motion.dl
@@ -75,7 +82,11 @@ export function Contact() {
               className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3"
             >
               <div className="border-t border-(--color-line) pt-5">
-                <dt className="mono text-(--color-muted)">EMAIL</dt>
+                {/* chat-bubble = the written channel — its exact semantic home. */}
+                <dt className="mono text-(--color-fg-2) flex items-center justify-between gap-3">
+                  EMAIL
+                  <Icon3D name="chat-bubble" size={32} float glow className="-my-2 shrink-0" />
+                </dt>
                 <dd className="mt-2">
                   <a
                     href={`mailto:${CONTACT.email}`}
@@ -86,7 +97,11 @@ export function Contact() {
                 </dd>
               </div>
               <div className="border-t border-(--color-line) pt-5">
-                <dt className="mono text-(--color-muted)">PHONE</dt>
+                {/* call-in = the voice channel. Two Icon3D accents total — max. */}
+                <dt className="mono text-(--color-fg-2) flex items-center justify-between gap-3">
+                  PHONE
+                  <Icon3D name="call-in" size={32} float glow className="-my-2 shrink-0" />
+                </dt>
                 <dd className="mt-2 text-(--color-fg)">
                   <a href="tel:+918374563012" className="block hover:text-(--color-accent-2) transition-colors">
                     {CONTACT.phone1}
@@ -97,7 +112,7 @@ export function Contact() {
                 </dd>
               </div>
               <div className="border-t border-(--color-line) pt-5">
-                <dt className="mono text-(--color-muted)">LOCATION</dt>
+                <dt className="mono text-(--color-fg-2)">LOCATION</dt>
                 <dd className="mt-2 text-(--color-fg)">{CONTACT.location}</dd>
               </div>
             </motion.dl>
@@ -110,72 +125,74 @@ export function Contact() {
             className="flex flex-col gap-6"
           >
             <div>
-              <label htmlFor="name" className="mono block text-(--color-muted)">NAME</label>
+              <label htmlFor="name" className="mono block text-(--color-fg-2)">NAME</label>
               <input
                 id="name"
                 type="text"
                 required
                 value={form.name}
+                onFocus={() => tick()}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="mt-2 w-full border-b border-(--color-line-2) bg-transparent py-3 text-[17px] text-(--color-fg) placeholder:text-(--color-muted-2) focus:border-(--color-fg) focus:outline-none transition-colors"
+                className="mt-2 w-full border-b border-(--color-line-2) bg-transparent py-3 text-[17px] text-(--color-fg) placeholder:text-(--color-muted) focus:border-(--color-fg) focus:outline-none transition-colors"
                 placeholder="Your name"
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="mono block text-(--color-muted)">EMAIL</label>
+              <label htmlFor="email" className="mono block text-(--color-fg-2)">EMAIL</label>
               <input
                 id="email"
                 type="email"
                 required
                 value={form.email}
+                onFocus={() => tick()}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                className="mt-2 w-full border-b border-(--color-line-2) bg-transparent py-3 text-[17px] text-(--color-fg) placeholder:text-(--color-muted-2) focus:border-(--color-fg) focus:outline-none transition-colors"
+                className="mt-2 w-full border-b border-(--color-line-2) bg-transparent py-3 text-[17px] text-(--color-fg) placeholder:text-(--color-muted) focus:border-(--color-fg) focus:outline-none transition-colors"
                 placeholder="you@company.com"
               />
             </div>
 
             <div>
-              <label htmlFor="message" className="mono block text-(--color-muted)">MESSAGE</label>
+              <label htmlFor="message" className="mono block text-(--color-fg-2)">MESSAGE</label>
               <textarea
                 id="message"
                 rows={4}
                 value={form.message}
+                onFocus={() => tick()}
                 onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-                className="mt-2 w-full resize-none border-b border-(--color-line-2) bg-transparent py-3 text-[17px] text-(--color-fg) placeholder:text-(--color-muted-2) focus:border-(--color-fg) focus:outline-none transition-colors"
+                className="mt-2 w-full resize-none border-b border-(--color-line-2) bg-transparent py-3 text-[17px] text-(--color-fg) placeholder:text-(--color-muted) focus:border-(--color-fg) focus:outline-none transition-colors"
                 placeholder="Tell us what you're building"
               />
             </div>
 
             <div className="mt-4 flex items-center justify-between">
               <Magnetic>
-                <button
-                  type="submit"
-                  disabled={status === "sending"}
-                  className="group inline-flex items-center gap-3 bg-(--color-fg) text-(--color-bg) rounded-full pl-6 pr-2 py-2 font-medium tracking-tight transition-transform hover:scale-[1.02] disabled:opacity-60"
+                {/* GlassButton already fires tick()/click() via the feedback bus;
+                    default type inside a <form> is submit. Re-entry is guarded
+                    in submit() since LiquidGlass doesn't forward `disabled`. */}
+                <GlassButton
+                  className={`px-7 py-3.5 text-[15px] font-medium tracking-tight bg-(--color-cobalt)! text-white! ${
+                    status === "sending" ? "pointer-events-none opacity-60" : ""
+                  }`}
                 >
-                  <span>
+                  <span className="inline-flex items-center gap-2.5 text-white">
                     {status === "sending" ? "Sending…" :
                      status === "ok"      ? "Thanks — we'll reply within 24h" :
                      status === "error"   ? "Try again" :
                                             "Send"}
+                    <Ph name="arrow-up-right" size={15} weight="light" />
                   </span>
-                  <span className="grid place-items-center w-9 h-9 rounded-full bg-(--color-bg) text-(--color-fg) transition-transform group-hover:rotate-45">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M7 17 L17 7 M9 7 L17 7 L17 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
-                </button>
+                </GlassButton>
               </Magnetic>
-              <span className="mono text-(--color-muted)">REPLIES&nbsp;WITHIN&nbsp;24H</span>
+              <span className="mono text-(--color-fg-2)">REPLIES&nbsp;WITHIN&nbsp;24H</span>
             </div>
           </motion.form>
         </div>
 
         {/* Bottom rule + colophon */}
         <div className="mt-32 border-t border-(--color-line) pt-8 flex flex-wrap items-center justify-between gap-4">
-          <span className="mono text-(--color-muted)">© 2026 CUBIXSO AI — STARTUP INDIA RECOGNISED</span>
-          <span className="mono text-(--color-muted)">17.385°N · 78.486°E</span>
+          <span className="mono text-(--color-fg-2)">© 2026 CUBIXSO AI — STARTUP INDIA RECOGNISED</span>
+          <span className="mono text-(--color-fg-2)">17.385°N · 78.486°E</span>
         </div>
       </div>
     </section>

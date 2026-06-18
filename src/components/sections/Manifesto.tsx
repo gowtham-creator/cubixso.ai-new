@@ -98,7 +98,7 @@ export function Manifesto() {
                   <dt className="font-serif italic text-[clamp(38px,5vw,68px)] leading-none tracking-tight text-(--color-fg) tabular-nums">
                     {row.stat}
                   </dt>
-                  <dd className="mt-4 mono text-(--color-muted)">
+                  <dd className="mt-4 mono text-(--color-fg-2)">
                     {row.label}
                   </dd>
                 </div>

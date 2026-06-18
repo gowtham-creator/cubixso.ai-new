@@ -5,6 +5,7 @@
 // then stays hidden so it never competes with content below the fold.
 
 import { motion, useScroll, useTransform } from "framer-motion";
+import { Ph } from "@/components/icons/Ph";
 
 export function ScrollIndicator({ className = "" }: { className?: string }) {
   const { scrollY } = useScroll();
@@ -33,7 +34,7 @@ export function ScrollIndicator({ className = "" }: { className?: string }) {
         animate={{ y: [0, 3, 0] }}
         transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
       >
-        ↓
+        <Ph name="arrow-down" weight="thin" size={13} />
       </motion.span>
     </motion.a>
   );

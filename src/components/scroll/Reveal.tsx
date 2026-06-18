@@ -78,7 +78,11 @@ export function Reveal({
           }
         }
       },
-      { rootMargin: "0px 0px -12% 0px", threshold: 0 },
+      // POSITIVE bottom margin: the trigger line sits ~22% BELOW the viewport,
+      // so the 3-beat entrance starts while the slab is still approaching and
+      // fast scrollers never catch a blank panel mid-flight. (The old -12%
+      // line made content lag the scroll — sections read as "missing".)
+      { rootMargin: "0px 0px 22% 0px", threshold: 0 },
     );
     io.observe(el);
     return () => io.disconnect();
@@ -125,6 +129,10 @@ export function Reveal({
           delay,
         },
       },
+      // A resting clip-path: inset(0) STILL clips at the border-box — any
+      // depth-parallax child translated ±28px would lose its edge forever.
+      // Drop the clip entirely the moment the wipe completes.
+      transitionEnd: { clipPath: "none" },
     },
   };
 

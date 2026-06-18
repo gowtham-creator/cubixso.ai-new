@@ -14,6 +14,8 @@ import { ChapterLabel } from "@/components/shared/ChapterLabel";
 import { LiquidGlass } from "@/components/glass/LiquidGlass";
 import { Reveal } from "@/components/scroll/Reveal";
 import { useDepthParallax } from "@/components/scroll/useDepthParallax";
+import { Icon3D, type Icon3DName } from "@/components/icons/Icon3D";
+import { Ph } from "@/components/icons/Ph";
 
 // Tiny procedural icons per service (kept lightweight, themable)
 function ServiceIcon({ index }: { index: number }) {
@@ -52,6 +54,16 @@ function ServiceIcon({ index }: { index: number }) {
   return <div className="w-7 h-7 text-(--color-fg)">{icons[index] ?? icons[0]}</div>;
 }
 
+// Aurora v3 §3 — meaning-matched 3D accents, ONLY on cards whose copy earns
+// them: computer = LLMOps (0), rocket = full-scale apps that ship end-to-end
+// (3, deployment/launch). Two per section max; the rest keep the quiet
+// procedural line icons — no decoration spam. (mobile is reserved for the
+// Products story per the v3 icon map.)
+const ACCENT_3D: Partial<Record<number, { name: Icon3DName; size: number }>> = {
+  0: { name: "computer", size: 72 },
+  3: { name: "rocket", size: 56 },
+};
+
 // Bento spans — break the uniform grid for visual rhythm
 const SPANS = [
   "lg:col-span-4 lg:row-span-2", // featured wide
@@ -71,7 +83,7 @@ export function Services({ bare = false }: { bare?: boolean } = {}) {
   return (
     <section
       id="services"
-      className="relative z-10 px-[var(--pad-x)] py-[clamp(80px,12vh,160px)]"
+      className="relative z-10 px-[var(--pad-x)] py-[clamp(56px,8vh,112px)]"
     >
       <div className="mx-auto w-full max-w-[var(--col-w)]">
         {!bare && (
@@ -94,7 +106,10 @@ export function Services({ bare = false }: { bare?: boolean } = {}) {
                   >
                     services
                   </em>
-                  ,<br />engineered for scale.
+                  ,<br />engineered for{" "}
+                  {/* Solid cobalt ink — gradient-to-white text vanished in light
+                      mode; a single accent word reads in both themes. */}
+                  <span className="text-(--color-cobalt-glow)">scale</span>.
                 </h2>
 
                 <p className="mt-8 max-w-prose text-[clamp(15px,1.1vw,17px)] leading-relaxed text-(--color-fg-2)">
@@ -110,7 +125,9 @@ export function Services({ bare = false }: { bare?: boolean } = {}) {
           style={{ transform: gridParallax }}
           className={`${bare ? "" : "mt-16"} grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 lg:grid-rows-3`}
         >
-          {SERVICES.map((s, i) => (
+          {SERVICES.map((s, i) => {
+            const accent = ACCENT_3D[i];
+            return (
             <Reveal
               key={s.name}
               direction="up"
@@ -122,7 +139,13 @@ export function Services({ bare = false }: { bare?: boolean } = {}) {
                 as="article"
                 className="flex h-full flex-col gap-4 p-7"
               >
-                <ServiceIcon index={i} />
+                {/* Meaning-matched 3D accent where one exists; otherwise the
+                    quiet procedural line icon. */}
+                {accent ? (
+                  <Icon3D name={accent.name} size={accent.size} float glow />
+                ) : (
+                  <ServiceIcon index={i} />
+                )}
                 <h3 className="font-display text-[clamp(18px,1.4vw,22px)] font-medium tracking-tight text-(--color-fg)">
                   {s.name}
                 </h3>
@@ -131,13 +154,12 @@ export function Services({ bare = false }: { bare?: boolean } = {}) {
                 </p>
                 <span className="mt-auto inline-flex items-center gap-1.5 mono text-(--color-muted) opacity-0 group-hover:opacity-100 transition-opacity">
                   EXPLORE
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path d="M7 17 L17 7 M9 7 L17 7 L17 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <Ph name="arrow-up-right" weight="light" size={14} />
                 </span>
               </LiquidGlass>
             </Reveal>
-          ))}
+            );
+          })}
         </motion.div>
       </div>
     </section>

@@ -1,93 +1,80 @@
 "use client";
 
-// CursorFollower — Tenbin-style 6px dot that lerp-follows the pointer.
-// Mix-blend-mode difference inverts whatever it sits over, which is what
-// makes a tiny white dot read as a "premium" pointer.
-//
-// Variant rules:
-//   default → 6px dot, white
-//   ibeam   → thin vertical bar over [data-cursor="text"] or h1/h2/h3 + p
-//   cta     → 48px ring with arrow over [data-cursor="cta"], a, button
-//   hidden  → faded out completely when over <input>, <textarea>, [data-cursor="hide"]
-//
-// Disabled entirely on touch devices and when prefers-reduced-motion is on,
-// since both make a custom pointer feel wrong.
+// CursorFollower — bespoke precision cursor. A solid dot is glued to the pointer
+// for accuracy; a thin ring trails it with eased lag. THEME-ADAPTIVE: ink is
+// white on the dark page, charcoal on the light page, so it reads on either.
+// Over a clickable the ring expands and both ring + dot pick up the brand cobalt
+// with a soft glow; pressing contracts the ring (tactile feedback). Hidden over
+// text inputs and when the pointer leaves the window. Disabled on touch +
+// reduced-motion (native cursor restored by globals.css).
 
 import { useEffect, useRef, useState } from "react";
-
-type Variant = "default" | "ibeam" | "cta" | "hidden";
+import { useTheme } from "@/components/providers/ThemeProvider";
 
 export function CursorFollower() {
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const { resolved } = useTheme();
+  const dark = resolved === "dark";
+
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
-  const labelRef = useRef<HTMLSpanElement>(null);
-
   const target = useRef({ x: 0, y: 0 });
-  const pos = useRef({ x: 0, y: 0 });
-  const ringPos = useRef({ x: 0, y: 0 });
+  const ring = useRef({ x: 0, y: 0 });
+  const downRef = useRef(false);
 
-  const [variant, setVariant] = useState<Variant>("default");
   const [enabled, setEnabled] = useState(false);
+  const [active, setActive] = useState(false); // over a clickable
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const isTouch = window.matchMedia("(pointer: coarse)").matches;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (isTouch || reduced) return;
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     setEnabled(true);
 
     target.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    pos.current = { ...target.current };
-    ringPos.current = { ...target.current };
+    ring.current = { ...target.current };
 
     const onMove = (e: PointerEvent) => {
-      target.current.x = e.clientX;
-      target.current.y = e.clientY;
+      target.current = { x: e.clientX, y: e.clientY };
     };
-
     const onOver = (e: Event) => {
       const t = e.target as HTMLElement | null;
       if (!t) return;
-      const tag = t.tagName;
-      const cursorAttr = t.closest("[data-cursor]")?.getAttribute("data-cursor");
-      if (cursorAttr === "cta" || t.closest("a, button") ||
-          tag === "A" || tag === "BUTTON") {
-        setVariant("cta");
-      } else if (cursorAttr === "text" ||
-                 t.closest("h1, h2, h3, h4, p, blockquote")) {
-        setVariant("ibeam");
-      } else if (cursorAttr === "hide" || tag === "INPUT" || tag === "TEXTAREA") {
-        setVariant("hidden");
-      } else {
-        setVariant("default");
-      }
+      const clickable = !!t.closest("a, button, [role='button'], [data-cursor='cta']");
+      const input = t.tagName === "INPUT" || t.tagName === "TEXTAREA";
+      setActive(clickable);
+      setHidden(input);
     };
-
-    const onLeave = () => setVariant("hidden");
-    const onEnter = () => setVariant("default");
+    const onLeave = () => setHidden(true);
+    const onEnter = () => setHidden(false);
+    const onDown = () => { downRef.current = true; };
+    const onUp = () => { downRef.current = false; };
 
     window.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("pointerover", onOver, { passive: true });
     document.addEventListener("pointerleave", onLeave);
     document.addEventListener("pointerenter", onEnter);
+    window.addEventListener("pointerdown", onDown, { passive: true });
+    window.addEventListener("pointerup", onUp, { passive: true });
 
     let raf = 0;
-    const tick = () => {
-      // Dot lerp — fast (snappy, reads like the pointer itself)
-      pos.current.x += (target.current.x - pos.current.x) * 0.35;
-      pos.current.y += (target.current.y - pos.current.y) * 0.35;
-      // Ring lerp — slower (gives the magnetic trailing feel)
-      ringPos.current.x += (target.current.x - ringPos.current.x) * 0.15;
-      ringPos.current.y += (target.current.y - ringPos.current.y) * 0.15;
-
+    let prev = performance.now();
+    const tick = (now: number) => {
+      // dot glued to the pointer for precision; ring trails with eased lag.
+      // Frame-rate-independent smoothing: convert a per-frame ease into a
+      // time-based one so the trail never lags badly on a slow frame and
+      // stays consistent across 60/120Hz displays.
+      const dt = Math.min((now - prev) / 1000, 0.05);
+      prev = now;
+      const k = 1 - Math.exp(-16 * dt); // smoother than 0.18/frame, settles fast
+      ring.current.x += (target.current.x - ring.current.x) * k;
+      ring.current.y += (target.current.y - ring.current.y) * k;
+      const press = downRef.current ? 0.82 : 1;
       if (dotRef.current) {
-        dotRef.current.style.transform =
-          `translate3d(${pos.current.x - 3}px, ${pos.current.y - 3}px, 0)`;
+        dotRef.current.style.transform = `translate3d(${target.current.x}px, ${target.current.y}px, 0) translate(-50%, -50%)`;
       }
       if (ringRef.current) {
-        ringRef.current.style.transform =
-          `translate3d(${ringPos.current.x}px, ${ringPos.current.y}px, 0)`;
+        ringRef.current.style.transform = `translate3d(${ring.current.x}px, ${ring.current.y}px, 0) translate(-50%, -50%) scale(${press})`;
       }
       raf = requestAnimationFrame(tick);
     };
@@ -99,51 +86,46 @@ export function CursorFollower() {
       document.removeEventListener("pointerover", onOver);
       document.removeEventListener("pointerleave", onLeave);
       document.removeEventListener("pointerenter", onEnter);
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointerup", onUp);
     };
   }, []);
 
   if (!enabled) return null;
 
-  return (
-    <div
-      ref={wrapRef}
-      aria-hidden
-      className="pointer-events-none fixed inset-0 z-[100]"
-      style={{ mixBlendMode: "difference" }}
-    >
-      {/* Inner dot — always white in difference space */}
-      <div
-        ref={dotRef}
-        className="absolute top-0 left-0 will-change-transform transition-[width,height,opacity,border-radius] duration-200 ease-out"
-        style={{
-          width: variant === "ibeam" ? 2 : variant === "cta" ? 0 : 6,
-          height: variant === "ibeam" ? 28 : variant === "cta" ? 0 : 6,
-          borderRadius: variant === "ibeam" ? 1 : 999,
-          background: "#ffffff",
-          opacity: variant === "hidden" ? 0 : 1,
-        }}
-      />
+  const base = dark ? "236,239,247" : "12,12,18"; // ink, theme-adaptive
+  const cobalt = "74,123,255";
+  const ease = "cubic-bezier(.22,1,.36,1)";
 
-      {/* Outer ring — only visible for cta */}
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-[100]">
+      {/* trailing ring — expands + goes cobalt over clickables */}
       <div
         ref={ringRef}
-        className="absolute top-0 left-0 grid place-items-center -translate-x-1/2 -translate-y-1/2 will-change-transform transition-[width,height,opacity,border-color] duration-300 ease-out"
+        className="absolute left-0 top-0 rounded-full will-change-transform"
         style={{
-          width: variant === "cta" ? 56 : 0,
-          height: variant === "cta" ? 56 : 0,
-          border: "1px solid #ffffff",
-          borderRadius: 999,
-          opacity: variant === "cta" ? 1 : 0,
+          width: active ? 44 : 26,
+          height: active ? 44 : 26,
+          border: `1.5px solid rgba(${active ? cobalt : base},${active ? 1 : 0.4})`,
+          background: active ? `rgba(${cobalt},0.1)` : "transparent",
+          boxShadow: active ? `0 0 0 1px rgba(${cobalt},0.25), 0 0 18px rgba(${cobalt},0.45)` : "none",
+          opacity: hidden ? 0 : 1,
+          transition: `width .2s ${ease}, height .2s ${ease}, border-color .16s ease, background .16s ease, box-shadow .16s ease, opacity .15s ease`,
         }}
-      >
-        <span
-          ref={labelRef}
-          className="font-mono text-[10px] uppercase tracking-[0.18em]"
-          style={{ color: "#ffffff" }}
-        >
-          →
-        </span>
-      </div>
+      />
+      {/* precision dot — glued to pointer, picks up cobalt on hover */}
+      <div
+        ref={dotRef}
+        className="absolute left-0 top-0 rounded-full will-change-transform"
+        style={{
+          width: active ? 6 : 5,
+          height: active ? 6 : 5,
+          background: `rgba(${active ? cobalt : base},${active ? 1 : 0.9})`,
+          boxShadow: active ? `0 0 12px rgba(${cobalt},0.9)` : "none",
+          opacity: hidden ? 0 : 1,
+          transition: `width .16s ${ease}, height .16s ${ease}, background .16s ease, box-shadow .16s ease, opacity .15s ease`,
+        }}
+      />
     </div>
   );
 }

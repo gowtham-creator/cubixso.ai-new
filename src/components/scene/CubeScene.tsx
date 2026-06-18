@@ -8,13 +8,14 @@
 // post-hydration via useEffect. SSR keeps text content for crawlers,
 // hydration adds the cube on top.
 
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
+import { Environment, Lightformer } from "@react-three/drei";
+import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import * as THREE from "three";
-import { Lighting } from "./Lighting";
-import { Cube, type ThemeRef } from "./Cube";
-import { PostFX } from "./PostFX";
+import { type ThemeRef } from "./Cube";
+import { CubixsoCube } from "./CubixsoCube";
 import { useTheme } from "@/components/providers/ThemeProvider";
 
 const FIXED_STYLE: React.CSSProperties = {
@@ -159,8 +160,10 @@ const CanvasInner = memo(function CanvasInner({
     () => ({ antialias: !isMobile, alpha: true, powerPreference: "high-performance" as const }),
     [isMobile],
   );
+  // Orthographic iso camera on the (1,1,1) diagonal — the brand logo pose, no
+  // perspective skew. Same framing as the loader so the hand-off is seamless.
   const cameraOpts = useMemo(
-    () => ({ position: [0, 0, 4] as [number, number, number], fov: 38, near: 0.1, far: 100 }),
+    () => ({ position: [3.46, 3.46, 3.46] as [number, number, number], zoom: 105, near: 0.1, far: 100 }),
     [],
   );
   const dprCap = useMemo<[number, number]>(
@@ -170,16 +173,33 @@ const CanvasInner = memo(function CanvasInner({
 
   return (
     <Canvas
+      orthographic
       gl={glOpts}
       dpr={dprCap}
       camera={cameraOpts}
       frameloop="always"
+      onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
       style={FIXED_STYLE}
     >
       <ThemeBridge themeRef={themeRef} />
-      <Lighting />
-      <Cube themeRef={themeRef} />
-      <PostFX enabled={!isMobile} />
+      <ambientLight intensity={0.45} />
+      <directionalLight position={[4, 6, 3]} intensity={1.3} color="#ffffff" />
+      <pointLight position={[-3, 2, -2]} intensity={22} color="#dfe8ff" distance={18} />
+      <Suspense fallback={null}>
+        {/* The shared Blender logo cube — rests at the logo pose, scroll rotates it */}
+        <CubixsoCube mode="hero" themeRef={themeRef} />
+        <Environment resolution={256} frames={1} environmentIntensity={0.8}>
+          <Lightformer intensity={2.6} color="#ffffff" position={[0, 3, 3]} scale={[7, 3, 1]} />
+          <Lightformer intensity={1.6} color="#eef2ff" position={[-4, 1, 2]} scale={[3, 4, 1]} />
+          <Lightformer intensity={1.4} color="#ffffff" position={[4, -1, -3]} scale={[5, 3, 1]} />
+          <Lightformer intensity={1.1} color="#ffffff" position={[0, -3, 1]} scale={[6, 2, 1]} />
+        </Environment>
+        {!isMobile && (
+          <EffectComposer multisampling={0}>
+            <Bloom intensity={0.3} luminanceThreshold={0.75} luminanceSmoothing={0.2} mipmapBlur radius={0.4} />
+          </EffectComposer>
+        )}
+      </Suspense>
       <VisibilityGate />
     </Canvas>
   );

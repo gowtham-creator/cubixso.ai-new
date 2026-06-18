@@ -8,10 +8,13 @@
 // hover). Desktop = a static wrapped row of pills inside the focal panel; mobile
 // = a gentle marquee of the same glass pills. Entrance is the signature 3-beat
 // <Reveal>; the headline cluster and the pill strip ride two depth planes.
+// Aurora Glass v3: a trophy Icon3D (trophy = awards/accreditation) floats
+// top-right of the panel — the section's single meaning-matched 3D accent.
 
 import { motion } from "framer-motion";
 import { BACKERS } from "@/lib/data";
 import { ChapterLabel } from "@/components/shared/ChapterLabel";
+import { Icon3D } from "@/components/icons/Icon3D";
 import { LiquidGlass, GlassChip } from "@/components/glass/LiquidGlass";
 import { Reveal } from "@/components/scroll/Reveal";
 import { useDepthParallax } from "@/components/scroll/useDepthParallax";
@@ -29,7 +32,7 @@ export function BackedBy() {
   return (
     <section
       id="backed-by"
-      className="relative z-10 px-[var(--pad-x)] py-[clamp(80px,12vh,160px)]"
+      className="relative z-10 px-[var(--pad-x)] py-[clamp(56px,8vh,112px)]"
     >
       {/* Void GUTTER: the panel never paints edge-to-edge — the cobalt light
           lives behind its rim. */}
@@ -40,6 +43,16 @@ export function BackedBy() {
             focal
             className="px-[clamp(20px,4vw,56px)] py-[clamp(40px,6vh,72px)]"
           >
+            {/* Meaning-matched 3D accent (trophy = awards) — decorative only,
+                hidden on small screens so the headline keeps its air. */}
+            <Icon3D
+              name="trophy"
+              size={56}
+              float
+              glow
+              className="absolute right-[clamp(20px,4vw,56px)] top-[clamp(40px,6vh,72px)] hidden md:inline-block"
+            />
+
             <motion.div style={{ transform: headTransform }}>
               <ChapterLabel num="09" word="TRUSTED INFRASTRUCTURE" />
 
@@ -71,7 +84,7 @@ export function BackedBy() {
                   key={label}
                   className="group px-[clamp(12px,1.1vw,18px)] py-[clamp(8px,0.9vh,12px)]"
                 >
-                  <span className="mono text-[11px] text-(--color-fg-2) opacity-70 transition-all duration-300 group-hover:opacity-100 group-hover:text-(--color-fg)">
+                  <span className="mono text-[11px] text-(--color-fg-2) transition-colors duration-300 group-hover:text-(--color-fg)">
                     {label}
                   </span>
                 </GlassChip>

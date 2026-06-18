@@ -36,9 +36,11 @@ import {
   useState,
   type CSSProperties,
   type ElementType,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { tick, click } from "@/lib/feedback";
 
 export type GlassTier = "nav" | "panel" | "lens" | "chip";
 
@@ -78,6 +80,10 @@ export interface LiquidGlassProps {
 
   /** Disable the entrance + hover specular sweep (also auto-off for reduced motion). */
   sweep?: boolean;
+
+  /** Forwarded to the host element (GlassButton composes the feedback bus here). */
+  onClick?: (e: ReactMouseEvent<HTMLElement>) => void;
+  onPointerEnter?: (e: ReactPointerEvent<HTMLElement>) => void;
 }
 
 const RADIUS_DEFAULT = 18;
@@ -106,6 +112,8 @@ export const LiquidGlass = forwardRef<HTMLElement, LiquidGlassProps>(
       lensFilterId,
       onViewChange,
       sweep = true,
+      onClick,
+      onPointerEnter,
     },
     forwardedRef
   ) {
@@ -200,6 +208,8 @@ export const LiquidGlass = forwardRef<HTMLElement, LiquidGlassProps>(
         ref={setRefs}
         className={classes}
         style={cssVars}
+        onClick={onClick}
+        onPointerEnter={onPointerEnter}
         onPointerMove={isPanel ? trackPointer : undefined}
         onPointerLeave={isPanel ? clearPointer : undefined}
       >
@@ -217,15 +227,30 @@ export const LiquidGlass = forwardRef<HTMLElement, LiquidGlassProps>(
 export function GlassButton({
   children,
   className = "",
+  onClick,
+  onPointerEnter,
   ...props
 }: Omit<LiquidGlassProps, "tier" | "pill"> &
   React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  // Feedback bus — tick() on true mouse hover-in only (a touch tap must never
+  // stack tick + click on one gesture), click() + haptic on press. Consumer
+  // handlers are composed in, never replaced.
+  const handleEnter = (e: ReactPointerEvent<HTMLElement>) => {
+    if (e.pointerType === "mouse") tick();
+    onPointerEnter?.(e as ReactPointerEvent<HTMLButtonElement>);
+  };
+  const handleClick = (e: ReactMouseEvent<HTMLElement>) => {
+    click();
+    onClick?.(e as ReactMouseEvent<HTMLButtonElement>);
+  };
   return (
     <LiquidGlass
       tier="chip"
       pill
       as="button"
       className={`lg-cta ${className}`}
+      onClick={handleClick}
+      onPointerEnter={handleEnter}
       {...(props as LiquidGlassProps)}
     >
       {children}

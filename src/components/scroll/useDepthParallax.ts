@@ -56,10 +56,16 @@ export function useDepthParallax(plane: 0 | 1 | 2 | 3): MotionValue<string> {
 
     const compute = () => {
       // Drive off raw scrollY for pixel-accurate, resolution-independent depth.
-      const y =
+      // HARD CAP ±28px: unbounded drift (-scrollY × factor) translated deep
+      // sections' content HUNDREDS of px out of their layout slots — headlines
+      // ended up floating in the previous section ("nothing is aligned / text
+      // missing"). Capped, planes keep a constant, calm 28px separation that
+      // reads as depth without ever breaking the grid.
+      const raw =
         typeof window !== "undefined"
           ? -window.scrollY * (speed - 1.0)
           : 0;
+      const y = Math.max(-28, Math.min(28, raw));
       transform.set(`translate3d(0, ${y.toFixed(2)}px, 0)`);
     };
 

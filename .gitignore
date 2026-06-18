@@ -52,3 +52,15 @@ bunx-*-mcp@latest/
 # Local backups + raw uploads (heavy or private)
 *.bak
 uploads/
+
+# Blender modeling workspace — dev artifacts (~130MB of renders + .blend
+# caches). The web app only ships the exported GLB in public/models/.
+/blender/
+
+# Playwright / QA scratch (screenshots, traces)
+/.playwright-mcp/
+/qa-*.jpeg
+/qa-*.png
+
+# Stray tool lockfiles
+uv-*.lock

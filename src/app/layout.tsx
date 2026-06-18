@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
-import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { Inter, Instrument_Serif, JetBrains_Mono, Caveat } from "next/font/google";
 import "./globals.css";
 import { SmoothScroll } from "@/components/providers/SmoothScroll";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import { Nav } from "@/components/layout/Nav";
-import { ConstructionNotice } from "@/components/layout/ConstructionNotice";
+import { LayoutChrome } from "@/components/layout/LayoutChrome";
 import { IntroSequence } from "@/components/loader/IntroSequence";
 import { CursorFollower } from "@/components/motion/CursorFollower";
-import { AudioToggle } from "@/components/audio/AudioToggle";
-import { SplineMascot } from "@/components/scene/SplineMascot";
-import { Footer } from "@/components/layout/Footer";
-import { VoidCube } from "@/components/scene/VoidCube";
+import { DotField } from "@/components/scene/DotField";
 import { ScrollProvider } from "@/components/scroll/ScrollProvider";
 import { ScrollRail } from "@/components/scroll/ScrollRail";
 import { GlassCounter } from "@/components/scroll/GlassCounter";
@@ -35,6 +31,14 @@ const instrument = Instrument_Serif({
 const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains",
+  display: "swap",
+});
+// Signature script for the intro loader's hand-drawn words ("AI-native." /
+// "by design."). Used only there — the body still resolves to font-display.
+const caveat = Caveat({
+  subsets: ["latin"],
+  variable: "--font-caveat",
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -64,7 +68,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${instrument.variable} ${jetbrains.variable} h-full antialiased`}
+      className={`${inter.variable} ${instrument.variable} ${jetbrains.variable} ${caveat.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         <a href="#main" className="skip-link">Skip to main content</a>
@@ -72,17 +76,12 @@ export default function RootLayout({
           <IntroSequence />
           <CursorFollower />
           <ScrollProvider>
-            {/* Global spine — the living void + cobalt cube, behind everything */}
-            <VoidCube />
+            {/* Site-wide floating-dust background (real footage): white dots on
+                black in dark theme, black dots on white in light theme. The
+                cube hero floats over this field. */}
+            <DotField />
             <SmoothScroll>
-              <div className="hairline-grid" aria-hidden />
-              <div className="grain" aria-hidden />
-              <ConstructionNotice />
-              <Nav />
-              <div id="main" tabIndex={-1}>{children}</div>
-              <Footer />
-              <SplineMascot />
-              <AudioToggle />
+              <LayoutChrome>{children}</LayoutChrome>
             </SmoothScroll>
             <ScrollRail />
             <GlassCounter />

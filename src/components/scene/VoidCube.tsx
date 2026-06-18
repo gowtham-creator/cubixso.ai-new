@@ -3,7 +3,8 @@
 // VoidCube — the GLOBAL SPINE canvas. ONE fixed, full-viewport R3F <Canvas>
 // (position:fixed; inset:0; pointer-events:none; behind all content) meant to
 // mount ONCE in the layout behind all 12 sections. It renders:
-//   • the black void,
+//   • a TRANSPARENT void — the Aurora layer mounted just below paints the
+//     black base + breathing gradient field behind this canvas,
 //   • the persistent cobalt EDGE-FRAME cube — the frozen Blender logo glb
 //     (/models/cubixso-cube.glb), REUSED exactly like CubixsoCube.tsx
 //     (useGLTF(url,"/draco/") + clone-with-cloned-materials),
@@ -42,6 +43,22 @@ const GLOW = "#4A7BFF";
 
 const PARTICLE_COUNT = 2400;
 
+// ── Loader → hero IGNITION handoff ────────────────────────────────────────────
+// Until the intro curtain lifts ("cubixso:revealed") the hero cube idles dim
+// (30% emissive) and slightly small (×0.6). On reveal it IGNITES: spring-
+// overshoot scale to 1, emissive ramps to full over ~1.2s, and the particle
+// field gets a one-shot outward velocity impulse before settling back into the
+// ambient drift. Already-seen fast path (sessionStorage cubixso.seen — event
+// fired before mount / reload mid-session) snaps straight to the final state.
+const IGNITE_SECONDS = 1.2;
+const BURST_DONE_S = 4; // impulse envelope fully decayed by here
+
+interface IgniteState {
+  revealed: boolean;
+  instant: boolean; // fast path: no animation, jump to final state
+  t: number; // 0..1 ignition progress (SpineCube is the only writer)
+}
+
 const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
 const clamp01 = (x: number) => clamp(x, 0, 1);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -51,16 +68,67 @@ const ramp = (p: number, a: number, b: number) => {
   return t * t * (3 - 2 * t); // smoothstep
 };
 
-// ── Shared, rAF-throttled normalized scroll progress (in viewports). ──────────
-// p ≈ section index; matches the design's single-scrollbar spine.
+// ── Shared, rAF-throttled normalized scroll progress — ANCHOR-MAPPED. ─────────
+// p is a virtual "phase index": exactly 1.0 as #manifesto arrives, 2.0 at
+// #services, 3.0 at #edge (WhyUs), 4.0 at #reach (Global → the globe bloom),
+// 5.0 at #legacy (FinalCTA → reform). Piecewise-linear between anchors.
+//
+// Why not scrollY/innerHeight: pin-spacers (KineticStack/Global ScrollTriggers)
+// and lazy-below-fold content stretch the page, so fixed viewport-multiples
+// drift away from the sections they were tuned against. Measuring the REAL
+// anchors keeps the cube's story locked to the narrative no matter how tall
+// the page becomes.
+const PHASE_ANCHOR_IDS = ["manifesto", "services", "edge", "reach", "legacy"];
+
 function useScrollProgress() {
   const ref = useRef(0);
   useEffect(() => {
     if (typeof window === "undefined") return;
     let raf = 0;
     let ticking = false;
+    // anchors[i] = scrollY at which phase index becomes i+1
+    const anchors: number[] = [];
+
+    const measure = () => {
+      const vh = Math.max(1, window.innerHeight);
+      PHASE_ANCHOR_IDS.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (!el) {
+          // missing anchor (non-home route) — fall back to viewport multiples
+          if (anchors[i] === undefined) anchors[i] = (i + 1) * vh;
+          return;
+        }
+        // While a section is actively PINNED ScrollTrigger holds it
+        // position:fixed — its rect is meaningless; keep the cached value.
+        if (getComputedStyle(el).position === "fixed") return;
+        // "Arrival" = section top reaching 55% up the viewport (the cube
+        // transition slightly leads the section, mass-in-zero-g style).
+        const top = el.getBoundingClientRect().top + window.scrollY;
+        anchors[i] = Math.max(1, top - vh * 0.55);
+      });
+    };
+
     const update = () => {
-      ref.current = window.scrollY / Math.max(1, window.innerHeight);
+      const y = window.scrollY;
+      const vh = Math.max(1, window.innerHeight);
+      let p: number;
+      if (anchors.length === 0 || anchors[0] === undefined) {
+        p = y / vh; // pre-measure fallback
+      } else if (y <= anchors[0]) {
+        p = y / Math.max(1, anchors[0]); // 0 → 1 across the hero approach
+      } else {
+        const last = anchors.length - 1;
+        let i = 0;
+        while (i < last && y > anchors[i + 1]) i++;
+        if (i >= last) {
+          // beyond the final anchor: advance gently in viewport units
+          p = anchors.length + (y - anchors[last]) / vh;
+        } else {
+          const span = Math.max(1, anchors[i + 1] - anchors[i]);
+          p = i + 1 + (y - anchors[i]) / span;
+        }
+      }
+      ref.current = p;
       ticking = false;
     };
     const onScroll = () => {
@@ -69,12 +137,28 @@ function useScrollProgress() {
         raf = requestAnimationFrame(update);
       }
     };
+    const onResize = () => {
+      measure();
+      update();
+    };
+
+    measure();
     update();
+    // Lazy-below-fold content (map, previews, mascot) grows the page after
+    // load — re-measure anchors whenever the document actually resizes.
+    let roTimer = 0;
+    const ro = new ResizeObserver(() => {
+      window.clearTimeout(roTimer);
+      roTimer = window.setTimeout(onResize, 250);
+    });
+    ro.observe(document.body);
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", update);
+    window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", update);
+      window.removeEventListener("resize", onResize);
+      window.clearTimeout(roTimer);
+      ro.disconnect();
       cancelAnimationFrame(raf);
     };
   }, []);
@@ -87,10 +171,11 @@ const P_REFORM = 5;
 interface SpineProps {
   reduced: boolean;
   scrollRef: React.MutableRefObject<number>;
+  igniteRef: React.MutableRefObject<IgniteState>;
 }
 
 // ── The cobalt edge-frame cube (frozen logo glb, cloned per instance). ────────
-function SpineCube({ reduced, scrollRef }: SpineProps) {
+function SpineCube({ reduced, scrollRef, igniteRef }: SpineProps) {
   const root = useRef<THREE.Group>(null);
   const { scene } = useGLTF(MODEL_URL, "/draco/");
 
@@ -119,6 +204,9 @@ function SpineCube({ reduced, scrollRef }: SpineProps) {
       mat.emissive.copy(glow);
       mat.metalness = 0.2;
       mat.roughness = 0.35;
+      // transparent so the spine cube can FADE IN as the cinematic VideoVoid
+      // film (which carries its own cube through the hero) fades out.
+      mat.transparent = true;
       list.push({ mat, base: mat.emissiveIntensity ?? 1 });
     });
     return list;
@@ -234,16 +322,39 @@ function SpineCube({ reduced, scrollRef }: SpineProps) {
     // Apply free-running spin (rate is itself damped above).
     spin.current += d * spinRate.current;
 
+    // ── IGNITION (loader handoff) — dim/small until revealed, then spring up.
+    const ig = igniteRef.current;
+    let igScale = 1;
+    let igEmit = 1;
+    if (ig.t < 1) {
+      if (ig.revealed) {
+        ig.t = ig.instant ? 1 : Math.min(1, ig.t + d / IGNITE_SECONDS);
+      }
+      const it = ig.revealed ? ig.t : 0;
+      // analytic underdamped spring 0→1: overshoots ~16% then settles by t=1
+      const f = it >= 1 ? 1 : 1 - Math.exp(-6 * it) * Math.cos(10.5 * it);
+      igScale = lerp(0.6, 1, f); // small → overshoot → 1
+      igEmit = lerp(0.3, 1, f); // dim → flash past full → full
+    }
+
     o.position.set(px.current, py.current, pz.current);
-    o.scale.setScalar(sx.current);
+    o.scale.setScalar(sx.current * igScale);
     o.rotation.set(tilt.current, spin.current, 0);
 
     // Gentle perpetual hover bob (antigravity float) — relaxes near reform/home.
     o.position.y += Math.sin(state.clock.elapsedTime * 1.2) * 0.08;
 
     // Drive emissive across all bar materials.
-    const e = emit.current * shimmer;
-    for (const m of mats) m.mat.emissiveIntensity = m.base * e;
+    const e = emit.current * shimmer * igEmit;
+    // FILM → REALTIME HANDOFF: the cinematic VideoVoid carries its own cube
+    // through the hero; the live spine cube fades in across the same window
+    // (p 0 → ~0.9) so there is exactly ONE cube on screen at any moment.
+    const fade = clamp01(p * 1.15);
+    for (const m of mats) {
+      m.mat.emissiveIntensity = m.base * e;
+      m.mat.opacity = fade;
+    }
+    o.visible = fade > 0.01;
   });
 
   return (
@@ -253,43 +364,72 @@ function SpineCube({ reduced, scrollRef }: SpineProps) {
   );
 }
 
-// ── Cobalt INSTANCED particle field — one InstancedMesh, GPU-cheap. ───────────
-function ParticleField({ reduced, scrollRef }: SpineProps) {
-  const mesh = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+// ── CINEMATIC BOKEH DUST — sparse, soft, filmic (v3). ─────────────────────────
+// Two THREE.Points layers (fine dust + a few large bokeh orbs) drawn with a
+// radial-gradient sprite so every point is a soft glow, not a hard dot. The
+// whole field rides ONE group transform per layer (rotation/scale/bob) — no
+// per-particle CPU work at all. Matches the Blender film's luminous-dust
+// mood so the hero handoff feels continuous.
+const DUST_COUNT = 220;
+const ORB_COUNT = 36;
 
-  // Base positions on a soft fibonacci shell (so the field reads as a cloud that
-  // can tighten to the cube or spread to a starfield).
-  const base = useMemo(() => {
-    const arr = new Float32Array(PARTICLE_COUNT * 3);
-    const golden = Math.PI * (3 - Math.sqrt(5));
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      const y = 1 - (i / (PARTICLE_COUNT - 1)) * 2;
-      const r = Math.sqrt(Math.max(0, 1 - y * y));
-      const theta = golden * i;
-      const rr = 3.4 * (0.55 + Math.random() * 0.9); // radial jitter = depth
-      arr[i * 3] = Math.cos(theta) * r * rr;
-      arr[i * 3 + 1] = y * rr;
-      arr[i * 3 + 2] = Math.sin(theta) * r * rr;
-    }
-    return arr;
+function makeGlowTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d")!;
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, "rgba(255,255,255,1)");
+  grad.addColorStop(0.35, "rgba(214,228,255,0.55)");
+  grad.addColorStop(1, "rgba(160,190,255,0)");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// Fibonacci shell positions — same cloud the cube story expects.
+function shellPositions(count: number, radius: number) {
+  const arr = new Float32Array(count * 3);
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < count; i++) {
+    const y = 1 - (i / (count - 1)) * 2;
+    const r = Math.sqrt(Math.max(0, 1 - y * y));
+    const theta = golden * i;
+    const rr = radius * (0.55 + Math.random() * 0.9);
+    arr[i * 3] = Math.cos(theta) * r * rr;
+    arr[i * 3 + 1] = y * rr;
+    arr[i * 3 + 2] = Math.sin(theta) * r * rr;
+  }
+  return arr;
+}
+
+function ParticleField({ reduced, scrollRef, igniteRef }: SpineProps) {
+  const group = useRef<THREE.Group>(null);
+
+  const glowTex = useMemo(() => makeGlowTexture(), []);
+  const dustGeo = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute(
+      "position",
+      new THREE.BufferAttribute(shellPositions(DUST_COUNT, 3.6), 3),
+    );
+    return g;
+  }, []);
+  const orbGeo = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute(
+      "position",
+      new THREE.BufferAttribute(shellPositions(ORB_COUNT, 4.4), 3),
+    );
+    return g;
   }, []);
 
   const spin = useRef(0);
-
-  // Static placement for reduced-motion (write once).
-  useEffect(() => {
-    if (!reduced || !mesh.current) return;
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      dummy.position.set(base[i * 3], base[i * 3 + 1], base[i * 3 + 2]);
-      dummy.updateMatrix();
-      mesh.current.setMatrixAt(i, dummy.matrix);
-    }
-    mesh.current.instanceMatrix.needsUpdate = true;
-  }, [reduced, base, dummy]);
+  const burstT = useRef(-1); // -1 = ignition burst not started yet
 
   useFrame((state, delta) => {
-    if (reduced || !mesh.current) return;
+    if (reduced || !group.current) return;
     const p = scrollRef.current;
     const d = Math.min(1, delta);
 
@@ -305,56 +445,68 @@ function ParticleField({ reduced, scrollRef }: SpineProps) {
       lerp(1, 0.72, rDrift) * // tighten toward the cube during disassembly
       lerp(1, 0.55, rNode) * // very tight around the node-cluster
       lerp(1, 2.6, rGlobe); // bloom out to a starfield around the globe
-    const scale = lerp(fieldScale, 1, rReform);
+
+    // ── IGNITION BURST (loader handoff) — one-shot outward velocity impulse on
+    // reveal, then settle back into the ambient drift. Fast path skips it.
+    const ig = igniteRef.current;
+    if (ig.revealed && burstT.current < 0) {
+      burstT.current = ig.instant ? BURST_DONE_S : 0;
+    }
+    let burst = 0;
+    if (burstT.current >= 0 && burstT.current < BURST_DONE_S) {
+      burstT.current += d;
+      const bt = burstT.current / 0.45;
+      burst = bt * Math.exp(1 - bt); // impulse response: peaks 1 at bt=1, decays
+    }
+
+    const scale = lerp(fieldScale, 1, rReform) * (1 + 0.75 * burst);
 
     const t = state.clock.elapsedTime;
-    const c = Math.cos(spin.current);
-    const s = Math.sin(spin.current);
-
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      const bx = base[i * 3];
-      const by = base[i * 3 + 1];
-      const bz = base[i * 3 + 2];
-      // slow Y rotation of the whole field
-      let x = (bx * c - bz * s) * scale;
-      const yy = by * scale;
-      let z = (bx * s + bz * c) * scale;
-      // tiny per-particle drift so the cloud breathes (cheap, deterministic)
-      x += Math.sin(t * 0.5 + i) * 0.02;
-      z += Math.cos(t * 0.5 + i * 1.3) * 0.02;
-      dummy.position.set(x, yy, z);
-      dummy.updateMatrix();
-      mesh.current.setMatrixAt(i, dummy.matrix);
-    }
-    mesh.current.instanceMatrix.needsUpdate = true;
+    // ONE transform for the whole field — slow turn, story-scale, gentle bob.
+    group.current.rotation.y = spin.current;
+    group.current.scale.setScalar(scale);
+    group.current.position.y = Math.sin(t * 0.22) * 0.18;
   });
 
   return (
-    <instancedMesh
-      ref={mesh}
-      args={[undefined, undefined, PARTICLE_COUNT]}
-      frustumCulled={false}
-    >
-      <sphereGeometry args={[0.012, 6, 6]} />
-      <meshBasicMaterial
-        color={GLOW}
-        transparent
-        opacity={0.85}
-        toneMapped={false}
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </instancedMesh>
+    <group ref={group}>
+      {/* fine dust — small soft glows */}
+      <points geometry={dustGeo} frustumCulled={false}>
+        <pointsMaterial
+          map={glowTex}
+          color={GLOW}
+          size={0.085}
+          sizeAttenuation
+          transparent
+          opacity={0.5}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+      {/* large bokeh orbs — the filmic depth layer */}
+      <points geometry={orbGeo} frustumCulled={false}>
+        <pointsMaterial
+          map={glowTex}
+          color="#9db9ff"
+          size={0.42}
+          sizeAttenuation
+          transparent
+          opacity={0.16}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+    </group>
   );
 }
 
 // ── The spine scene (cube + particles + lightformer environment). ─────────────
-function Scene({ reduced, scrollRef }: SpineProps) {
+function Scene({ reduced, scrollRef, igniteRef }: SpineProps) {
   return (
     <>
       <ambientLight intensity={0.35} />
-      <SpineCube reduced={reduced} scrollRef={scrollRef} />
-      <ParticleField reduced={reduced} scrollRef={scrollRef} />
+      <SpineCube reduced={reduced} scrollRef={scrollRef} igniteRef={igniteRef} />
+      <ParticleField reduced={reduced} scrollRef={scrollRef} igniteRef={igniteRef} />
       {/* Lightformer env — NO HDRI CDN. Cobalt-keyed studio rims so the glass
           edge-frame reads as a cobalt intelligence in the void. */}
       <Environment resolution={128} frames={1} environmentIntensity={0.7}>
@@ -370,6 +522,33 @@ function Scene({ reduced, scrollRef }: SpineProps) {
 export function VoidCube() {
   const scrollRef = useScrollProgress();
   const [reduced, setReduced] = useState(false);
+
+  // Loader → hero handoff: listen for the intro curtain lift. If the intro
+  // already ran this session (event fired before mount / mid-session reload),
+  // skip the ignition animation and render the final ignited state.
+  const igniteRef = useRef<IgniteState>({ revealed: false, instant: false, t: 0 });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ig = igniteRef.current;
+    if (ig.revealed) return; // StrictMode re-run after reveal — keep state
+    let seen = false;
+    try {
+      seen = sessionStorage.getItem("cubixso.seen") === "1";
+    } catch {
+      /* private mode — treat as unseen */
+    }
+    if (seen) {
+      ig.revealed = true;
+      ig.instant = true;
+      ig.t = 1;
+      return;
+    }
+    const onReveal = () => {
+      ig.revealed = true;
+    };
+    window.addEventListener("cubixso:revealed", onReveal);
+    return () => window.removeEventListener("cubixso:revealed", onReveal);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -401,19 +580,19 @@ export function VoidCube() {
         inset: 0,
         zIndex: 0,
         pointerEvents: "none",
-        background: "#000000",
+        // No background — the canvas is transparent so the Aurora gradient
+        // void (mounted just below in the layout) shows through behind it.
       }}
     >
       <Canvas
         camera={{ position: [0, 0, 6], fov: 45, near: 0.1, far: 100 }}
         dpr={[1, 2]}
-        gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
+        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         frameloop={frameloop}
         style={{ position: "absolute", inset: 0 }}
       >
-        <color attach="background" args={["#000000"]} />
         <Suspense fallback={null}>
-          <Scene reduced={reduced} scrollRef={scrollRef} />
+          <Scene reduced={reduced} scrollRef={scrollRef} igniteRef={igniteRef} />
         </Suspense>
       </Canvas>
     </div>
