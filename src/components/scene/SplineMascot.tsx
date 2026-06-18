@@ -17,12 +17,15 @@ import { useGLTF } from "@react-three/drei";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 import * as THREE from "three";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { cdn } from "@/lib/cdn";
+import { useDeviceTier, hasWebGL } from "@/lib/perf";
 
-const MODEL_URL = "/models/cubixso-cube.glb";
+const MODEL_URL = cdn("/models/cubixso-cube.glb");
+const DRACO_URL = cdn("/draco/");
 
 function LogoCube({ hover, dark }: { hover: boolean; dark: boolean }) {
   const root = useRef<THREE.Group>(null);
-  const { scene } = useGLTF(MODEL_URL, "/draco/");
+  const { scene } = useGLTF(MODEL_URL, DRACO_URL);
 
   // Clone scene + materials (independent of the cache — never mutate the glb).
   const [model] = useState(() => {
@@ -106,8 +109,13 @@ function LogoCube({ hover, dark }: { hover: boolean; dark: boolean }) {
 
 export function SplineMascot() {
   const { resolved } = useTheme();
+  const tier = useDeviceTier();
   const [armed, setArmed] = useState(false);
   const [hover, setHover] = useState(false);
+  // Probe WebGL once on the client. Default true so SSR + first paint agree.
+  const [webgl, setWebgl] = useState(true);
+  useEffect(() => setWebgl(hasWebGL()), []);
+  const lowTier = tier === "low";
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const sx = useSpring(x, { stiffness: 80, damping: 14, mass: 1 });
@@ -140,6 +148,9 @@ export function SplineMascot() {
     return () => window.removeEventListener("pointermove", onMove);
   }, [armed, x, y]);
 
+  // Low-end / no-WebGL devices skip this decorative footer Canvas entirely.
+  if (lowTier || !webgl) return null;
+
   if (!armed) return null;
 
   return (
@@ -152,7 +163,7 @@ export function SplineMascot() {
       aria-hidden
     >
       <Canvas
-        dpr={[1, 2]}
+        dpr={lowTier ? 1 : [1, 2]}
         gl={{ alpha: true, antialias: true }}
         camera={{ position: [0, 0, 4.4], fov: 38 }}
         style={{ background: "transparent" }}
@@ -165,4 +176,4 @@ export function SplineMascot() {
   );
 }
 
-useGLTF.preload(MODEL_URL, "/draco/");
+useGLTF.preload(MODEL_URL, DRACO_URL);

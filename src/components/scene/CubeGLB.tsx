@@ -19,8 +19,9 @@ import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { useScrollProgress } from "./Cube";
+import { cdn } from "@/lib/cdn";
 
-const MODEL_URL = "/models/cubixso-cube.glb";
+const MODEL_URL = cdn("/models/cubixso-cube.glb");
 
 interface CubeGLBProps {
   themeIsDark?: boolean;

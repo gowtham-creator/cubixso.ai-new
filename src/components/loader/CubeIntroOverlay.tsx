@@ -20,8 +20,10 @@ import { useGLTF, useAnimations, Environment, Lightformer } from "@react-three/d
 import { AnimatePresence, motion } from "framer-motion";
 import * as THREE from "three";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { cdn } from "@/lib/cdn";
 
-const MODEL_URL = "/models/cubixso-cube.glb";
+const MODEL_URL = cdn("/models/cubixso-cube.glb");
+const DRACO_URL = cdn("/draco/");
 
 // ── Timing (tunable) ─────────────────────────────────────────────────────────
 const START_DELAY = 3800;   // ms — overlay appears as the preloader hands off
@@ -51,7 +53,7 @@ interface BarState {
 
 function CubeModel() {
   const root = useRef<THREE.Group>(null);
-  const { scene, animations } = useGLTF(MODEL_URL, "/draco/");
+  const { scene, animations } = useGLTF(MODEL_URL, DRACO_URL);
   const { actions } = useAnimations(animations, root);
   const t0 = useRef<number | null>(null);
   const fadeDone = useRef(false);
@@ -176,4 +178,4 @@ export function CubeIntroOverlay() {
   );
 }
 
-useGLTF.preload(MODEL_URL, "/draco/");
+useGLTF.preload(MODEL_URL, DRACO_URL);

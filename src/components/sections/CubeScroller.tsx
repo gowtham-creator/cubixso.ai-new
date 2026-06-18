@@ -15,8 +15,11 @@ import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { useScroll, useMotionValueEvent } from "framer-motion";
 import * as THREE from "three";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { cdn } from "@/lib/cdn";
+import { useDeviceTier, hasWebGL } from "@/lib/perf";
 
-const MODEL = "/models/cubixso-cube.glb";
+const MODEL = cdn("/models/cubixso-cube.glb");
+const DRACO = cdn("/draco/");
 const FRAMES = 94;
 
 function ScrubCube({
@@ -28,7 +31,7 @@ function ScrubCube({
   dark: boolean;
   active: boolean;
 }) {
-  const { scene } = useGLTF(MODEL, "/draco/");
+  const { scene } = useGLTF(MODEL, DRACO);
   const root = useRef<THREE.Group>(null);
 
   // Clone + recolor: dark glowing body, theme-tinted emissive edges (bloom turns
@@ -71,6 +74,16 @@ export function CubeScroller() {
   const [frame, setFrame] = useState(1);
   const [active, setActive] = useState(true);
 
+  // Device-adaptive quality. Both default to high / WebGL-present on the server
+  // and first client paint (see @/lib/perf), so desktop renders pixel-identical
+  // and there is no hydration mismatch — degradation kicks in only after mount.
+  const tier = useDeviceTier();
+  const [webgl, setWebgl] = useState(true);
+  useEffect(() => setWebgl(hasWebGL()), []);
+
+  // High tier keeps the approved adaptive DPR; low tier clamps to 1.
+  const dpr: 1 | [number, number] = tier === "low" ? 1 : [1, 2];
+
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
   useMotionValueEvent(scrollYProgress, "change", (v) => {
     progressRef.current = v;
@@ -93,12 +106,13 @@ export function CubeScroller() {
           [ DIMENSIONAL ]
         </div>
 
+        {webgl && (
         <div className="pointer-events-none absolute inset-0">
           <Canvas
             orthographic
             camera={{ position: [3.4, 3.4, 3.4], zoom: 105, near: 0.1, far: 100 }}
             gl={{ antialias: true, alpha: true }}
-            dpr={[1, 2]}
+            dpr={dpr}
             frameloop={active ? "always" : "never"}
             onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
           >
@@ -117,6 +131,7 @@ export function CubeScroller() {
             </EffectComposer>
           </Canvas>
         </div>
+        )}
 
         {/* copy + live frame counter — the 94-frame scrub, made literal */}
         <div className="pointer-events-none absolute bottom-[clamp(48px,9vh,110px)] left-1/2 z-10 -translate-x-1/2 text-center">
@@ -132,4 +147,4 @@ export function CubeScroller() {
   );
 }
 
-useGLTF.preload(MODEL, "/draco/");
+useGLTF.preload(MODEL, DRACO);

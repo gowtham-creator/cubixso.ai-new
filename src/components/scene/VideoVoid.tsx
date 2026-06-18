@@ -12,6 +12,7 @@
 // so it costs nothing past the hero.
 
 import { useEffect, useRef, useState } from "react";
+import { cdn } from "@/lib/cdn";
 
 export function VideoVoid() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -82,7 +83,7 @@ export function VideoVoid() {
       {reduced ? (
         // eslint-disable-next-line @next/next/no-img-element -- decorative full-bleed backdrop
         <img
-          src="/void-poster.jpg"
+          src={cdn("/void-poster.jpg")}
           alt=""
           className="h-full w-full object-cover"
         />
@@ -94,11 +95,11 @@ export function VideoVoid() {
           loop
           playsInline
           preload="auto"
-          poster="/void-poster.jpg"
+          poster={cdn("/void-poster.jpg")}
           className="h-full w-full object-cover"
         >
-          <source src="/void-loop.webm" type="video/webm" />
-          <source src="/void-loop.mp4" type="video/mp4" />
+          <source src={cdn("/void-loop.webm")} type="video/webm" />
+          <source src={cdn("/void-loop.mp4")} type="video/mp4" />
         </video>
       )}
       {/* gentle darkening veil so hero type always clears AAA contrast */}

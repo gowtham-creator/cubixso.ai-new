@@ -35,8 +35,10 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Lightformer, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { cdn } from "@/lib/cdn";
 
-const MODEL_URL = "/models/cubixso-cube.glb";
+const MODEL_URL = cdn("/models/cubixso-cube.glb");
+const DRACO_URL = cdn("/draco/");
 
 const COBALT = "#1B4FFF";
 const GLOW = "#4A7BFF";
@@ -177,7 +179,7 @@ interface SpineProps {
 // ── The cobalt edge-frame cube (frozen logo glb, cloned per instance). ────────
 function SpineCube({ reduced, scrollRef, igniteRef }: SpineProps) {
   const root = useRef<THREE.Group>(null);
-  const { scene } = useGLTF(MODEL_URL, "/draco/");
+  const { scene } = useGLTF(MODEL_URL, DRACO_URL);
 
   // Clone scene + materials so this spine instance is independent of the cache
   // (the loader/hero also clone — no shared-cache fights).
@@ -599,6 +601,6 @@ export function VoidCube() {
   );
 }
 
-useGLTF.preload(MODEL_URL, "/draco/");
+useGLTF.preload(MODEL_URL, DRACO_URL);
 
 export default VoidCube;

@@ -10,11 +10,13 @@ import { Suspense, useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useGLTF, Environment, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
+import { cdn } from "@/lib/cdn";
 
-const MODEL_URL = "/models/cubixso-cube.glb";
+const MODEL_URL = cdn("/models/cubixso-cube.glb");
+const DRACO_URL = cdn("/draco/");
 
 function LogoMesh() {
-  const { scene } = useGLTF(MODEL_URL, "/draco/");
+  const { scene } = useGLTF(MODEL_URL, DRACO_URL);
   const root = useRef<THREE.Group>(null);
 
   const model = useMemo(() => {
@@ -71,4 +73,4 @@ export function GlassLogo() {
   );
 }
 
-useGLTF.preload(MODEL_URL, "/draco/");
+useGLTF.preload(MODEL_URL, DRACO_URL);

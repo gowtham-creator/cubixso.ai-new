@@ -24,6 +24,7 @@ import { EffectComposer, Bloom, ChromaticAberration } from "@react-three/postpro
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { useDeviceTier, hasWebGL } from "@/lib/perf";
 
 const ACCENT = "#1B4FFF";       // electric cobalt — the Y
 const ACCENT_GLOW = "#4A7BFF";  // lighter cobalt — emissive / glow
@@ -139,6 +140,38 @@ function CubeRig({ dark }: { dark: boolean }) {
   );
 }
 
+// Static fallback glyph — a tasteful CSS cube wireframe with the cobalt Y,
+// shown when WebGL is unavailable so the hero never renders a blank/broken
+// canvas. Pure CSS/SVG, theme-adaptive, no GPU required.
+function StaticCubeFallback({ dark }: { dark: boolean }) {
+  const edge = dark ? "#e6f0ff" : "#8aa0d8";
+  return (
+    <svg
+      viewBox="0 0 200 200"
+      className="h-full w-full"
+      style={{ filter: dark ? "drop-shadow(0 0 22px rgba(74,123,255,0.5))" : "none" }}
+    >
+      {/* cube cage — diamond silhouette with a vertical front edge, matching
+          the 3D pose (cage rotated 45°, look-down camera) */}
+      <g
+        fill="none"
+        stroke={edge}
+        strokeWidth={dark ? 2 : 1.1}
+        strokeLinejoin="round"
+        opacity={dark ? 0.95 : 0.8}
+      >
+        <polygon points="100,18 168,58 168,142 100,182 32,142 32,58" />
+        <path d="M100,18 L100,100 M100,100 L168,142 M100,100 L32,142" />
+      </g>
+      {/* solid cobalt Y */}
+      <path
+        d="M100,72 L84,52 L92,52 L100,64 L108,52 L116,52 Z M96,72 L104,72 L104,108 L96,108 Z"
+        fill={ACCENT}
+      />
+    </svg>
+  );
+}
+
 export function HeroGlassCube({
   className,
   boxClassName,
@@ -147,6 +180,17 @@ export function HeroGlassCube({
   const [active, setActive] = useState(true);
   const { resolved } = useTheme();
   const dark = resolved === "dark";
+
+  // Device-adaptive quality. Both default to high / WebGL-present on the server
+  // and first client paint (see @/lib/perf), so desktop renders pixel-identical
+  // and there's no hydration mismatch; the client re-detects after mount.
+  const tier = useDeviceTier();
+  const [webgl, setWebgl] = useState(true);
+  useEffect(() => setWebgl(hasWebGL()), []);
+  const low = tier === "low";
+
+  // High tier keeps the approved adaptive DPR; low tier clamps to 1.
+  const dpr: 1 | [number, number] = low ? 1 : [1, 2];
 
   useEffect(() => {
     const el = ref.current;
@@ -166,10 +210,13 @@ export function HeroGlassCube({
       className={className ?? "pointer-events-none absolute inset-0 z-0 flex items-center justify-center"}
     >
       <div className={boxClassName ?? "aspect-square w-[min(80vw,680px)]"}>
+        {!webgl ? (
+          <StaticCubeFallback dark={dark} />
+        ) : (
         <Canvas
           camera={{ position: [0, 2.4, 5.8], fov: 28, near: 0.1, far: 100 }}
           gl={{ antialias: true, alpha: true }}
-          dpr={[1, 2]}
+          dpr={dpr}
           frameloop={active ? "always" : "never"}
           onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
           style={{ position: "absolute", inset: 0 }}
@@ -186,20 +233,34 @@ export function HeroGlassCube({
               <Lightformer intensity={dark ? 0.8 : 1.3} color="#dbe6ff" position={[4, -1, -3]} scale={[6, 3, 1]} />
             </Environment>
           </Suspense>
-          <EffectComposer>
-            <Bloom
-              intensity={dark ? 1.5 : 0.28}
-              luminanceThreshold={dark ? 0.1 : 0.62}
-              luminanceSmoothing={0.9}
-              mipmapBlur
-            />
-            {/* thin red/cyan edge fringe — the reference's glassy chromatic edge */}
-            <ChromaticAberration
-              blendFunction={BlendFunction.NORMAL}
-              offset={[0.0011, 0.0011]}
-            />
-          </EffectComposer>
+          {/* High tier keeps the approved composer untouched. Low tier skips the
+              heavy ChromaticAberration pass and softens Bloom to ease the GPU. */}
+          {low ? (
+            <EffectComposer>
+              <Bloom
+                intensity={dark ? 0.9 : 0.2}
+                luminanceThreshold={dark ? 0.1 : 0.62}
+                luminanceSmoothing={0.9}
+                mipmapBlur
+              />
+            </EffectComposer>
+          ) : (
+            <EffectComposer>
+              <Bloom
+                intensity={dark ? 1.5 : 0.28}
+                luminanceThreshold={dark ? 0.1 : 0.62}
+                luminanceSmoothing={0.9}
+                mipmapBlur
+              />
+              {/* thin red/cyan edge fringe — the reference's glassy chromatic edge */}
+              <ChromaticAberration
+                blendFunction={BlendFunction.NORMAL}
+                offset={[0.0011, 0.0011]}
+              />
+            </EffectComposer>
+          )}
         </Canvas>
+        )}
       </div>
     </div>
   );

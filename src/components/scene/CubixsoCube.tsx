@@ -18,8 +18,10 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
+import { cdn } from "@/lib/cdn";
 
-const MODEL_URL = "/models/cubixso-cube.glb";
+const MODEL_URL = cdn("/models/cubixso-cube.glb");
+const DRACO_URL = cdn("/draco/");
 
 // per-bar opacity + emission fade windows (seconds) for the intro assembly
 const FADE: Record<string, [number, number]> = {
@@ -89,7 +91,7 @@ interface Props {
 
 export function CubixsoCube({ mode, reduced = false, active = true, themeRef, accent }: Props) {
   const root = useRef<THREE.Group>(null);
-  const { scene, animations } = useGLTF(MODEL_URL, "/draco/");
+  const { scene, animations } = useGLTF(MODEL_URL, DRACO_URL);
   const scrollVp = useScrollViewports();
   const lastDark = useRef<boolean | null>(null);
 
@@ -235,4 +237,4 @@ export function CubixsoCube({ mode, reduced = false, active = true, themeRef, ac
   );
 }
 
-useGLTF.preload(MODEL_URL, "/draco/");
+useGLTF.preload(MODEL_URL, DRACO_URL);

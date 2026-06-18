@@ -17,6 +17,7 @@ import * as THREE from "three";
 import { type ThemeRef } from "./Cube";
 import { CubixsoCube } from "./CubixsoCube";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { cdn } from "@/lib/cdn";
 
 const FIXED_STYLE: React.CSSProperties = {
   position: "fixed",
@@ -120,7 +121,7 @@ export function CubeScene() {
             opacity: 0.9,
           }}
         >
-          <source src={isDark ? "/video/cube-loop-dark.mp4" : "/video/cube-loop-light.mp4"} type="video/mp4" />
+          <source src={cdn(isDark ? "/video/cube-loop-dark.mp4" : "/video/cube-loop-light.mp4")} type="video/mp4" />
         </video>
       </div>
     );

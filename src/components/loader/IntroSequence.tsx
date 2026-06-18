@@ -14,9 +14,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import * as THREE from "three";
 import { whoosh } from "@/lib/feedback";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { cdn } from "@/lib/cdn";
 
 const SIG = [0.16, 1, 0.3, 1] as const;
-const MODEL = "/models/cubixso-cube.glb";
+const MODEL = cdn("/models/cubixso-cube.glb");
+const DRACO = cdn("/draco/");
 const DURATION = 3600; // a calm partial turn before the lift
 
 // Capability keywords that float in the margins AROUND the cube while it spins.
@@ -29,7 +31,7 @@ const WORDS: { t: string; style: React.CSSProperties }[] = [
 ];
 
 function PreloaderCube({ dark }: { dark: boolean }) {
-  const { scene } = useGLTF(MODEL, "/draco/");
+  const { scene } = useGLTF(MODEL, DRACO);
   const root = useRef<THREE.Group>(null);
 
   // dark theme → glowing white-blue edges (bloom makes the glow).
@@ -184,4 +186,4 @@ export function IntroSequence() {
   );
 }
 
-useGLTF.preload(MODEL, "/draco/");
+useGLTF.preload(MODEL, DRACO);

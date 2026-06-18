@@ -17,6 +17,7 @@
 
 import { useEffect, useRef } from "react";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { detectTier } from "@/lib/perf";
 
 interface Dot {
   x: number; y: number; r: number; a: number;
@@ -36,6 +37,11 @@ export function DotField() {
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Device-tier adaptation: "high" (desktop / server) is unchanged. On "low"
+    // tier (few cores, little RAM, coarse-pointer mobile, reduced-motion) we
+    // thin the field by ~half and skip the per-dot twinkle (the per-frame
+    // Math.sin), which is the most expensive work in the draw loop.
+    const lowTier = detectTier() === "low";
     const ink = dark ? "255,255,255" : "0,0,0";
     const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
@@ -44,7 +50,12 @@ export function DotField() {
 
     const build = () => {
       const mobile = W < 768;
-      const count = Math.max(110, Math.min(640, Math.round((W * H) / 5400) * (mobile ? 0.55 : 1)));
+      // High tier: EXACT original formula (kept verbatim so desktop is pixel-
+      // identical). Low tier: ~50% fewer dots, with a lower floor so very small
+      // constrained screens stay light.
+      const count = lowTier
+        ? Math.max(60, Math.min(320, Math.round(((W * H) / 5400) * (mobile ? 0.55 : 1) * 0.5)))
+        : Math.max(110, Math.min(640, Math.round((W * H) / 5400) * (mobile ? 0.55 : 1)));
       const baseAng = -0.4; // overall drift: gentle up-and-right
       dots = Array.from({ length: count }, () => {
         const t = Math.random();
@@ -83,7 +94,9 @@ export function DotField() {
           if (d.x < -4) d.x = W + 4; else if (d.x > W + 4) d.x = -4;
           if (d.y < -4) d.y = H + 4; else if (d.y > H + 4) d.y = -4;
         }
-        const tw = reduced ? 1 : 0.82 + 0.18 * Math.sin(now * 0.001 * d.tw + d.ph);
+        // Twinkle is the priciest per-frame work (a Math.sin per dot). Skip it
+        // on reduced-motion and on low-tier devices (static alpha).
+        const tw = reduced || lowTier ? 1 : 0.82 + 0.18 * Math.sin(now * 0.001 * d.tw + d.ph);
         ctx.fillStyle = `rgba(${ink},${d.a * tw})`;
         ctx.beginPath();
         ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
