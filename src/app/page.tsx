@@ -22,6 +22,8 @@ export default function Home() {
     <main>
       <Hero />          {/* 01 · FUTURE                  */}
       <Manifesto />     {/* 02 · INTELLIGENCE            */}
+      <BackedBy />      {/* TRUSTED INFRASTRUCTURE — partner logos, surfaced
+                            early (just under the hero/intro) per request      */}
       <InfoBand />      {/* 02b · WHO WE ARE (facts)     */}
       <KineticStack />  {/* 03 · THE IDEA                */}
       <Services />      {/* 04 · CAPABILITIES            */}
@@ -31,7 +33,6 @@ export default function Home() {
       <CubeScroller />  {/* 07b · DIMENSIONAL (scrub)    */}
       <Metrics />       {/* 08 · PROOF                   */}
       <Testimonial />   {/*       (bridge — bold quote)  */}
-      <BackedBy />      {/* 09 · TRUSTED INFRASTRUCTURE  */}
       <Global />        {/* 10 · REACH                   */}
       <FinalCTA />      {/* 11 · LEGACY                  */}
     </main>

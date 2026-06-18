@@ -86,7 +86,7 @@ export function BackedBy() {
             />
 
             <motion.div style={{ transform: headTransform }}>
-              <ChapterLabel num="09" word="TRUSTED INFRASTRUCTURE" />
+              <ChapterLabel num="02b" word="TRUSTED INFRASTRUCTURE" />
 
               {/* Real semantic heading; spread copy preserved verbatim. */}
               <h2 className="font-display text-[length:var(--text-display-lg)] leading-[0.95] tracking-[-0.04em] text-balance text-(--color-fg) max-w-4xl">
