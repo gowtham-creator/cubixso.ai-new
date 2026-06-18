@@ -22,12 +22,16 @@ const DRACO = cdn("/draco/");
 const DURATION = 3600; // a calm partial turn before the lift
 
 // Capability keywords that float in the margins AROUND the cube while it spins.
-const WORDS: { t: string; style: React.CSSProperties }[] = [
-  { t: "Agentic Orchestration", style: { top: "15%", left: "50%", transform: "translateX(-50%)" } },
-  { t: "Agent Teams", style: { top: "37%", right: "7%" } },
-  { t: "Agentic AI", style: { top: "42%", left: "7%" } },
-  { t: "LLMOps", style: { bottom: "28%", left: "17%" } },
-  { t: "RAG · MCP", style: { bottom: "26%", right: "17%" } },
+// `style` is the desktop orbit (words sit to the sides of the cube). On phones
+// and tablet-portrait the cube fills most of the width, so the side words would
+// land ON the cube — `mobile` re-stacks them into the clear zones ABOVE and
+// BELOW the centred cube (and above the wordmark) so nothing overlaps.
+const WORDS: { t: string; style: React.CSSProperties; mobile: React.CSSProperties }[] = [
+  { t: "Agentic Orchestration", style: { top: "15%", left: "50%", transform: "translateX(-50%)" }, mobile: { top: "7%", left: "50%", transform: "translateX(-50%)" } },
+  { t: "Agent Teams", style: { top: "37%", right: "7%" }, mobile: { top: "13.5%", left: "50%", transform: "translateX(-50%)" } },
+  { t: "Agentic AI", style: { top: "42%", left: "7%" }, mobile: { bottom: "30%", left: "50%", transform: "translateX(-50%)" } },
+  { t: "LLMOps", style: { bottom: "28%", left: "17%" }, mobile: { bottom: "23.5%", left: "50%", transform: "translateX(-50%)" } },
+  { t: "RAG · MCP", style: { bottom: "26%", right: "17%" }, mobile: { bottom: "17%", left: "50%", transform: "translateX(-50%)" } },
 ];
 
 function PreloaderCube({ dark }: { dark: boolean }) {
@@ -76,6 +80,7 @@ export function IntroSequence() {
   const [show, setShow] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [reduced, setReduced] = useState(false);
+  const [compact, setCompact] = useState(false); // phone / tablet-portrait
   const done = useRef(false);
 
   const finish = () => {
@@ -91,6 +96,7 @@ export function IntroSequence() {
     if (typeof window === "undefined") return;
     try { if (sessionStorage.getItem("cubixso.seen") === "1") return; } catch { /* private */ }
     setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    setCompact(window.matchMedia("(max-width: 900px)").matches);
     setShow(true);
   }, []);
 
@@ -144,7 +150,7 @@ export function IntroSequence() {
           {!reduced && WORDS.map((w, i) => (
             <motion.div
               key={w.t}
-              style={w.style}
+              style={compact ? w.mobile : w.style}
               className="pointer-events-none absolute whitespace-nowrap"
               initial={{ opacity: 0, y: 18, filter: "blur(9px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}

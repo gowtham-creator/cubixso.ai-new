@@ -11,18 +11,50 @@
 // Aurora Glass v3: a trophy Icon3D (trophy = awards/accreditation) floats
 // top-right of the panel — the section's single meaning-matched 3D accent.
 
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { BACKERS } from "@/lib/data";
 import { ChapterLabel } from "@/components/shared/ChapterLabel";
 import { Icon3D } from "@/components/icons/Icon3D";
-import { LiquidGlass, GlassChip } from "@/components/glass/LiquidGlass";
+import { LiquidGlass } from "@/components/glass/LiquidGlass";
 import { Reveal } from "@/components/scroll/Reveal";
 import { useDepthParallax } from "@/components/scroll/useDepthParallax";
+import { InfiniteSlider } from "@/components/ui/infinite-slider";
+
+// Real partner / programme marks (from public/partners/, sourced from the old
+// site repo). Shown as an animated logo marquee on the homepage. Each mark sits
+// in a near-white chip so the (mostly dark-ink) logos read on BOTH black and
+// white themes.
+const LOGOS = [
+  { src: "/partners/msft.png", name: "Microsoft for Startups" },
+  { src: "/partners/google-devs.png", name: "Google for Startups" },
+  { src: "/partners/aws.png", name: "Amazon Web Services" },
+  { src: "/partners/mongo.png", name: "MongoDB" },
+  { src: "/partners/neo4j.png", name: "Neo4j" },
+  { src: "/partners/perplexity.png", name: "Perplexity" },
+  { src: "/partners/atlassian.png", name: "Atlassian" },
+  { src: "/partners/zoho.jpg", name: "Zoho" },
+  { src: "/partners/digital-ocean.png", name: "DigitalOcean" },
+  { src: "/partners/dpiit.png", name: "DPIIT · Startup India" },
+  { src: "/partners/wadhwani.png", name: "Wadhwani Foundation" },
+];
+
+function LogoChip({ src, name }: { src: string; name: string }) {
+  return (
+    <div className="flex h-[58px] w-[150px] shrink-0 items-center justify-center rounded-2xl border border-black/5 bg-white/90 px-6 [html[data-theme=dark]_&]:border-white/10">
+      <Image
+        src={src}
+        alt={name}
+        width={120}
+        height={36}
+        loading="eager"
+        unoptimized
+        className="h-8 w-auto max-w-full object-contain"
+      />
+    </div>
+  );
+}
 
 export function BackedBy() {
-  // Doubled for the seamless marquee loop (mobile).
-  const loop = [...BACKERS, ...BACKERS];
-
   // Two layered elements drift on their own depth planes for antigravity feel:
   // the headline cluster slightly overtakes scroll (foreground, plane 3); the
   // pill strip rides the content baseline-plus (plane 2).
@@ -74,67 +106,21 @@ export function BackedBy() {
               </p>
             </motion.div>
 
-            {/* ── Desktop: wrapped row of glass chip pills ─────────────────── */}
+            {/* ── Logo marquee — real partner marks, scrolls on ALL screens
+                 (so mobile/tablet show logos too, not just text). ─────────── */}
             <motion.div
               style={{ transform: stripTransform }}
-              className="mt-16 hidden md:flex flex-wrap gap-[clamp(8px,0.9vw,14px)]"
+              className="relative mt-14 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_7%,black_93%,transparent)]"
             >
-              {BACKERS.map((label) => (
-                <GlassChip
-                  key={label}
-                  className="group px-[clamp(12px,1.1vw,18px)] py-[clamp(8px,0.9vh,12px)]"
-                >
-                  <span className="mono text-[11px] text-(--color-fg-2) transition-colors duration-300 group-hover:text-(--color-fg)">
-                    {label}
-                  </span>
-                </GlassChip>
-              ))}
-            </motion.div>
-
-            {/* ── Mobile: gentle marquee of the same glass pills ──────────── */}
-            <div className="mt-12 md:hidden relative overflow-hidden">
-              <div className="flex gap-3 py-1 animate-[backed-marquee_34s_linear_infinite] whitespace-nowrap will-change-transform">
-                {loop.map((label, i) => (
-                  <GlassChip
-                    key={`${label}-${i}`}
-                    className="shrink-0 px-3.5 py-2"
-                    sweep={false}
-                  >
-                    <span className="mono text-[10.5px] text-(--color-fg-2)">
-                      {label}
-                    </span>
-                  </GlassChip>
+              <InfiniteSlider gap={18} duration={42} durationOnHover={120}>
+                {LOGOS.map((logo) => (
+                  <LogoChip key={logo.src} src={logo.src} name={logo.name} />
                 ))}
-              </div>
-              {/* Edge fades to the void, not to an opaque bg. */}
-              <div
-                className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-(--color-bg-soft)/60 to-transparent"
-                aria-hidden
-              />
-              <div
-                className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-(--color-bg-soft)/60 to-transparent"
-                aria-hidden
-              />
-            </div>
+              </InfiniteSlider>
+            </motion.div>
           </LiquidGlass>
         </Reveal>
       </div>
-
-      <style jsx>{`
-        @keyframes backed-marquee {
-          0% {
-            transform: translate3d(0, 0, 0);
-          }
-          100% {
-            transform: translate3d(-50%, 0, 0);
-          }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .animate-\\[backed-marquee_34s_linear_infinite\\] {
-            animation: none !important;
-          }
-        }
-      `}</style>
     </section>
   );
 }
