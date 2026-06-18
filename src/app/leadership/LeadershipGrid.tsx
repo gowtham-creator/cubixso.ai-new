@@ -115,7 +115,7 @@ function MemberCounter() {
         {String(n).padStart(2, "0")}
       </span>
       <span className="text-[clamp(13px,1.1vw,16px)] leading-snug text-(--color-fg-2)">
-        — people building
+        people building
         <br className="hidden sm:block" /> Cubixso.
       </span>
       <span className="sr-only">{total} people are building Cubixso.</span>

@@ -12,7 +12,7 @@ import { ConstructionNotice } from "@/components/layout/ConstructionNotice";
 import { Footer } from "@/components/layout/Footer";
 import { SplineMascot } from "@/components/scene/SplineMascot";
 
-const BARE_ROUTES = new Set(["/newsletter"]);
+const BARE_ROUTES = new Set(["/newsletter", "/coming-soon"]);
 
 export function LayoutChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

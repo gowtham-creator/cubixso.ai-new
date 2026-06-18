@@ -72,7 +72,7 @@ export function NewsletterHero() {
           {...fade(0.25)}
           className="mx-auto mt-8 max-w-prose text-[clamp(15px,1.2vw,18px)] leading-relaxed text-(--color-fg-2)"
         >
-          One concise dispatch on production AI — what we shipped, what we
+          One concise dispatch on production AI: what we shipped, what we
           learned, and where the field is heading. No noise, no spam. Subscribe
           to our newsletter today and never miss what we&apos;re building.
         </motion.p>
@@ -93,7 +93,7 @@ export function NewsletterHero() {
                 <span className="grid place-items-center w-6 h-6 rounded-full bg-(--color-cobalt) text-white">
                   <Ph name="check" weight="bold" size={14} />
                 </span>
-                Thanks — you&apos;re subscribed.
+                Thanks, you&apos;re subscribed.
               </p>
             </LiquidGlass>
           ) : (

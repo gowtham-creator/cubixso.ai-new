@@ -28,7 +28,7 @@ export const STATES: StatePresence[] = [
     cities: ["Hyderabad", "Warangal", "Karimnagar"],
     reach: "Global HQ · 40+ partner teams",
     blurb:
-      "Hyderabad is where Cubixso.ai is built — our engineering, research, and growth teams operate from the city's HITEC corridor. It is the anchor of our partner network across South India, with the deepest concentration of client deployments and on-ground delivery.",
+      "Hyderabad is where Cubixso.ai is built: our engineering, research, and growth teams operate from the city's HITEC corridor. It is the anchor of our partner network across South India, with the deepest concentration of client deployments and on-ground delivery.",
   },
   {
     id: "andhra-pradesh",
@@ -48,7 +48,7 @@ export const STATES: StatePresence[] = [
     cities: ["Mumbai", "Pune", "Nagpur"],
     reach: "18 partners · enterprise accounts",
     blurb:
-      "Maharashtra is our enterprise gateway — Mumbai's brand, BFSI, and media houses pair with Cubixso.ai for performance marketing at scale. Pune's product and SaaS ecosystem rounds out a partner base that handles our most demanding, data-heavy mandates.",
+      "Maharashtra is our enterprise gateway: Mumbai's brand, BFSI, and media houses pair with Cubixso.ai for performance marketing at scale. Pune's product and SaaS ecosystem rounds out a partner base that handles our most demanding, data-heavy mandates.",
   },
   {
     id: "tamil-nadu",
@@ -68,7 +68,7 @@ export const STATES: StatePresence[] = [
     cities: ["Bengaluru", "Mysuru", "Mangaluru"],
     reach: "15 partners · startup + SaaS",
     blurb:
-      "Karnataka is our innovation bench — Bengaluru's startup and SaaS density makes it the fastest-moving market in the network. Partners here run growth experiments and AI campaign pilots that we refine and roll out across the rest of the country.",
+      "Karnataka is our innovation bench: Bengaluru's startup and SaaS density makes it the fastest-moving market in the network. Partners here run growth experiments and AI campaign pilots that we refine and roll out across the rest of the country.",
   },
 ];
 
