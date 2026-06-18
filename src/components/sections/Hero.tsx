@@ -38,16 +38,18 @@ export function Hero() {
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const cubeY = useTransform(scrollYProgress, [0, 1], [0, 70]);
   const headY = useTransform(scrollYProgress, [0, 1], [0, -150]);
-  const headOpacity = useTransform(scrollYProgress, [0, 0.62], [1, 0]);
-  const copyOpacity = useTransform(scrollYProgress, [0, 0.45], [1, 0]);
-  const copyY = useTransform(scrollYProgress, [0, 0.5], [0, 60]);
+  // Fades pushed LATER so the hero content stays present through most of the
+  // (now shorter) scroll stage — kills the long empty tail before Manifesto.
+  const headOpacity = useTransform(scrollYProgress, [0, 0.86], [1, 0]);
+  const copyOpacity = useTransform(scrollYProgress, [0, 0.66], [1, 0]);
+  const copyY = useTransform(scrollYProgress, [0, 0.7], [0, 60]);
   const headStyle = reduced ? undefined : { y: headY, opacity: headOpacity };
   const copyStyle = reduced ? undefined : { opacity: copyOpacity, y: copyY };
 
   return (
     <section
       ref={heroRef}
-      className={`relative ${reduced ? "min-h-svh" : "h-[170vh]"} text-(--color-fg)`}
+      className={`relative ${reduced ? "min-h-svh" : "h-[125vh]"} text-(--color-fg)`}
       style={{ background: "transparent" }}
     >
       <div className={`${reduced ? "relative" : "sticky top-0"} h-svh overflow-hidden`}>
