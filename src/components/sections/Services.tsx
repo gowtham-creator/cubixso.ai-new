@@ -64,6 +64,19 @@ const ACCENT_3D: Partial<Record<number, { name: Icon3DName; size: number }>> = {
   3: { name: "rocket", size: 56 },
 };
 
+// Per-card background "shader" — a distinct-hue radial orb that lives behind the
+// glass so each service block (LLMOps, Agentic AI, …) reads with depth and colour
+// instead of a flat panel, especially in dark mode. Softly visible by default,
+// intensifies on hover. One hue per service, in card order.
+const ORBS = [
+  "from-cyan-400/30 via-blue-500/10",     // LLMOps
+  "from-violet-500/30 via-fuchsia-400/10", // Agentic
+  "from-blue-500/30 via-indigo-400/10",    // Agents & Automation
+  "from-amber-500/30 via-orange-400/10",   // Full-Scale Apps
+  "from-emerald-500/30 via-teal-400/10",   // Orchestration
+  "from-rose-500/30 via-pink-400/10",      // RAG / Knowledge
+];
+
 // Bento spans — break the uniform grid for visual rhythm
 const SPANS = [
   "lg:col-span-4 lg:row-span-2", // featured wide
@@ -137,25 +150,34 @@ export function Services({ bare = false }: { bare?: boolean } = {}) {
               <LiquidGlass
                 tier="panel"
                 as="article"
-                className="flex h-full flex-col gap-4 p-7"
+                className="relative h-full overflow-hidden p-7"
               >
-                {/* Meaning-matched 3D accent where one exists; otherwise the
-                    quiet procedural line icon. */}
-                {accent ? (
-                  <Icon3D name={accent.name} size={accent.size} float glow />
-                ) : (
-                  <ServiceIcon index={i} />
-                )}
-                <h3 className="font-display text-[clamp(18px,1.4vw,22px)] font-medium tracking-tight text-(--color-fg)">
-                  {s.name}
-                </h3>
-                <p className="text-[14.5px] leading-relaxed text-(--color-fg-2) group-hover:text-(--color-fg) transition-colors">
-                  {s.body}
-                </p>
-                <span className="mt-auto inline-flex items-center gap-1.5 mono text-(--color-muted) opacity-0 group-hover:opacity-100 transition-opacity">
-                  EXPLORE
-                  <Ph name="arrow-up-right" weight="light" size={14} />
-                </span>
+                {/* Background shader orb — distinct hue per service, softly
+                    lit by default, fuller on hover. Reads in dark + light. */}
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-gradient-to-br ${ORBS[i] ?? ORBS[0]} to-transparent opacity-60 blur-3xl transition-opacity duration-700 group-hover:opacity-100`}
+                />
+                {/* Content sits above the orb. */}
+                <div className="relative z-10 flex h-full flex-col gap-4">
+                  {/* Meaning-matched 3D accent where one exists; otherwise the
+                      quiet procedural line icon. */}
+                  {accent ? (
+                    <Icon3D name={accent.name} size={accent.size} float glow />
+                  ) : (
+                    <ServiceIcon index={i} />
+                  )}
+                  <h3 className="font-display text-[clamp(18px,1.4vw,22px)] font-medium tracking-tight text-(--color-fg)">
+                    {s.name}
+                  </h3>
+                  <p className="text-[14.5px] leading-relaxed text-(--color-fg-2) group-hover:text-(--color-fg) transition-colors">
+                    {s.body}
+                  </p>
+                  <span className="mt-auto inline-flex items-center gap-1.5 mono text-(--color-muted) opacity-0 group-hover:opacity-100 transition-opacity">
+                    EXPLORE
+                    <Ph name="arrow-up-right" weight="light" size={14} />
+                  </span>
+                </div>
               </LiquidGlass>
             </Reveal>
             );

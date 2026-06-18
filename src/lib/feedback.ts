@@ -249,17 +249,21 @@ export function chime() {
 }
 
 // ---------------------------------------------------------------------------
-// AMBIENT — layered cinematic pad (hubtown's music loop, synthesized)
+// AMBIENT — a soothing, breathing pad (calm/premium, synthesized, no assets)
 // ---------------------------------------------------------------------------
-// Two detuned low oscillators (55Hz sine + 110Hz triangle, a few cents apart so
-// they slowly beat) under a bandpass-filtered noise bed whose center frequency
-// an LFO sweeps once every ~70s (within the 45–90s spec window). Master pad
-// gain ≈0.05, 2s fade-in, 0.8s fade-out. Starts/stops ONLY with the audio gate.
+// Warm OPEN-FIFTH voicing (A2–E3–A3 + a faint E4 shimmer) — neutral and serene,
+// neither happy nor sad. Everything runs through a warm low-pass so there is no
+// harshness, then through a "swell" gain whose level an LFO gently raises and
+// lowers (~13s) so the whole pad BREATHES — the main thing that makes it relaxing.
+// A second slow LFO drifts the low-pass cutoff (~26s) so the brightness subtly
+// shifts. A soft, high air wash sits underneath. Quiet by design, 3s fade-in,
+// 1.2s fade-out, and it starts/stops ONLY with the audio gate (off by default).
 
 const AMBIENT_LEVEL = 0.05;
-const AMBIENT_FADE_IN_S = 2;
-const AMBIENT_FADE_OUT_S = 0.8;
-const AMBIENT_LFO_PERIOD_S = 70; // one full filter sweep — spec: 45–90s
+const AMBIENT_FADE_IN_S = 3;
+const AMBIENT_FADE_OUT_S = 1.2;
+const AMBIENT_SWELL_PERIOD_S = 13; // breathing amplitude swell
+const AMBIENT_BRIGHT_PERIOD_S = 26; // slow low-pass cutoff drift
 
 interface AmbientNodes {
   sources: (OscillatorNode | AudioBufferSourceNode)[];
@@ -293,53 +297,77 @@ export function startAmbient() {
     return;
   }
 
-  // Pad master — the only handle start/stop ever ramps
+  // Pad master — the only handle start/stop ever ramps (the fade in/out).
   const gain = ac.createGain();
   gain.gain.setValueAtTime(0.0001, t0);
   gain.gain.linearRampToValueAtTime(AMBIENT_LEVEL, t0 + AMBIENT_FADE_IN_S);
   gain.connect(master);
 
-  // Layer 1 — deep sine root, pulled 4 cents flat
-  const oscA = ac.createOscillator();
-  oscA.type = "sine";
-  oscA.frequency.value = 55;
-  oscA.detune.value = -4;
-  oscA.connect(gain);
+  // Swell — the BREATHING stage. Base level + a slow LFO that raises/lowers it,
+  // so the pad gently inhales and exhales (the soothing motion).
+  const swell = ac.createGain();
+  swell.gain.value = 0.8;
+  swell.connect(gain);
 
-  // Layer 2 — octave triangle, 6 cents sharp (slow beating against the root)
-  const oscB = ac.createOscillator();
-  oscB.type = "triangle";
-  oscB.frequency.value = 110;
-  oscB.detune.value = 6;
-  const oscBLevel = ac.createGain();
-  oscBLevel.gain.value = 0.45; // triangle harmonics sit under the root
-  oscB.connect(oscBLevel);
-  oscBLevel.connect(gain);
+  const swellLfo = ac.createOscillator();
+  swellLfo.type = "sine";
+  swellLfo.frequency.value = 1 / AMBIENT_SWELL_PERIOD_S;
+  const swellDepth = ac.createGain();
+  swellDepth.gain.value = 0.2; // swell rides 0.6 … 1.0
+  swellLfo.connect(swellDepth);
+  swellDepth.connect(swell.gain);
 
-  // Layer 3 — noise bed through a slowly swept bandpass: distant air
+  // Warm low-pass — rounds off all harshness; a slow LFO drifts the cutoff so
+  // the brightness subtly shifts over time. The tonal layers feed THIS.
+  const warm = ac.createBiquadFilter();
+  warm.type = "lowpass";
+  warm.frequency.value = 900;
+  warm.Q.value = 0.5;
+  warm.connect(swell);
+
+  const brightLfo = ac.createOscillator();
+  brightLfo.type = "sine";
+  brightLfo.frequency.value = 1 / AMBIENT_BRIGHT_PERIOD_S;
+  const brightDepth = ac.createGain();
+  brightDepth.gain.value = 320; // cutoff drifts ~580 … 1220 Hz
+  brightLfo.connect(brightDepth);
+  brightDepth.connect(warm.frequency);
+
+  // Open-fifth voicing — serene, neither major nor minor. Each tone is a sine
+  // (triangle on the A3 for a little warmth), softly detuned so they shimmer.
+  const TONES: { type: OscillatorType; freq: number; detune: number; level: number }[] = [
+    { type: "sine", freq: 110.0, detune: -3, level: 1.0 }, // A2 root
+    { type: "sine", freq: 164.81, detune: 2, level: 0.7 }, // E3 fifth
+    { type: "triangle", freq: 220.0, detune: -2, level: 0.38 }, // A3 octave (warmth)
+    { type: "sine", freq: 329.63, detune: 4, level: 0.13 }, // E4 distant shimmer
+  ];
+  const tones = TONES.map(({ type, freq, detune, level }) => {
+    const osc = ac.createOscillator();
+    osc.type = type;
+    osc.frequency.value = freq;
+    osc.detune.value = detune;
+    const lvl = ac.createGain();
+    lvl.gain.value = level;
+    osc.connect(lvl);
+    lvl.connect(warm);
+    return osc;
+  });
+
+  // Soft high air wash — a gentle band of noise under the tones (breathes too).
   const noise = ac.createBufferSource();
   noise.buffer = getNoise(ac);
   noise.loop = true;
-  const bp = ac.createBiquadFilter();
-  bp.type = "bandpass";
-  bp.frequency.value = 320;
-  bp.Q.value = 1.6;
-  const noiseLevel = ac.createGain();
-  noiseLevel.gain.value = 0.22;
-  noise.connect(bp);
-  bp.connect(noiseLevel);
-  noiseLevel.connect(gain);
+  const air = ac.createBiquadFilter();
+  air.type = "bandpass";
+  air.frequency.value = 700;
+  air.Q.value = 0.9;
+  const airLevel = ac.createGain();
+  airLevel.gain.value = 0.05;
+  noise.connect(air);
+  air.connect(airLevel);
+  airLevel.connect(swell);
 
-  // LFO — one sweep per ~70s, ±220Hz around the bandpass center
-  const lfo = ac.createOscillator();
-  lfo.type = "sine";
-  lfo.frequency.value = 1 / AMBIENT_LFO_PERIOD_S;
-  const lfoDepth = ac.createGain();
-  lfoDepth.gain.value = 220;
-  lfo.connect(lfoDepth);
-  lfoDepth.connect(bp.frequency);
-
-  const sources: AmbientNodes["sources"] = [oscA, oscB, noise, lfo];
+  const sources: AmbientNodes["sources"] = [...tones, noise, swellLfo, brightLfo];
   sources.forEach((s) => s.start(t0));
   ambient = { sources, gain, stopping: null };
 }
