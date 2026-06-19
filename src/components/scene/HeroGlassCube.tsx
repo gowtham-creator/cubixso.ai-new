@@ -25,6 +25,7 @@ import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { useDeviceTier, hasWebGL } from "@/lib/perf";
+import { CanvasBoundary } from "@/components/util/CanvasBoundary";
 
 const ACCENT = "#1B4FFF";       // electric cobalt — the Y
 const ACCENT_GLOW = "#4A7BFF";  // lighter cobalt — emissive / glow
@@ -225,6 +226,7 @@ export function HeroGlassCube({
         {!webgl ? (
           <StaticCubeFallback dark={dark} />
         ) : (
+        <CanvasBoundary fallback={<StaticCubeFallback dark={dark} />}>
         <Canvas
           camera={{ position: [0, 2.4, 5.8], fov: 28, near: 0.1, far: 100 }}
           gl={{ antialias: true, alpha: true }}
@@ -272,6 +274,7 @@ export function HeroGlassCube({
             </EffectComposer>
           )}
         </Canvas>
+        </CanvasBoundary>
         )}
       </div>
     </div>

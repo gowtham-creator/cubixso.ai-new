@@ -15,6 +15,8 @@ import * as THREE from "three";
 import { whoosh } from "@/lib/feedback";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { cdn } from "@/lib/cdn";
+import { hasWebGL } from "@/lib/perf";
+import { CanvasBoundary } from "@/components/util/CanvasBoundary";
 
 const SIG = [0.16, 1, 0.3, 1] as const;
 const MODEL = cdn("/models/cubixso-cube.glb");
@@ -80,6 +82,7 @@ export function IntroSequence() {
   const [reduced, setReduced] = useState(false);
   const [compact, setCompact] = useState(false); // phone / tablet-portrait
   const [wordIdx, setWordIdx] = useState(0); // cycling keyword on compact screens
+  const [webgl, setWebgl] = useState(true); // 3D only renders when WebGL works
   const done = useRef(false);
 
   const finish = () => {
@@ -96,6 +99,7 @@ export function IntroSequence() {
     try { if (sessionStorage.getItem("cubixso.seen") === "1") return; } catch { /* private */ }
     setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     setCompact(window.matchMedia("(max-width: 900px)").matches);
+    setWebgl(hasWebGL()); // no WebGL (weak/blocklisted GPU) → wordmark-only loader
     setShow(true);
   }, []);
 
@@ -129,6 +133,11 @@ export function IntroSequence() {
           style={{ background: dark ? "#060708" : "#ffffff" }}
           aria-hidden
         >
+          {/* The 3D cube renders ONLY when WebGL works, and inside a boundary —
+              so a weak/blocklisted GPU (common on Windows laptops + tablets) can
+              never crash the loader; it just shows the wordmark loader instead. */}
+          {webgl && (
+          <CanvasBoundary fallback={null}>
           <Canvas
             orthographic
             // Smaller zoom on phones/tablets so the cube isn't oversized and the
@@ -153,6 +162,8 @@ export function IntroSequence() {
               <Bloom intensity={dark ? 1.2 : 0.12} luminanceThreshold={dark ? 0.1 : 0.7} luminanceSmoothing={0.9} mipmapBlur />
             </EffectComposer>
           </Canvas>
+          </CanvasBoundary>
+          )}
 
           {/* Capability keywords. DESKTOP: scattered, orbiting in the wide
               margins AROUND the cube. MOBILE/TABLET: there is no horizontal room
