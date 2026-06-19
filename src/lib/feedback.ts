@@ -278,7 +278,7 @@ export function chime() {
 // Same-origin file (kept off the CDN so MediaElementSource never taints on CORS).
 
 const AMBIENT_SRC = "/audio/ambient.mp3";
-const AMBIENT_LEVEL = 0.2;        // 0..1 — subtle background level
+const AMBIENT_LEVEL = 0.1;        // 0..1 — subtle background level (lowered: was too loud)
 const AMBIENT_LOWPASS_HZ = 7200;  // soften the highs for warmth
 const AMBIENT_PITCH = 0.92;       // playbackRate — slightly deeper/calmer than original
 const AMBIENT_FADE_IN_S = 3;
