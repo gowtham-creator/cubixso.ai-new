@@ -252,157 +252,91 @@ export function chime() {
 }
 
 // ---------------------------------------------------------------------------
-// AMBIENT — a soothing, breathing pad (calm/premium, synthesized, no assets)
+// AMBIENT — real background-music track, PROCESSED to suit the site
 // ---------------------------------------------------------------------------
-// Warm OPEN-FIFTH voicing (A2–E3–A3 + a faint E4 shimmer) — neutral and serene,
-// neither happy nor sad. Everything runs through a warm low-pass so there is no
-// harshness, then through a "swell" gain whose level an LFO gently raises and
-// lowers (~13s) so the whole pad BREATHES — the main thing that makes it relaxing.
-// A second slow LFO drifts the low-pass cutoff (~26s) so the brightness subtly
-// shifts. A soft, high air wash sits underneath. Quiet by design, 3s fade-in,
-// 1.2s fade-out, and it starts/stops ONLY with the audio gate (off by default).
+// A looping .mp3 played through the WebAudio graph so we control its tone, not
+// just play it raw: MediaElementSource → low-pass (warmth) → gain (level + fades)
+// → master. Tuned to sit UNDER the UI sounds as a calm atmosphere:
+//   • AMBIENT_LEVEL  — background volume (low; it's atmosphere, not foreground).
+//   • AMBIENT_LOWPASS_HZ — rolls off the harsh highs so it's soft, not fatiguing.
+//   • AMBIENT_PITCH  — playbackRate; <1 lowers the pitch/tempo for a deeper, calmer feel.
+//   • fades in/out so it never pops. Starts/stops ONLY with the audio gate, and
+//     only after a real gesture unlocks the context (autoplay-safe).
+// Same-origin file (kept off the CDN so MediaElementSource never taints on CORS).
 
-const AMBIENT_LEVEL = 0.05;
+const AMBIENT_SRC = "/audio/ambient.mp3";
+const AMBIENT_LEVEL = 0.2;        // 0..1 — subtle background level
+const AMBIENT_LOWPASS_HZ = 7200;  // soften the highs for warmth
+const AMBIENT_PITCH = 0.92;       // playbackRate — slightly deeper/calmer than original
 const AMBIENT_FADE_IN_S = 3;
-const AMBIENT_FADE_OUT_S = 1.2;
-const AMBIENT_SWELL_PERIOD_S = 13; // breathing amplitude swell
-const AMBIENT_BRIGHT_PERIOD_S = 26; // slow low-pass cutoff drift
+const AMBIENT_FADE_OUT_S = 1.5;
+const AMBIENT_ENABLED = true;     // a real track is wired — set false to silence music
 
-interface AmbientNodes {
-  sources: (OscillatorNode | AudioBufferSourceNode)[];
-  gain: GainNode;
-  /** teardown timer while fading out — cleared if the pad is restarted */
-  stopping: number | null;
+// Built once, reused (a MediaElementSource can only be created once per element).
+let musicEl: HTMLAudioElement | null = null;
+let musicGain: GainNode | null = null;
+let musicStopping: number | null = null;
+
+/** Lazily build the element + WebAudio chain. Returns false if unavailable. */
+function ensureMusicGraph(ac: AudioContext, out: GainNode): boolean {
+  if (musicGain) return true;
+  try {
+    if (!musicEl) {
+      musicEl = new Audio(AMBIENT_SRC);
+      musicEl.loop = true;
+      musicEl.preload = "auto";
+      musicEl.playbackRate = AMBIENT_PITCH;
+    }
+    const src = ac.createMediaElementSource(musicEl);
+    const lp = ac.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = AMBIENT_LOWPASS_HZ;
+    lp.Q.value = 0.6;
+    const g = ac.createGain();
+    g.gain.value = 0.0001;
+    src.connect(lp);
+    lp.connect(g);
+    g.connect(out);
+    musicGain = g;
+    return true;
+  } catch {
+    return false; // no MediaElementSource support / already created
+  }
 }
-
-let ambient: AmbientNodes | null = null; // module singleton — StrictMode-safe
-
-// Background ambient is DISABLED per the client's request — no synthesized pad
-// plays. To re-enable a REAL audio track later, drop an .mp3/.ogg in public/
-// (see sourcing notes) and wire an <audio loop> element gated by the toggle,
-// or flip this flag back to true to restore the synthesized pad below.
-const AMBIENT_ENABLED = false;
 
 /**
- * Start (or resume) the ambient pad. Idempotent: a second call while running
- * (React StrictMode double-effects, rapid toggling) only re-ramps the gain —
- * it never stacks a second oscillator bank.
+ * Start (or resume) the background music. Idempotent: a second call while
+ * playing just re-ramps the gain back up — it never stacks a second source.
  */
 export function startAmbient() {
-  if (!AMBIENT_ENABLED) return; // background sound removed per request
-  if (!enabled) return;
+  if (!AMBIENT_ENABLED || !enabled) return;
   const ac = ensureContext(); // inside the opt-in gesture — autoplay-legal
   if (!ac || !master) return;
-  const t0 = ac.currentTime;
+  if (!ensureMusicGraph(ac, master) || !musicGain || !musicEl) return;
 
-  if (ambient) {
-    // Already alive (possibly mid fade-out) — cancel teardown, ramp back up.
-    if (ambient.stopping !== null) {
-      clearTimeout(ambient.stopping);
-      ambient.stopping = null;
-    }
-    ambient.gain.gain.cancelScheduledValues(t0);
-    ambient.gain.gain.setValueAtTime(Math.max(ambient.gain.gain.value, 0.0001), t0);
-    ambient.gain.gain.linearRampToValueAtTime(AMBIENT_LEVEL, t0 + AMBIENT_FADE_IN_S);
-    return;
+  if (musicStopping !== null) {
+    clearTimeout(musicStopping);
+    musicStopping = null;
   }
-
-  // Pad master — the only handle start/stop ever ramps (the fade in/out).
-  const gain = ac.createGain();
-  gain.gain.setValueAtTime(0.0001, t0);
-  gain.gain.linearRampToValueAtTime(AMBIENT_LEVEL, t0 + AMBIENT_FADE_IN_S);
-  gain.connect(master);
-
-  // Swell — the BREATHING stage. Base level + a slow LFO that raises/lowers it,
-  // so the pad gently inhales and exhales (the soothing motion).
-  const swell = ac.createGain();
-  swell.gain.value = 0.8;
-  swell.connect(gain);
-
-  const swellLfo = ac.createOscillator();
-  swellLfo.type = "sine";
-  swellLfo.frequency.value = 1 / AMBIENT_SWELL_PERIOD_S;
-  const swellDepth = ac.createGain();
-  swellDepth.gain.value = 0.2; // swell rides 0.6 … 1.0
-  swellLfo.connect(swellDepth);
-  swellDepth.connect(swell.gain);
-
-  // Warm low-pass — rounds off all harshness; a slow LFO drifts the cutoff so
-  // the brightness subtly shifts over time. The tonal layers feed THIS.
-  const warm = ac.createBiquadFilter();
-  warm.type = "lowpass";
-  warm.frequency.value = 900;
-  warm.Q.value = 0.5;
-  warm.connect(swell);
-
-  const brightLfo = ac.createOscillator();
-  brightLfo.type = "sine";
-  brightLfo.frequency.value = 1 / AMBIENT_BRIGHT_PERIOD_S;
-  const brightDepth = ac.createGain();
-  brightDepth.gain.value = 320; // cutoff drifts ~580 … 1220 Hz
-  brightLfo.connect(brightDepth);
-  brightDepth.connect(warm.frequency);
-
-  // Open-fifth voicing — serene, neither major nor minor. Each tone is a sine
-  // (triangle on the A3 for a little warmth), softly detuned so they shimmer.
-  const TONES: { type: OscillatorType; freq: number; detune: number; level: number }[] = [
-    { type: "sine", freq: 110.0, detune: -3, level: 1.0 }, // A2 root
-    { type: "sine", freq: 164.81, detune: 2, level: 0.7 }, // E3 fifth
-    { type: "triangle", freq: 220.0, detune: -2, level: 0.38 }, // A3 octave (warmth)
-    { type: "sine", freq: 329.63, detune: 4, level: 0.13 }, // E4 distant shimmer
-  ];
-  const tones = TONES.map(({ type, freq, detune, level }) => {
-    const osc = ac.createOscillator();
-    osc.type = type;
-    osc.frequency.value = freq;
-    osc.detune.value = detune;
-    const lvl = ac.createGain();
-    lvl.gain.value = level;
-    osc.connect(lvl);
-    lvl.connect(warm);
-    return osc;
-  });
-
-  // Soft high air wash — a gentle band of noise under the tones (breathes too).
-  const noise = ac.createBufferSource();
-  noise.buffer = getNoise(ac);
-  noise.loop = true;
-  const air = ac.createBiquadFilter();
-  air.type = "bandpass";
-  air.frequency.value = 700;
-  air.Q.value = 0.9;
-  const airLevel = ac.createGain();
-  airLevel.gain.value = 0.05;
-  noise.connect(air);
-  air.connect(airLevel);
-  airLevel.connect(swell);
-
-  const sources: AmbientNodes["sources"] = [...tones, noise, swellLfo, brightLfo];
-  sources.forEach((s) => s.start(t0));
-  ambient = { sources, gain, stopping: null };
+  const t0 = ac.currentTime;
+  musicGain.gain.cancelScheduledValues(t0);
+  musicGain.gain.setValueAtTime(Math.max(musicGain.gain.value, 0.0001), t0);
+  musicGain.gain.exponentialRampToValueAtTime(AMBIENT_LEVEL, t0 + AMBIENT_FADE_IN_S);
+  void musicEl.play().catch(() => {/* gesture not ready yet — next call retries */});
 }
 
-/** Fade the pad out over 0.8s, then stop + release every node. Idempotent. */
+/** Fade the music out, then pause (the graph is kept for instant resume). */
 export function stopAmbient() {
-  if (!ambient || !ctx) return;
-  const pad = ambient;
-  if (pad.stopping !== null) return; // already fading out
+  if (!musicGain || !musicEl || !ctx) return;
+  if (musicStopping !== null) return;
   const t0 = ctx.currentTime;
-  pad.gain.gain.cancelScheduledValues(t0);
-  pad.gain.gain.setValueAtTime(Math.max(pad.gain.gain.value, 0.0001), t0);
-  pad.gain.gain.linearRampToValueAtTime(0.0001, t0 + AMBIENT_FADE_OUT_S);
-  pad.stopping = window.setTimeout(() => {
-    pad.sources.forEach((s) => {
-      try {
-        s.stop();
-      } catch {
-        /* already stopped */
-      }
-      s.disconnect();
-    });
-    pad.gain.disconnect();
-    if (ambient === pad) ambient = null;
-  }, AMBIENT_FADE_OUT_S * 1000 + 60);
+  musicGain.gain.cancelScheduledValues(t0);
+  musicGain.gain.setValueAtTime(Math.max(musicGain.gain.value, 0.0001), t0);
+  musicGain.gain.exponentialRampToValueAtTime(0.0001, t0 + AMBIENT_FADE_OUT_S);
+  musicStopping = window.setTimeout(() => {
+    try { musicEl?.pause(); } catch {/* ignore */}
+    musicStopping = null;
+  }, AMBIENT_FADE_OUT_S * 1000 + 80);
 }
 
 // ---------------------------------------------------------------------------

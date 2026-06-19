@@ -29,6 +29,10 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: ONE_YEAR_IMMUTABLE }],
       },
       {
+        source: "/audio/:path*",
+        headers: [{ key: "Cache-Control", value: ONE_YEAR_IMMUTABLE }],
+      },
+      {
         // top-level media: intro.mp4/.webm, void-loop.*, posters, og.png, fonts
         source: "/:file(.*\\.(?:mp4|webm|glb|hdr|jpg|jpeg|png|avif|woff2))",
         headers: [{ key: "Cache-Control", value: ONE_YEAR_IMMUTABLE }],

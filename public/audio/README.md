@@ -1,30 +1,23 @@
-# Background music — drop the file here
+# Background music
 
-Put your looping track at:
+**Active track:** `public/audio/ambient.mp3` (wired + playing under the Sound toggle).
 
-    public/audio/ambient.mp3      (or ambient.ogg)
+It plays through the WebAudio graph (not raw) so its tone suits the site. Tune it
+in `src/lib/feedback.ts` (the `AMBIENT_*` constants):
 
-Then tell Claude "wire the ambient track" and it adds a looping `<audio>`
-element gated by the existing Sound toggle (so it respects on/off and starts on
-the first user gesture — autoplay-safe).
+- `AMBIENT_LEVEL`     — background volume (0..1). Lower = more subtle.
+- `AMBIENT_LOWPASS_HZ`— rolls off harsh highs for warmth.
+- `AMBIENT_PITCH`     — playbackRate; `< 1` = deeper/calmer, `> 1` = brighter/faster.
+- `AMBIENT_FADE_IN_S` / `AMBIENT_FADE_OUT_S` — fade timings.
+- `AMBIENT_ENABLED`   — set `false` to silence the music (UI sounds stay).
 
-## Style (hubtown-like)
-Search terms: **ambient electronic loop · cinematic ambient · downtempo ·
-atmospheric pad · lo-fi background**. Pick a SEAMLESS LOOP, 30–120s, exported as
-a small MP3 (~96–128 kbps, ideally < 1.5 MB).
+Autoplay-safe: it only starts after the first real gesture, and the Sound toggle
+mutes everything.
 
-## Where to download
-
-Free (commercial / web use OK — check each track's license):
-- Pixabay Music   https://pixabay.com/music/search/ambient/        (no attribution)
-- Uppbeat         https://uppbeat.io/browse/genre/ambient           (free tier)
-- Free Music Archive  https://freemusicarchive.org                  (filter CC0 / CC-BY)
-- YouTube Audio Library  https://studio.youtube.com → Audio Library (genre: Ambient)
-
-Premium (what studios like hubtown actually use — subscription, top quality):
-- Epidemic Sound  https://www.epidemicsound.com
-- Artlist         https://artlist.io
-- Soundstripe     https://www.soundstripe.com
-
-Make sure the license allows use on a commercial website.
+## To swap the track
+Replace `public/audio/ambient.mp3` with a new loop (seamless, 30–120s, small MP3
+~128 kbps). Sources: Pixabay Music, Uppbeat, Free Music Archive, YouTube Audio
+Library (free); Epidemic Sound / Artlist / Soundstripe (premium). Check the
+license allows commercial website use. Keep the same filename, or update
+`AMBIENT_SRC` in feedback.ts.
 </content>
