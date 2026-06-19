@@ -120,9 +120,20 @@ export function isAudioEnabled(): boolean {
 // Internals
 // ---------------------------------------------------------------------------
 
-/** Sound is allowed only when the toggle is on AND a gesture unlocked audio. */
+/** Sound is allowed only when the toggle is on AND a gesture unlocked audio.
+ *  Used by the AMBIENT flourishes (whoosh / chime) + background music. */
 function liveContext(): AudioContext | null {
   if (!enabled || !ctx || !master) return null;
+  if (ctx.state === "suspended") void ctx.resume().catch(() => {});
+  return ctx;
+}
+
+/** Interaction SFX context — clicks/ticks are a baseline UI affordance that
+ *  plays by DEFAULT once audio is unlocked, INDEPENDENT of the Sound toggle.
+ *  (The toggle governs the background music + ambient, not the basic clicks.)
+ *  The context is still only created by a real gesture, so autoplay is respected. */
+function sfxContext(): AudioContext | null {
+  if (!ctx || !master) return null;
   if (ctx.state === "suspended") void ctx.resume().catch(() => {});
   return ctx;
 }
@@ -161,9 +172,10 @@ function vibrate(pattern: number | number[]) {
 // The four sounds
 // ---------------------------------------------------------------------------
 
-/** Hover blip — 1.2kHz gliding to 600Hz sine, ~30ms, very quiet. No haptic. */
+/** Hover blip — 1.2kHz gliding to 600Hz sine, ~30ms, very quiet. No haptic.
+ *  Interaction SFX → plays by default, not gated by the Sound toggle. */
 export function tick() {
-  const ac = liveContext();
+  const ac = sfxContext();
   if (!ac) return;
   const t0 = ac.currentTime;
 
@@ -176,11 +188,12 @@ export function tick() {
   osc.stop(t0 + 0.06);
 }
 
-/** Press — filtered noise burst + low 180Hz thump, ~60ms. Haptic: 8ms tap. */
+/** Press — filtered noise burst + low 180Hz thump, ~60ms. Haptic: 8ms tap.
+ *  Interaction SFX → plays by default, not gated by the Sound toggle. */
 export function click() {
   vibrate(8); // touch answer fires even when sound is off
 
-  const ac = liveContext();
+  const ac = sfxContext();
   if (!ac) return;
   const t0 = ac.currentTime;
 
