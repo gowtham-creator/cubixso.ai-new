@@ -36,7 +36,7 @@ const WHOOSH_MIN_GAP_MS = 2000;
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let noiseBuf: AudioBuffer | null = null; // 1s of white noise, shared by click/whoosh/ambient
-let enabled = false; // mirrors AudioToggle — OFF by default per locked decision
+let enabled = false; // SSR-safe initial; the window block below seeds it ON by default
 let lastWhoosh = 0;
 
 /** Create the context inside a user gesture; reuse forever after. */
@@ -59,13 +59,16 @@ function ensureContext(): AudioContext | null {
 // Arm the lazy unlock: the first gesture anywhere creates the context so it is
 // warm by the time any sound fires (the AudioToggle click itself is a gesture).
 if (typeof window !== "undefined") {
-  // Seed the gate from this session's entry choice ("ENTER WITH SOUND" persists
-  // across reloads within the session — the ambient itself still waits for a
-  // gesture, so autoplay policy is never violated).
+  // UI sounds (click / tick / whoosh / chime) are ON BY DEFAULT — the gate is
+  // enabled unless the visitor explicitly turned it OFF this session ("0").
+  // Autoplay policy is still respected: the AudioContext only unlocks on the
+  // first real gesture, so the first click is what makes sound, never page load.
+  // (The background-music PAD stays disabled via AMBIENT_ENABLED — only the
+  // interaction sounds play until a real music track is wired in.)
   try {
-    enabled = sessionStorage.getItem(SOUND_KEY) === "1";
+    enabled = sessionStorage.getItem(SOUND_KEY) !== "0";
   } catch {
-    /* private mode */
+    enabled = true; // private mode — default ON
   }
 
   const unlock = () => {
