@@ -23,15 +23,14 @@ const MODEL = cdn("/models/cubixso-cube.glb");
 const DRACO = cdn("/draco/");
 const DURATION = 3600; // a calm partial turn before the lift
 
-// Capability keywords. DESKTOP: each floats at its own spot in the wide margins
-// AROUND the cube (`style`). MOBILE/TABLET: there is no room beside the cube, so
-// the render cycles them one-at-a-time in a band below it (no per-word position).
-const WORDS: { t: string; style: React.CSSProperties }[] = [
-  { t: "Agentic Orchestration", style: { top: "15%", left: "50%", transform: "translateX(-50%)" } },
-  { t: "Agent Teams", style: { top: "37%", right: "7%" } },
-  { t: "Agentic AI", style: { top: "42%", left: "7%" } },
-  { t: "LLMOps", style: { bottom: "28%", left: "17%" } },
-  { t: "RAG · MCP", style: { bottom: "26%", right: "17%" } },
+// Capability keywords. DESKTOP: they ORBIT the cube on a slow ellipse (positions
+// computed per-frame). MOBILE/TABLET: cycled one-at-a-time in a band below it.
+const WORDS = [
+  "Agentic Orchestration",
+  "Agent Teams",
+  "Agentic AI",
+  "LLMOps",
+  "RAG · MCP",
 ];
 
 function PreloaderCube({ dark }: { dark: boolean }) {
@@ -84,6 +83,7 @@ export function IntroSequence() {
   const [wordIdx, setWordIdx] = useState(0); // cycling keyword on compact screens
   const [webgl, setWebgl] = useState(true); // 3D only renders when WebGL works
   const done = useRef(false);
+  const wordRefs = useRef<(HTMLDivElement | null)[]>([]); // orbiting keywords (desktop)
 
   const finish = () => {
     if (done.current) return;
@@ -116,6 +116,34 @@ export function IntroSequence() {
     if (!show || !compact || reduced) return;
     const id = window.setInterval(() => setWordIdx((i) => (i + 1) % WORDS.length), 1150);
     return () => clearInterval(id);
+  }, [show, compact, reduced]);
+
+  // DESKTOP: the keywords ORBIT the cube — they ride a slow elliptical path
+  // around the centre, evenly spaced, staying upright (pure translation, no
+  // tumble). Direct ref writes per frame (no React re-render). ~36s/rev.
+  useEffect(() => {
+    if (!show || compact || reduced) return;
+    let raf = 0;
+    let start = 0;
+    const N = WORDS.length;
+    const loop = (ts: number) => {
+      if (!start) start = ts;
+      const t = ts - start;
+      const Rx = Math.min(window.innerWidth * 0.4, 600);
+      const Ry = Math.min(window.innerHeight * 0.34, 360);
+      const base = t * 0.000175; // rad/ms → ~36s per revolution
+      for (let i = 0; i < N; i++) {
+        const el = wordRefs.current[i];
+        if (!el) continue;
+        const a = base + (i / N) * Math.PI * 2 - Math.PI / 2; // start at top
+        const x = Math.cos(a) * Rx;
+        const y = Math.sin(a) * Ry;
+        el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
   }, [show, compact, reduced]);
 
   if (!show) return null;
@@ -159,34 +187,28 @@ export function IntroSequence() {
               </Environment>
             </Suspense>
             <EffectComposer>
-              <Bloom intensity={dark ? 1.2 : 0.12} luminanceThreshold={dark ? 0.1 : 0.7} luminanceSmoothing={0.9} mipmapBlur />
+              {/* Tighter bloom: only the brightest edges glow (higher threshold,
+                  lower intensity) so the wide soft halo no longer fills the
+                  background as a grey blob — the field stays pure black. */}
+              <Bloom intensity={dark ? 0.55 : 0.1} luminanceThreshold={dark ? 0.28 : 0.7} luminanceSmoothing={0.7} radius={0.5} />
             </EffectComposer>
           </Canvas>
           </CanvasBoundary>
           )}
 
-          {/* Capability keywords. DESKTOP: scattered, orbiting in the wide
-              margins AROUND the cube. MOBILE/TABLET: there is no horizontal room
-              beside the cube, so instead of 5 scattered words colliding with it
-              we cycle ONE keyword at a time in a clean band BELOW the cube — it
-              never touches the cube. */}
+          {/* Capability keywords. DESKTOP: they ORBIT the cube on a slow ellipse
+              (transform set per-frame by the orbit effect; fade-in via CSS so it
+              never fights the JS transform). MOBILE/TABLET: no room beside the
+              cube, so cycle ONE keyword at a time in a band below it. */}
           {!reduced && !compact && WORDS.map((w, i) => (
-            <motion.div
-              key={w.t}
-              style={w.style}
-              className="pointer-events-none absolute whitespace-nowrap"
-              initial={{ opacity: 0, y: 18, filter: "blur(9px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 0.95, delay: 0.4 + i * 0.14, ease: SIG }}
+            <div
+              key={w}
+              ref={(el) => { wordRefs.current[i] = el; }}
+              style={{ transform: "translate(-50%, -50%)", animationDelay: `${0.4 + i * 0.12}s` }}
+              className={`cbx-orbit-word pointer-events-none absolute left-1/2 top-1/2 whitespace-nowrap font-display text-[15px] font-medium tracking-[0.005em] ${dark ? "text-white/90" : "text-black/85"}`}
             >
-              <motion.span
-                className={`font-display text-[13px] md:text-[15px] font-medium tracking-[0.005em] ${dark ? "text-white/90" : "text-black/85"}`}
-                animate={{ y: [0, -5, 0] }}
-                transition={{ repeat: Infinity, duration: 3.4 + i * 0.25, ease: "easeInOut" }}
-              >
-                {w.t}
-              </motion.span>
-            </motion.div>
+              {w}
+            </div>
           ))}
 
           {!reduced && compact && (
@@ -200,7 +222,7 @@ export function IntroSequence() {
                   transition={{ duration: 0.5, ease: SIG }}
                   className={`text-center font-display text-[15px] font-medium tracking-[0.04em] ${dark ? "text-white/85" : "text-black/80"}`}
                 >
-                  {WORDS[wordIdx].t}
+                  {WORDS[wordIdx]}
                 </motion.span>
               </AnimatePresence>
             </div>
@@ -209,7 +231,11 @@ export function IntroSequence() {
           {/* bold brand wordmark — ".ai" is a SOFT, FLOWING gradient (the colour
               gently drifts left→right forever). Palindrome stops + 200% size make
               the loop seamless. */}
-          <style>{`@keyframes cbx-ai-flow { to { background-position: 200% center; } }`}</style>
+          <style>{`
+            @keyframes cbx-ai-flow { to { background-position: 200% center; } }
+            @keyframes cbx-orbit-fade { from { opacity: 0; } to { opacity: 1; } }
+            .cbx-orbit-word { opacity: 0; animation: cbx-orbit-fade 0.9s ease forwards; }
+          `}</style>
           <motion.div
             initial={{ opacity: 0, y: 12, filter: "blur(6px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
