@@ -240,25 +240,36 @@ export function HeroGlassCube({
           <pointLight position={[-3, 1, 2]} intensity={dark ? 10 : 4} color={ACCENT_GLOW} distance={16} />
           <pointLight position={[0, 0, 0]} intensity={dark ? 7 : 1.4} color={ACCENT} distance={7} />
           <Suspense fallback={null}>
-            <CubeRig dark={dark} fit={compact ? 0.7 : 0.92} />
+            <CubeRig dark={dark} fit={compact ? 0.8 : 0.92} />
             <Environment resolution={128} frames={1} environmentIntensity={dark ? 0.45 : 0.9}>
               <Lightformer intensity={dark ? 1.6 : 2.4} color="#ffffff" position={[0, 3, 3]} scale={[8, 3, 1]} />
               <Lightformer intensity={dark ? 1.0 : 1.6} color="#cfe0ff" position={[-4, 1, 2]} scale={[3, 5, 1]} />
               <Lightformer intensity={dark ? 0.8 : 1.3} color="#dbe6ff" position={[4, -1, -3]} scale={[6, 3, 1]} />
             </Environment>
           </Suspense>
-          {/* High tier keeps the approved composer untouched. Low tier skips the
-              heavy ChromaticAberration pass and softens Bloom to ease the GPU. */}
-          {low ? (
+          {/* Desktop (high, !compact) keeps the approved bright composer. On
+              compact (mobile/tablet) the bloom is TIGHTENED — a higher threshold +
+              lower intensity keep the glow on the edges so it doesn't fill the
+              constrained canvas box and read as a faint grey rectangle/seam. Low
+              tier softens further to ease the GPU. */}
+          {compact ? null : low ? (
+            // COMPACT (mobile/tablet): NO post-processing composer at all. The
+            // composer renders an opaque background that would cover the dust
+            // field as a visible rectangle inside the constrained canvas box. With
+            // no composer the canvas stays truly transparent — the dust shows
+            // through and the cube floats seamlessly; the emissive edges keep it
+            // bright without a bloom halo. Low tier (desktop-ish, non-compact):
+            // bloom only, softened for the GPU.
             <EffectComposer>
               <Bloom
-                intensity={dark ? 0.9 : 0.2}
+                intensity={dark ? 0.9 : 0.18}
                 luminanceThreshold={dark ? 0.1 : 0.62}
                 luminanceSmoothing={0.9}
                 mipmapBlur
               />
             </EffectComposer>
           ) : (
+            // Desktop high tier: the approved bright composer + chromatic fringe.
             <EffectComposer>
               <Bloom
                 intensity={dark ? 1.5 : 0.28}
@@ -266,7 +277,6 @@ export function HeroGlassCube({
                 luminanceSmoothing={0.9}
                 mipmapBlur
               />
-              {/* thin red/cyan edge fringe — the reference's glassy chromatic edge */}
               <ChromaticAberration
                 blendFunction={BlendFunction.NORMAL}
                 offset={[0.0011, 0.0011]}

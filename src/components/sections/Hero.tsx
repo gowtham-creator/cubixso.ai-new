@@ -52,20 +52,24 @@ export function Hero() {
       className={`relative ${reduced ? "min-h-svh" : "h-[125vh]"} text-(--color-fg)`}
       style={{ background: "transparent" }}
     >
-      <div className={`${reduced ? "relative" : "sticky top-0"} h-svh overflow-hidden`}>
+      <div className={`${reduced ? "relative" : "sticky top-0"} flex h-svh flex-col overflow-hidden lg:block`}>
         {/* glass cube + cobalt Y — the hero centerpiece (Vercel-faithful).
-            DESKTOP (lg): large, vertically centred — the headline reads over it.
-            MOBILE/TABLET: there is no horizontal room, so the cube is smaller and
-            sits in the UPPER band, leaving the lower half clear for the headline +
-            copy (instead of the cube filling the whole screen behind the text). */}
-        <motion.div style={reduced ? undefined : { y: cubeY }} className="absolute inset-0 z-[1] will-change-transform">
+            DESKTOP (lg): absolute, large, vertically centred — headline reads over it.
+            MOBILE/TABLET: a FLOW block filling the TOP of the hero (big — sized by
+            min(vw, vh, px) so it fills the width yet never gets tall enough to
+            overflow into the next section), with the headline + copy flowing
+            directly below it (no absolute overlap → no gap, no overlap). */}
+        <motion.div
+          style={reduced ? undefined : { y: cubeY }}
+          className="relative z-[1] flex shrink-0 justify-center pt-[12vh] will-change-transform lg:absolute lg:inset-0 lg:block lg:pt-0"
+        >
           <HeroGlassCube
-            className="pointer-events-none absolute inset-0 z-0 flex justify-center items-start pt-[8vh] lg:items-center lg:pt-0"
-            // `relative` on mobile/tablet CONSTRAINS the inner Canvas (which is
-            // absolute inset-0) to this box, so the cube actually scales down to
-            // the box size. `lg:static` lets the Canvas escape to the full-screen
-            // ancestor on desktop — keeping the approved large centred cube there.
-            boxClassName="relative lg:static aspect-square w-[min(56vw,250px)] sm:w-[min(48vw,380px)] lg:w-[min(80vw,680px)]"
+            className="pointer-events-none flex w-full items-center justify-center lg:absolute lg:inset-0"
+            // `relative` (mobile/tablet) constrains the inner Canvas to this box so
+            // the cube scales to it; `lg:static` lets the Canvas fill the screen on
+            // desktop (approved large centred cube). Capped by 46vh so a tall cube
+            // never crosses into the section below on short screens.
+            boxClassName="relative aspect-square w-[min(88vw,46vh,400px)] sm:w-[min(66vw,52vh,560px)] lg:static lg:w-[min(80vw,680px)]"
           />
         </motion.div>
 
@@ -82,11 +86,11 @@ export function Hero() {
 
         <h1 className="sr-only">Generative AI for the autonomous enterprise</h1>
 
-        {/* MOBILE/TABLET: headline + copy flow as one grouped column anchored in
-            the lower band (under the cube) so there are no messy overlaps or dead
-            gaps. DESKTOP (lg): the wrapper becomes display:contents and each block
-            resumes its original absolute position (headline centred, copy bottom). */}
-        <div className="absolute inset-0 z-10 flex flex-col justify-end gap-6 px-[var(--pad-x)] pb-[15vh] lg:contents">
+        {/* MOBILE/TABLET: headline + copy FLOW in the space left below the cube,
+            centred so they fill it without a dead gap or overlap. DESKTOP (lg):
+            the wrapper becomes display:contents and each block resumes its original
+            absolute position (headline centred, copy bottom). */}
+        <div className="relative z-10 flex flex-1 flex-col justify-center gap-5 px-[var(--pad-x)] pb-[5vh] lg:contents">
 
         {/* headline */}
         <motion.div
