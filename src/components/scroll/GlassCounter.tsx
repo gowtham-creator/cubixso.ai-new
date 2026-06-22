@@ -34,7 +34,7 @@ export function GlassCounter({ total = TOTAL }: { total?: number }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed bottom-[max(20px,env(safe-area-inset-bottom))] left-[var(--pad-x)] z-40 select-none"
+      className="pointer-events-none fixed bottom-[max(20px,env(safe-area-inset-bottom))] left-[var(--pad-x)] z-40 hidden select-none sm:block"
     >
       <div
         className="glass-counter relative flex items-center gap-1.5 overflow-hidden rounded-full px-3.5 py-2"

@@ -22,9 +22,11 @@ export function Hero() {
 
   const [revealed, setRevealed] = useState(false);
   const [reduced, setReduced] = useState(false);
+  const [compact, setCompact] = useState(false); // phone / tablet (<lg)
   useEffect(() => {
     if (typeof window === "undefined") return;
     setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    setCompact(window.matchMedia("(max-width: 1023px)").matches);
     let seen = false;
     try { seen = sessionStorage.getItem("cubixso.seen") === "1"; } catch {}
     if (seen) { setRevealed(true); return; }
@@ -43,16 +45,21 @@ export function Hero() {
   const headOpacity = useTransform(scrollYProgress, [0, 0.86], [1, 0]);
   const copyOpacity = useTransform(scrollYProgress, [0, 0.66], [1, 0]);
   const copyY = useTransform(scrollYProgress, [0, 0.7], [0, 60]);
-  const headStyle = reduced ? undefined : { y: headY, opacity: headOpacity };
-  const copyStyle = reduced ? undefined : { opacity: copyOpacity, y: copyY };
+  // The scroll-pin stage (tall section + sticky + the scroll-driven fades) is
+  // DESKTOP-ONLY. On mobile/tablet (and reduced-motion) the hero is a normal
+  // min-h-svh section that grows to fit — so the CTAs are never clipped by a
+  // fixed-height overflow box and never fade out as you scroll.
+  const staged = !reduced && !compact;
+  const headStyle = staged ? { y: headY, opacity: headOpacity } : undefined;
+  const copyStyle = staged ? { opacity: copyOpacity, y: copyY } : undefined;
 
   return (
     <section
       ref={heroRef}
-      className={`relative ${reduced ? "min-h-svh" : "h-[125vh]"} text-(--color-fg)`}
+      className={`relative ${staged ? "h-[125vh]" : "min-h-svh"} text-(--color-fg)`}
       style={{ background: "transparent" }}
     >
-      <div className={`${reduced ? "relative" : "sticky top-0"} flex h-svh flex-col overflow-hidden lg:block`}>
+      <div className={`${staged ? "sticky top-0 h-svh overflow-hidden" : "relative min-h-svh"} flex flex-col lg:block`}>
         {/* glass cube + cobalt Y — the hero centerpiece (Vercel-faithful).
             DESKTOP (lg): absolute, large, vertically centred — headline reads over it.
             MOBILE/TABLET: a FLOW block filling the TOP of the hero (big — sized by
@@ -60,7 +67,7 @@ export function Hero() {
             overflow into the next section), with the headline + copy flowing
             directly below it (no absolute overlap → no gap, no overlap). */}
         <motion.div
-          style={reduced ? undefined : { y: cubeY }}
+          style={staged ? { y: cubeY } : undefined}
           className="relative z-[1] flex shrink-0 justify-center pt-[12vh] will-change-transform lg:absolute lg:inset-0 lg:block lg:pt-0"
         >
           <HeroGlassCube
