@@ -116,15 +116,19 @@ function LogoRow({
 
 function CategoryLabel({ index, label }: { index: number; label: string }) {
   return (
-    <motion.p
-      {...reveal(index * 0.05)}
-      className="mono mb-6 inline-flex items-center gap-3 text-[12px] tracking-[0.2em] text-(--color-muted)"
-    >
-      <span className="text-(--color-muted-2)">
-        {String(index + 1).padStart(2, "0")}
+    <motion.div {...reveal(index * 0.05)} className="mb-9">
+      {/* small mono index + hairline — the editorial marker */}
+      <span className="mono mb-3 flex items-center gap-2.5 text-[11px] tracking-[0.24em] text-(--color-muted)">
+        <span className="text-(--color-cobalt-glow)">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <span aria-hidden className="h-px w-8 bg-(--color-line)" />
       </span>
-      [ {label.toUpperCase()} ]
-    </motion.p>
+      {/* the real subheading — large, legible, on-brand display type */}
+      <h2 className="font-display text-[clamp(30px,4.4vw,56px)] font-normal leading-[0.95] tracking-[-0.035em] text-(--color-fg)">
+        {label}
+      </h2>
+    </motion.div>
   );
 }
 
@@ -135,21 +139,19 @@ export function Collaborators() {
       className="relative z-10 bg-(--color-bg) px-[var(--pad-x)] py-[clamp(40px,7vh,90px)] pb-[clamp(80px,12vh,160px)]"
     >
       <div className="mx-auto flex w-full max-w-[var(--col-w)] flex-col gap-16">
-        {/* Our Collaborators — two rows scrolling opposite directions. */}
+        {/* Our Collaborators — a single marquee row (no doubled track). */}
         <div>
           <CategoryLabel index={0} label="Collaborators" />
-          <motion.div {...reveal(0.1)} className="flex flex-col gap-5">
-            <LogoRow logos={COLLABORATORS} duration={40} />
-            <LogoRow logos={COLLABORATORS} duration={48} reverse />
+          <motion.div {...reveal(0.1)}>
+            <LogoRow logos={COLLABORATORS} duration={46} />
           </motion.div>
         </div>
 
-        {/* Our Supporters — two rows scrolling opposite directions. */}
+        {/* Our Supporters — a single marquee row (no doubled track). */}
         <div>
           <CategoryLabel index={1} label="Supporters" />
-          <motion.div {...reveal(0.1)} className="flex flex-col gap-5">
-            <LogoRow logos={SUPPORTERS} duration={44} reverse />
-            <LogoRow logos={SUPPORTERS} duration={52} />
+          <motion.div {...reveal(0.1)}>
+            <LogoRow logos={SUPPORTERS} duration={52} reverse />
           </motion.div>
         </div>
 
