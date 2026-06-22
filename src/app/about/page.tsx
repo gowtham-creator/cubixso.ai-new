@@ -29,20 +29,24 @@ const PARTNER_LOGOS: Logo[] = [
   { src: "/partners/neo4j.png", alt: "Neo4j" },
   { src: "/partners/perplexity.png", alt: "Perplexity" },
   { src: "/partners/zoho.jpg", alt: "Zoho" },
-  { src: "/partners/google-devs.png", alt: "Google Developers" },
+  { src: "/partners/google-devs.png", alt: "Google for Startups" },
+  { src: "/partners/notion-startups.png", alt: "Notion for Startups" },
   { src: "/partners/PayU-ogo.png", alt: "PayU" },
 ];
 
+// Mirrors the company deck's "Our Collaborators" slide — companies we build
+// alongside. (DPIIT + Wadhwani live in the Backed-By strip below, not here.)
 const COLLABORATOR_LOGOS: Logo[] = [
-  { src: "/partners/dpiit.png", alt: "DPIIT" },
-  { src: "/partners/wadhwani.png", alt: "Wadhwani Foundation" },
+  { src: "/partners/cloudgap.png", alt: "Cloudgap" },
+  { src: "/partners/elit-celer.png", alt: "ElitCeler Technologies" },
+  { src: "/partners/tetra-digital.png", alt: "The Tetra Digital" },
   { src: "/partners/pursuit-soln.png", alt: "Pursuit Solutions" },
-  { src: "/partners/ect-logo.png", alt: "ECT" },
+  { src: "/partners/tech-savant.png", alt: "Tech Savants" },
+  { src: "/partners/winningedge.png", alt: "WinningEdge Solutions" },
+  { src: "/partners/nextbridge.png", alt: "NextBridge Solutions" },
+  { src: "/partners/ect-logo.png", alt: "ElevateCode Technologies" },
   { src: "/partners/bolt-abacus-black.png", alt: "Bolt Abacus" },
-  { src: "/partners/tech-savant.png", alt: "Tech Savant" },
   { src: "/partners/krower.png", alt: "Krower" },
-  { src: "/partners/winningedge.png", alt: "Winning Edge" },
-  { src: "/partners/elit-celer.png", alt: "Elit Celer" },
 ];
 
 function LogoChip({ logo }: { logo: Logo }) {
