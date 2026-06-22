@@ -105,7 +105,7 @@ function MenuButton({ open, onClick }: { open: boolean; onClick: () => void }) {
       onClick={onClick}
       aria-label={open ? "Close menu" : "Open menu"}
       aria-expanded={open}
-      className="lg:hidden grid place-items-center w-9 h-9 rounded-full border border-(--color-line-2) text-(--color-fg) hover:border-(--color-fg) transition-colors"
+      className="xl:hidden grid place-items-center w-9 h-9 rounded-full border border-(--color-line-2) text-(--color-fg) hover:border-(--color-fg) transition-colors"
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
         {open ? (
@@ -228,7 +228,7 @@ export function Nav() {
             {/* Route links — desktop. flex-1 + justify-center keeps the row
                 centered between the fixed-width brand and right cluster, so
                 it can never collide with either. */}
-            <nav className="hidden lg:flex flex-1 min-w-0 items-center justify-center gap-0.5 px-6">
+            <nav className="hidden xl:flex flex-1 min-w-0 items-center justify-center gap-0.5 px-6">
               {ROUTES.map((r) => {
                 const active =
                   pathname === r.href || pathname?.startsWith(r.href + "/");
@@ -274,7 +274,7 @@ export function Nav() {
               <ThemeToggle />
 
               <Magnetic strength={0.2}>
-                <Link href="/contact" aria-label="Start — get in touch" className="hidden lg:inline-flex">
+                <Link href="/contact" aria-label="Start — get in touch" className="hidden xl:inline-flex">
                   <GlassButton
                     as="span"
                     className="lg-nav-cta items-center gap-2 mono whitespace-nowrap text-[11px] px-4 py-2 bg-(--color-cobalt)! text-white!"
@@ -306,7 +306,7 @@ export function Nav() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
             style={{ top: "calc(var(--notice-h, 0px) + 64px)" }}
-            className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-(--color-bg)/90 backdrop-blur-2xl pointer-events-auto"
+            className="xl:hidden fixed inset-x-0 bottom-0 z-40 bg-(--color-bg)/90 backdrop-blur-2xl pointer-events-auto"
           >
             <nav className="flex flex-col gap-2 px-[var(--pad-x)] pt-10 pb-12">
               {ROUTES.map((r, i) => (
