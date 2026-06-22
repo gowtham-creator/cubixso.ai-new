@@ -27,7 +27,7 @@ export default function CollaboratorsPage() {
             behind us.
           </>
         }
-        intro="We don't build alone. Accelerators, recognitions and platform partners that vouch for the work."
+        intro="We don't build alone. The collaborators we build alongside, and the supporters — programmes, clouds and stacks — we run on."
       />
       <Collaborators />
       <FinalCTA />

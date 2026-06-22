@@ -14,29 +14,38 @@ import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 
 type Logo = { src: string; name: string };
 
-// Real assets in public/partners/, grouped for the partner wall.
-const PLATFORM_PARTNERS: Logo[] = [
-  { src: "/partners/aws.png", name: "Amazon Web Services" },
-  { src: "/partners/msft.png", name: "Microsoft" },
-  { src: "/partners/google-devs.png", name: "Google Developers" },
-  { src: "/partners/atlassian.png", name: "Atlassian" },
-  { src: "/partners/mongo.png", name: "MongoDB" },
-  { src: "/partners/neo4j.png", name: "Neo4j" },
-  { src: "/partners/perplexity.png", name: "Perplexity" },
-  { src: "/partners/digital-ocean.png", name: "DigitalOcean" },
-  { src: "/partners/zoho.jpg", name: "Zoho" },
-  { src: "/partners/PayU-ogo.png", name: "PayU" },
+// Real assets in public/partners/, grouped to mirror the company deck's
+// "Our Collaborators and Supporters" slides exactly.
+
+// Our Collaborators — companies we build alongside (deck p11).
+const COLLABORATORS: Logo[] = [
+  { src: "/partners/cloudgap.png", name: "Cloudgap" },
+  { src: "/partners/elit-celer.png", name: "ElitCeler Technologies" },
+  { src: "/partners/tetra-digital.png", name: "The Tetra Digital" },
+  { src: "/partners/pursuit-soln.png", name: "Pursuit Solutions" },
+  { src: "/partners/tech-savant.png", name: "Tech Savants" },
+  { src: "/partners/winningedge.png", name: "WinningEdge Solutions" },
+  { src: "/partners/nextbridge.png", name: "NextBridge Solutions" },
+  { src: "/partners/ect-logo.png", name: "ElevateCode Technologies" },
+  { src: "/partners/bolt-abacus-black.png", name: "Bolt Abacus" },
+  { src: "/partners/krower.png", name: "Krower" },
 ];
 
-const ACCELERATORS: Logo[] = [
+// Our Supporters — the programmes, clouds, AI/CRM stacks and incubation we
+// run on (deck p10, "15+ Supporters").
+const SUPPORTERS: Logo[] = [
   { src: "/partners/wadhwani.png", name: "Wadhwani Foundation" },
-  { src: "/partners/bolt-abacus-black.png", name: "Bolt Abacus" },
-  { src: "/partners/pursuit-soln.png", name: "Pursuit Solutions" },
-  { src: "/partners/tech-savant.png", name: "Tech Savant" },
-  { src: "/partners/elit-celer.png", name: "Elit Celer" },
-  { src: "/partners/krower.png", name: "Krower" },
-  { src: "/partners/ect-logo.png", name: "ECT" },
-  { src: "/partners/winningedge.png", name: "Winning Edge" },
+  { src: "/partners/notion-startups.png", name: "Notion for Startups" },
+  { src: "/partners/mongo.png", name: "MongoDB Startup Accelerator" },
+  { src: "/partners/msft.png", name: "Microsoft for Startups" },
+  { src: "/partners/atlassian.png", name: "Atlassian" },
+  { src: "/partners/aws.png", name: "AWS Startups" },
+  { src: "/partners/digital-ocean.png", name: "DigitalOcean" },
+  { src: "/partners/zoho.jpg", name: "Zoho for Startups" },
+  { src: "/partners/google-devs.png", name: "Google for Startups" },
+  { src: "/partners/neo4j.png", name: "Neo4j" },
+  { src: "/partners/perplexity.png", name: "Perplexity" },
+  { src: "/partners/PayU-ogo.png", name: "PayU" },
 ];
 
 const RECOGNITION: Logo[] = [
@@ -126,20 +135,21 @@ export function Collaborators() {
       className="relative z-10 bg-(--color-bg) px-[var(--pad-x)] py-[clamp(40px,7vh,90px)] pb-[clamp(80px,12vh,160px)]"
     >
       <div className="mx-auto flex w-full max-w-[var(--col-w)] flex-col gap-16">
-        {/* Platform Partners — two rows scrolling opposite directions. */}
+        {/* Our Collaborators — two rows scrolling opposite directions. */}
         <div>
-          <CategoryLabel index={0} label="Platform Partners" />
+          <CategoryLabel index={0} label="Collaborators" />
           <motion.div {...reveal(0.1)} className="flex flex-col gap-5">
-            <LogoRow logos={PLATFORM_PARTNERS} duration={40} />
-            <LogoRow logos={PLATFORM_PARTNERS} duration={48} reverse />
+            <LogoRow logos={COLLABORATORS} duration={40} />
+            <LogoRow logos={COLLABORATORS} duration={48} reverse />
           </motion.div>
         </div>
 
-        {/* Accelerators & Programs — single row. */}
+        {/* Our Supporters — two rows scrolling opposite directions. */}
         <div>
-          <CategoryLabel index={1} label="Accelerators & Programs" />
-          <motion.div {...reveal(0.1)}>
-            <LogoRow logos={ACCELERATORS} duration={44} reverse />
+          <CategoryLabel index={1} label="Supporters" />
+          <motion.div {...reveal(0.1)} className="flex flex-col gap-5">
+            <LogoRow logos={SUPPORTERS} duration={44} reverse />
+            <LogoRow logos={SUPPORTERS} duration={52} />
           </motion.div>
         </div>
 
