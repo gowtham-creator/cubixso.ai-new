@@ -64,7 +64,7 @@ export const TEAM: TeamMember[] = [
     slug: "puchapalli-nagendra-prasad",
     name: "Puchapalli Nagendra Prasad",
     role: "Senior Business & Sales Consultant",
-    group: "Advisors",
+    group: "Executive",
     initials: "NP",
     photo: "/team/puchapalli-nagendra-prasad.jpg",
     bio: [
