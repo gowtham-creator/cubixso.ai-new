@@ -44,10 +44,24 @@ const SOCIALS = [
 
 export function NewsletterHero() {
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState(false);
 
-  const handleEmailSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleEmailSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
+    const email = new FormData(e.currentTarget).get("email")?.toString().trim();
+    if (!email) return;
+    setError(false);
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) setSubmitted(true);
+      else setError(true);
+    } catch {
+      setError(true);
+    }
   };
 
   return (
@@ -126,6 +140,12 @@ export function NewsletterHero() {
                   <ArrowRight className="h-5 w-5" />
                 </button>
               </form>
+            )}
+
+            {error && (
+              <p className="px-4 text-sm text-red-300" role="status">
+                Something went wrong — please try again.
+              </p>
             )}
 
             <p className="px-4 text-sm leading-relaxed text-white">
