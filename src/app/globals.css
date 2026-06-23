@@ -59,16 +59,20 @@
 
 /* ─── Light theme overrides — swaps tokens when html[data-theme="light"] ── */
 html[data-theme="light"] {
-  --color-bg:        #ffffff;
-  --color-bg-soft:   #ffffff;
-  --color-surface:   #ebebee;
-  --color-fg:        #0a0a0c;
-  --color-fg-2:      #6e6e73;
-  --color-fg-elev:   #0a0a0c;
-  --color-muted:     #86868b;
-  --color-muted-2:   #a1a1a6;
-  --color-line:      #e2e2e6;
-  --color-line-2:    #c7c7cc;
+  /* Cool, premium, cobalt-native canvas — a faint blue-grey off-white instead
+     of clinical pure white. Elevated surfaces are flipped LIGHTER (pure white)
+     so glass panels/cards read as RAISED white planes floating on the canvas
+     (Linear/Stripe-style depth) instead of vanishing into it. */
+  --color-bg:        #f5f7fc;  /* canvas — soft cool tint, never flat #fff */
+  --color-bg-soft:   #ffffff;  /* elevated — white panels/glass pop forward */
+  --color-surface:   #e9edf6;  /* recessed cool surface (insets, tracks) */
+  --color-fg:        #0b1022;  /* ink with a blue cast — reads as designed */
+  --color-fg-2:      #565d70;  /* cool secondary ink */
+  --color-fg-elev:   #0b1022;
+  --color-muted:     #727a8c;
+  --color-muted-2:   #969db0;
+  --color-line:      #dde3f1;  /* cool hairline */
+  --color-line-2:    #c4ccde;
   /* accent stays the brand cobalt — works on both themes */
   /* powder (#AFD2FA) is a near-white tint — invisible on white. In light mode
      it carries leadership names, initials avatars, and bio-panel links, so swap

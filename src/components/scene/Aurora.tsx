@@ -166,22 +166,25 @@ const AURORA_CSS = `
   to  { transform:translate3d(-8vw,-11vh,0) scale(1.12); }
 }
 
-/* ── LIGHT THEME — Floral White / Powder tints over the parchment base ──── */
+/* ── LIGHT THEME — soft powder-blue washes + a cobalt-glow accent + floral
+   warmth, over the cool off-white canvas. (NB: --color-powder is overridden to
+   deep cobalt in light for TEXT legibility, so the blobs use literal soft sky
+   tones here, not that token, to stay gentle rather than heavy.) ─────────── */
 html[data-theme="light"] .aurora-blob-1{
-  --a-c1:color-mix(in oklab, var(--color-powder) 42%, transparent);
-  --a-c2:color-mix(in oklab, var(--color-floral) 30%, transparent);
+  --a-c1:color-mix(in oklab, #AFD2FA 64%, transparent);
+  --a-c2:color-mix(in oklab, #4A7BFF 26%, transparent);
 }
 html[data-theme="light"] .aurora-blob-2{
-  --a-c1:color-mix(in oklab, var(--color-floral) 45%, transparent);
-  --a-c2:color-mix(in oklab, var(--color-powder) 22%, transparent);
+  --a-c1:color-mix(in oklab, #4A7BFF 28%, transparent);
+  --a-c2:color-mix(in oklab, var(--color-floral) 50%, transparent);
 }
 html[data-theme="light"] .aurora-blob-3{
-  --a-c1:color-mix(in oklab, var(--color-powder) 30%, transparent);
-  --a-c2:color-mix(in oklab, var(--color-floral) 24%, transparent);
+  --a-c1:color-mix(in oklab, #AFD2FA 52%, transparent);
+  --a-c2:color-mix(in oklab, var(--color-floral) 34%, transparent);
 }
 html[data-theme="light"] .aurora-blob-4{
-  --a-c1:color-mix(in oklab, var(--color-floral) 36%, transparent);
-  --a-c2:color-mix(in oklab, var(--color-powder) 18%, transparent);
+  --a-c1:color-mix(in oklab, var(--color-floral) 52%, transparent);
+  --a-c2:color-mix(in oklab, #AFD2FA 30%, transparent);
 }
 
 /* ── REDUCED MOTION — static blobs, no drift (hue is held at 0deg in JS) ── */
