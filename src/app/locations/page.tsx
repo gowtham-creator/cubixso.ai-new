@@ -56,6 +56,37 @@ export default function LocationsPage() {
         intro="Cubixso.ai is built in Hyderabad — T-Hub and WeWork — with a partner network across South and West India, an office in Dubai, and the United States next. Explore the partner network by state, then our physical offices on the world map."
       />
 
+      {/* Incubated at — the hosts of our Hyderabad HQ, as credibility chips */}
+      <section className="relative z-10 bg-(--color-bg) px-[var(--pad-x)] pb-[clamp(24px,4vh,48px)]">
+        <div className="mx-auto w-full max-w-[var(--col-w)]">
+          <div className="flex flex-col items-start gap-5 border-t border-(--color-line) pt-7 sm:flex-row sm:items-center sm:gap-8">
+            <span className="mono shrink-0 text-[10px] tracking-[0.2em] text-(--color-muted)">
+              INCUBATED&nbsp;AT
+            </span>
+            <div className="flex flex-wrap items-center gap-4">
+              {[
+                { src: "/partners/t-hub.png", alt: "T-Hub", h: "max-h-9" },
+                { src: "/partners/wework-labs.png", alt: "WeWork Labs", h: "max-h-5" },
+              ].map((l) => (
+                <span
+                  key={l.alt}
+                  className="flex h-14 items-center justify-center rounded-xl border border-(--color-line) bg-white/90 px-6 [html[data-theme=dark]_&]:border-white/10"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={l.src}
+                    alt={l.alt}
+                    loading="lazy"
+                    decoding="async"
+                    className={`${l.h} w-auto object-contain`}
+                  />
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="relative z-10 bg-(--color-bg) px-[var(--pad-x)] pb-[clamp(80px,12vh,160px)]">
         <div className="mx-auto w-full max-w-[var(--col-w)]">
           <div className="mb-3 flex items-center justify-between">
