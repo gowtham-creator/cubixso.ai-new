@@ -7,6 +7,7 @@
 // here (handled at the layout/route level).
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LiquidGlass } from "@/components/glass/LiquidGlass";
@@ -14,10 +15,26 @@ import { FinalCTA } from "@/components/sections/FinalCTA";
 import { Ph } from "@/components/icons/Ph";
 import IndiaStatesMap from "@/components/locations/IndiaStatesMap";
 import { STATES, DEFAULT_STATE_ID } from "@/lib/states";
+import { OFFICES, DEFAULT_OFFICE_ID, OFFICE_COUNTRIES } from "@/lib/offices";
+
+// Heavy WebGL map — code-split + client-only (mirrors how PresenceMap is loaded).
+const OfficeMap = dynamic(
+  () => import("@/components/locations/OfficeMap").then((m) => m.OfficeMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full animate-pulse rounded-2xl bg-(--color-surface)" />
+    ),
+  },
+);
 
 export default function LocationsPage() {
   const [activeId, setActiveId] = useState(DEFAULT_STATE_ID);
   const active = STATES.find((s) => s.id === activeId) ?? STATES[0];
+
+  const [activeOfficeId, setActiveOfficeId] = useState(DEFAULT_OFFICE_ID);
+  const activeOffice =
+    OFFICES.find((o) => o.id === activeOfficeId) ?? OFFICES[0];
 
   return (
     <main>
@@ -26,17 +43,17 @@ export default function LocationsPage() {
         eyebrow="LOCATIONS"
         title={
           <>
-            One country.{" "}
+            From Hyderabad,{" "}
             <em
               className="font-serif not-italic italic text-aurora"
               style={{ letterSpacing: "-0.02em", fontWeight: 400 }}
             >
-              Five
+              global
             </em>{" "}
-            states of reach.
+            reach.
           </>
         }
-        intro="Cubixso.ai is built in Hyderabad and runs through a partner network across South and West India. Select a state to see where our partners and clients operate."
+        intro="Cubixso.ai is built in Hyderabad — T-Hub and WeWork — with a partner network across South and West India, an office in Dubai, and the United States next. Explore the partner network by state, then our physical offices on the world map."
       />
 
       <section className="relative z-10 bg-(--color-bg) px-[var(--pad-x)] pb-[clamp(80px,12vh,160px)]">
@@ -141,6 +158,125 @@ export default function LocationsPage() {
             <LiquidGlass tier="panel" radius={24} className="block p-2 sm:p-3">
               <div className="h-[clamp(380px,58vh,640px)] w-full">
                 <IndiaStatesMap selectedGeoName={active.geoName} />
+              </div>
+            </LiquidGlass>
+          </div>
+        </div>
+      </section>
+
+      {/* ── GLOBAL OFFICES — physical sites on a fly-to mapcn point map ───── */}
+      <section className="relative z-10 bg-(--color-bg) px-[var(--pad-x)] pb-[clamp(80px,12vh,160px)]">
+        <div className="mx-auto w-full max-w-[var(--col-w)]">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="mono text-[10px] tracking-[0.2em] text-(--color-muted)">
+              PRESENCE//GLOBAL
+            </span>
+            <span className="mono text-[10px] tracking-[0.2em] text-(--color-muted)">
+              SELECT AN OFFICE ↓
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:gap-8">
+            {/* LEFT — office selector grouped by country + active-office card */}
+            <div className="flex flex-col gap-6">
+              <div
+                role="radiogroup"
+                aria-label="Select an office"
+                className="flex flex-col gap-4"
+              >
+                {OFFICE_COUNTRIES.map((country) => {
+                  const list = OFFICES.filter((o) => o.country === country);
+                  if (list.length === 0) return null;
+                  return (
+                    <div key={country}>
+                      <p className="mono mb-2 text-[10px] tracking-[0.2em] text-(--color-muted)">
+                        {country}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {list.map((o) => {
+                          const on = o.id === activeOfficeId;
+                          return (
+                            <button
+                              key={o.id}
+                              role="radio"
+                              aria-checked={on}
+                              onClick={() => setActiveOfficeId(o.id)}
+                              className={`mono text-[11px] tracking-[0.12em] rounded-full border px-4 py-2 transition-all duration-300 ${
+                                on
+                                  ? "border-(--color-accent) bg-(--color-accent)/12 text-(--color-fg)"
+                                  : "border-(--color-line) text-(--color-fg-2) hover:border-(--color-line-2) hover:text-(--color-fg)"
+                              }`}
+                            >
+                              <span
+                                className={`mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle ${
+                                  o.status === "soon"
+                                    ? "bg-(--color-accent-2)"
+                                    : on
+                                      ? "bg-(--color-signal)"
+                                      : "bg-(--color-line-2)"
+                                }`}
+                                aria-hidden
+                              />
+                              {o.name}
+                              {o.status === "soon" ? " · soon" : ""}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <LiquidGlass tier="panel" radius={24} className="block p-6 sm:p-8">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeOffice.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <span className="mono text-[10px] tracking-[0.2em] text-(--color-accent-2)">
+                      {activeOffice.type}
+                      {activeOffice.status === "soon" ? " · coming soon" : ""}
+                    </span>
+
+                    <h2 className="mt-4 flex items-center gap-2.5 font-serif italic text-[clamp(30px,4vw,52px)] leading-none text-(--color-fg)">
+                      <Ph
+                        name="map-pin"
+                        size={24}
+                        weight="light"
+                        className="shrink-0 text-(--color-accent-2)"
+                      />
+                      {activeOffice.name}
+                    </h2>
+
+                    <p className="mt-2 mono text-[11px] tracking-[0.08em] text-(--color-fg-2)">
+                      {activeOffice.city}, {activeOffice.country}
+                    </p>
+
+                    <p className="mt-6 max-w-prose text-[15px] leading-relaxed text-(--color-fg-2)">
+                      {activeOffice.blurb}
+                    </p>
+
+                    <div className="mt-7 border-t border-(--color-line) pt-5">
+                      <span className="mono text-[10px] tracking-[0.2em] text-(--color-muted)">
+                        ADDRESS
+                      </span>
+                      <p className="mt-3 max-w-prose text-[13.5px] leading-relaxed text-(--color-fg)">
+                        {activeOffice.address}
+                      </p>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </LiquidGlass>
+            </div>
+
+            {/* RIGHT — the global fly-to office map (mapcn / MapLibre) */}
+            <LiquidGlass tier="panel" radius={24} className="block p-2 sm:p-3">
+              <div className="h-[clamp(380px,58vh,640px)] w-full">
+                <OfficeMap offices={OFFICES} activeId={activeOfficeId} />
               </div>
             </LiquidGlass>
           </div>
