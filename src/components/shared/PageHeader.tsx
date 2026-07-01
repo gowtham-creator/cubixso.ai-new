@@ -35,7 +35,8 @@ interface PageHeaderProps {
   title: React.ReactNode;
   intro?: React.ReactNode;
   /** optional right-side visual (e.g. the wireframe globe on /contact). When
-      present the opener becomes a two-column layout; the aside is desktop-only. */
+      present the opener becomes a two-column layout; the aside shows on ALL
+      breakpoints — centered under the copy on mobile/tablet, right column on lg+. */
   aside?: React.ReactNode;
 }
 
@@ -70,7 +71,7 @@ export function PageHeader({ num, eyebrow, title, intro, aside }: PageHeaderProp
           {aside && (
             <motion.div
               {...fade(0.4)}
-              className="hidden lg:flex justify-end will-change-transform"
+              className="flex justify-center lg:justify-end will-change-transform"
             >
               {aside}
             </motion.div>

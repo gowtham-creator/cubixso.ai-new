@@ -29,7 +29,7 @@ export default function ContactPage() {
           </>
         }
         intro="Honest scoping, real timelines, pricing on the call. Tell us what you're building — we reply within 24 hours."
-        aside={<RotatingEarth className="w-full max-w-[440px]" />}
+        aside={<RotatingEarth className="w-full max-w-[210px] sm:max-w-[300px] lg:max-w-[440px]" />}
       />
       <Contact bare />
       <FinalCTA />

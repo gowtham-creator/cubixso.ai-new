@@ -43,25 +43,34 @@ export default function RotatingEarth({ width = 460, height = 460, className = "
     // window — the aside column is narrow (max-w-440) so window math would
     // overshoot and clip. A single square dimension keeps the canvas in lockstep
     // with the wrapper's aspect-square box → no layout jump on first paint.
-    const wrapW = wrapRef.current?.clientWidth || width;
-    const box = Math.min(width, height, wrapW || width);
-    const containerWidth = box;
-    const containerHeight = box;
-    const radius = box / 2.5;
+    // These are `let` because resize() recomputes them, so the globe TRACKS the
+    // container (orientation change, tablet split-view, first-paint 0-width)
+    // instead of a one-time measurement.
+    let containerWidth = 0;
+    let containerHeight = 0;
+    let radius = 0;
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = containerWidth * dpr;
-    canvas.height = containerHeight * dpr;
-    canvas.style.width = `${containerWidth}px`;
-    canvas.style.height = `${containerHeight}px`;
-    context.scale(dpr, dpr);
-
-    const projection = d3
-      .geoOrthographic()
-      .scale(radius)
-      .translate([containerWidth / 2, containerHeight / 2])
-      .clipAngle(90);
+    const projection = d3.geoOrthographic().clipAngle(90);
     const path = d3.geoPath().projection(projection).context(context);
+
+    // (Re)measure the wrapper and re-sync the canvas backing store (DPR-scaled),
+    // CSS size, and projection. Setting canvas.width/height resets the 2D
+    // transform, so context.scale(dpr) is applied fresh (never compounded).
+    const resize = () => {
+      const wrapW = wrapRef.current?.clientWidth || width;
+      const box = Math.min(width, height, wrapW || width);
+      containerWidth = box;
+      containerHeight = box;
+      radius = box / 2.5;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = containerWidth * dpr;
+      canvas.height = containerHeight * dpr;
+      canvas.style.width = `${containerWidth}px`;
+      canvas.style.height = `${containerHeight}px`;
+      context.scale(dpr, dpr);
+      projection.scale(radius).translate([containerWidth / 2, containerHeight / 2]);
+    };
+    resize();
 
     const pointInPolygon = (point: [number, number], polygon: number[][]): boolean => {
       const [x, y] = point;
@@ -189,11 +198,23 @@ export default function RotatingEarth({ width = 460, height = 460, className = "
       : null;
     if (io && wrapRef.current) io.observe(wrapRef.current);
 
-    const onMouseDown = (event: MouseEvent) => {
+    // Track container/orientation changes — re-sync canvas + projection, repaint.
+    // Fires once on observe, which self-corrects a 0-width first paint on mobile.
+    const ro = wrapRef.current && typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => { resize(); render(); })
+      : null;
+    if (ro && wrapRef.current) ro.observe(wrapRef.current);
+
+    // Pointer (not mouse) events so drag-to-rotate works on TOUCH too — mobile
+    // browsers don't reliably synthesize mouse events during a touch drag.
+    // setPointerCapture keeps the gesture; `touch-action:none` on the canvas
+    // stops the browser stealing it for page scroll.
+    const onPointerDown = (event: PointerEvent) => {
       autoRotate = false;
+      try { canvas.setPointerCapture(event.pointerId); } catch {}
       const sx = event.clientX, sy = event.clientY;
       const start: [number, number] = [rotation[0], rotation[1]];
-      const move = (m: MouseEvent) => {
+      const move = (m: PointerEvent) => {
         const s = 0.4;
         rotation[0] = start[0] + (m.clientX - sx) * s;
         rotation[1] = Math.max(-90, Math.min(90, start[1] - (m.clientY - sy) * s));
@@ -201,27 +222,30 @@ export default function RotatingEarth({ width = 460, height = 460, className = "
         render();
       };
       const up = () => {
-        document.removeEventListener("mousemove", move);
-        document.removeEventListener("mouseup", up);
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up);
+        document.removeEventListener("pointercancel", up);
         if (!reduced) setTimeout(() => { autoRotate = true; }, 400);
       };
-      document.addEventListener("mousemove", move);
-      document.addEventListener("mouseup", up);
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up);
+      document.addEventListener("pointercancel", up);
     };
-    canvas.addEventListener("mousedown", onMouseDown);
+    canvas.addEventListener("pointerdown", onPointerDown);
 
     loadWorldData();
 
     return () => {
       rotationTimer.stop();
       io?.disconnect();
-      canvas.removeEventListener("mousedown", onMouseDown);
+      ro?.disconnect();
+      canvas.removeEventListener("pointerdown", onPointerDown);
     };
   }, [width, height, dark]);
 
   if (error) {
     return (
-      <div ref={wrapRef} className={`flex items-center justify-center ${className}`}>
+      <div ref={wrapRef} className={`relative aspect-square flex items-center justify-center ${className}`}>
         <p className="text-(--color-muted) text-sm">{error}</p>
       </div>
     );
@@ -233,7 +257,7 @@ export default function RotatingEarth({ width = 460, height = 460, className = "
     // jump on the /contact opener. The canvas fills the box; the effect keeps its
     // backing-store px sizing in sync via the same min(width/height) math.
     <div ref={wrapRef} className={`relative aspect-square ${className}`}>
-      <canvas ref={canvasRef} className="absolute inset-0 m-auto cursor-grab active:cursor-grabbing" style={{ maxWidth: "100%" }} />
+      <canvas ref={canvasRef} className="absolute inset-0 m-auto cursor-grab active:cursor-grabbing touch-none" style={{ maxWidth: "100%", touchAction: "none" }} />
       {hint && (
         <div className="pointer-events-none absolute bottom-2 left-2 mono text-[10px] tracking-[0.18em] text-(--color-muted)">
           DRAG TO ROTATE
