@@ -14,6 +14,7 @@ export default function OgImage() {
     (
       <div
         style={{
+          position: "relative",
           width: "100%",
           height: "100%",
           display: "flex",
@@ -39,6 +40,8 @@ export default function OgImage() {
         </div>
         <div
           style={{
+            display: "flex",
+            flexWrap: "wrap",
             fontSize: 92,
             fontWeight: 700,
             lineHeight: 1.05,
@@ -46,7 +49,7 @@ export default function OgImage() {
             maxWidth: 940,
           }}
         >
-          Generative AI for the{" "}
+          <span>Generative AI for the&nbsp;</span>
           <span style={{ color: "#4A7BFF" }}>autonomous enterprise.</span>
         </div>
         <div
