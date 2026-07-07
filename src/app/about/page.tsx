@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "About — Cubixso.ai",
   description:
     "An AI-first company building intelligent systems, agentic products, and enterprise platforms end-to-end — architecture through deployment, observability, and support.",
+  alternates: { canonical: "/about" },
 };
 
 // Two ecosystem logo groups. Each logo rides a theme-aware neutral chip so

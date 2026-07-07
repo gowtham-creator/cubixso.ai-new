@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Collaborators — Cubixso.ai",
   description:
     "The ecosystem behind Cubixso — accelerators, programs, recognitions and platform partners, from T-Hub and NASSCOM 10000 Start-ups to Microsoft for Startups, NVIDIA Inception and OpenAI.",
+  alternates: { canonical: "/collaborators" },
 };
 
 export default function CollaboratorsPage() {

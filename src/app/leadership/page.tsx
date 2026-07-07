@@ -4,17 +4,26 @@
 
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { personSchemas, breadcrumbSchema } from "@/lib/schema";
 import { LeadershipGrid } from "./LeadershipGrid";
 
 export const metadata: Metadata = {
   title: "Leadership — Cubixso.ai",
   description:
     "The people building Cubixso.ai — one accountable team designing, shipping, and operating generative-AI systems for the autonomous enterprise.",
+  alternates: { canonical: "/leadership" },
 };
 
 export default function LeadershipPage() {
   return (
     <main className="relative">
+      <JsonLd
+        data={[
+          ...personSchemas(),
+          breadcrumbSchema([{ name: "Leadership", path: "/leadership" }]),
+        ]}
+      />
       <PageHeader
         num="08"
         eyebrow="LEADERSHIP"

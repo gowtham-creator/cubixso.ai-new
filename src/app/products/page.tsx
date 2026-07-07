@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Products — Cubixso.ai",
   description:
     "Six standalone AI products in the wild — purpose-built to solve specific business challenges with no custom build required. Ready to deploy from day one.",
+  alternates: { canonical: "/products" },
 };
 
 export default function ProductsPage() {

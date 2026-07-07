@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Terms & Conditions — Cubixso.ai",
   description:
     "The Terms & Conditions governing access to and use of Cubixso.ai's enterprise AI websites, platforms, and professional services.",
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {

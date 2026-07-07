@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Case Studies — Cubixso.ai",
   description:
     "Proof, not promises. Outcomes from production AI across fintech, media, judiciary, education, construction and enterprise — plus insights from the team building it.",
+  alternates: { canonical: "/case-studies" },
 };
 
 export default function CaseStudiesPage() {

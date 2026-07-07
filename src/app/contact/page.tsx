@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Contact — Cubixso.ai",
   description:
     "Start the conversation — honest scoping, real timelines, and pricing on the call. We hand you a system, not a notebook. Replies within 24 hours.",
+  alternates: { canonical: "/contact" },
 };
 
 export default function ContactPage() {

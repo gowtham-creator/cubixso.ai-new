@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy — Cubixso.ai",
   description:
     "How Cubixso.ai collects, uses, safeguards, and shares information across its enterprise AI services, including AI and model data handling.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {

@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Newsletter — Cubixso.ai",
   description:
     "Stay in the loop. One concise dispatch on production AI — what we shipped, what we learned, and where the field is heading. No noise, no spam.",
+  alternates: { canonical: "/newsletter" },
 };
 
 // Standalone newsletter page — a SINGLE centered subscribe section. Adapted

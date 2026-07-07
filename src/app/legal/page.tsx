@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Legal — Cubixso.ai",
   description:
     "Cubixso.ai's legal center — read our Terms & Conditions and Privacy Policy, and reach our team for any legal inquiries.",
+  alternates: { canonical: "/legal" },
 };
 
 const DOCS = [

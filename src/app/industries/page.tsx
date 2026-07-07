@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Industries — Cubixso.ai",
   description:
     "Built for six high-value sectors — healthcare, manufacturing, education, real estate, fintech, and supply chain — across India, the Middle East, and the Americas.",
+  alternates: { canonical: "/industries" },
 };
 
 export default function IndustriesPage() {

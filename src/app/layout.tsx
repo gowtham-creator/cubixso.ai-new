@@ -10,6 +10,15 @@ import { DotField } from "@/components/scene/DotField";
 import { ScrollProvider } from "@/components/scroll/ScrollProvider";
 import { ScrollRail } from "@/components/scroll/ScrollRail";
 import { GlassCounter } from "@/components/scroll/GlassCounter";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { organizationSchema, websiteSchema } from "@/lib/schema";
+import {
+  SITE_URL,
+  SITE_NAME,
+  SITE_TAGLINE,
+  SITE_DESCRIPTION,
+  SEO_KEYWORDS,
+} from "@/lib/seo";
 
 // Clean Apple-inspired stack: Inter (display + UI body, very SF-Pro adjacent)
 // + Instrument Serif for editorial italic counterpoint
@@ -43,22 +52,40 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
-  title: "Cubixso.ai — Generative AI for the autonomous enterprise.",
-  description:
-    "Cubixso.ai builds intelligent AI systems, agentic products, and enterprise platforms — engineered for scale and impact.",
-  metadataBase: new URL("https://cubixso.ai"),
+  metadataBase: new URL(SITE_URL),
+  title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: SEO_KEYWORDS,
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  // Canonical for the homepage; inner routes set their own in metadata.
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "Cubixso.ai — Generative AI for the autonomous enterprise.",
-    description:
-      "Intelligent AI systems, MCPs, agentic products, and enterprise platforms.",
     type: "website",
-    images: ["/og.png"],
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    locale: "en_US",
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    // og:image is provided by app/opengraph-image.tsx (cascades site-wide).
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cubixso.ai",
-    description: "Generative AI for the autonomous enterprise.",
-    images: ["/og.png"],
+    title: SITE_NAME,
+    description: SITE_TAGLINE,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
 };
 
@@ -72,6 +99,7 @@ export default function RootLayout({
     >
       <body className="min-h-full">
         <a href="#main" className="skip-link">Skip to main content</a>
+        <JsonLd data={[organizationSchema(), websiteSchema()]} />
         <ThemeProvider>
           <IntroSequence />
           <CursorFollower />

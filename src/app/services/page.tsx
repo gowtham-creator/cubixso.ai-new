@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Services — Cubixso.ai",
   description:
     "LLMOps, agentic systems, AI agents, full-scale apps, workflow orchestration, RAG & knowledge systems. Six enterprise AI services engineered for scale.",
+  alternates: { canonical: "/services" },
 };
 
 export default function ServicesPage() {

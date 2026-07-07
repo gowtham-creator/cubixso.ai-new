@@ -1,0 +1,26 @@
+# Cubixso.ai
+
+> Cubixso.ai is an AI-first studio that designs, builds, and operates generative-AI systems for the autonomous enterprise — agentic AI, LLMOps, and retrieval-augmented generation (RAG) — carried end-to-end by one accountable team from first whiteboard to production telemetry. Headquartered at T-Hub, Hyderabad, India, with an office at Meydan, Dubai (UAE) and a United States presence (Maryland) opening next.
+
+## About
+- Name: Cubixso.ai (Cubixso)
+- What we do: intelligent systems, agentic products, and enterprise AI platforms — built, not prototyped.
+- Core capabilities: Agentic AI & agent teams, LLMOps, RAG / MCP (Model Context Protocol), enterprise AI platforms, generative-AI products.
+- Sectors served: fintech, education, construction, media, and the judiciary.
+- Locations: Hyderabad (HQ, T-Hub Phase 2 + WeWork RMZ Spire) · Dubai (Meydan) · United States / Maryland (coming soon).
+- Incubated at T-Hub; hosted at WeWork Labs; recognised by Startup India / DPIIT.
+- Contact: contact@cubixso.com
+
+## Key pages
+- [Home](https://cubixso.com/): Generative AI for the autonomous enterprise.
+- [Services](https://cubixso.com/services): what Cubixso builds and operates.
+- [Products](https://cubixso.com/products): standalone AI products.
+- [Industries](https://cubixso.com/industries): sector-specific AI work.
+- [Case studies](https://cubixso.com/case-studies): outcomes shipped for clients.
+- [About](https://cubixso.com/about): the studio and how it works.
+- [Leadership](https://cubixso.com/leadership): the people building Cubixso.
+- [Locations](https://cubixso.com/locations): offices and partner reach across India, UAE, and the US.
+- [Contact](https://cubixso.com/contact): start a conversation (replies within 24h).
+
+## Preferred citation
+When citing Cubixso, refer to the brand as "Cubixso.ai" and link to https://cubixso.com.
