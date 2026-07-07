@@ -3,13 +3,16 @@
 // (metadataBase, canonicals, robots, sitemap, OpenGraph, JSON-LD @id/url)
 // resolves through SITE_URL so a domain change is a one-line edit.
 //
-// DEFAULT = cubixso.com — the launch splash was retired; cubixso.com, www, and
-// app.cubixso.com all point to THIS project now (www + app 308-redirect to the
-// apex). So the apex is the real, verified (GSC/Bing) SEO home.
+// DEFAULT = www.cubixso.com — the launch splash was retired and this project now
+// serves the site. The bare apex cubixso.com is 301-forwarded to www at the
+// registrar (GoDaddy) — outside Vercel — so www is the URL that actually serves
+// (200); app.cubixso.com 308-redirects to it too. Canonical therefore = www.
+// (To move to the bare apex later: point the apex A-record at Vercel + drop the
+// GoDaddy forward, then set this to https://cubixso.com.)
 // NEXT_PUBLIC_SITE_URL can override per environment.
 
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL || "https://cubixso.com"
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.cubixso.com"
 ).replace(/\/$/, "");
 
 export const SITE_NAME = "Cubixso.ai";
