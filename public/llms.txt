@@ -12,15 +12,15 @@
 - Contact: contact@cubixso.com
 
 ## Key pages
-- [Home](https://app.cubixso.com/): Generative AI for the autonomous enterprise.
-- [Services](https://app.cubixso.com/services): what Cubixso builds and operates.
-- [Products](https://app.cubixso.com/products): standalone AI products.
-- [Industries](https://app.cubixso.com/industries): sector-specific AI work.
-- [Case studies](https://app.cubixso.com/case-studies): outcomes shipped for clients.
-- [About](https://app.cubixso.com/about): the studio and how it works.
-- [Leadership](https://app.cubixso.com/leadership): the people building Cubixso.
-- [Locations](https://app.cubixso.com/locations): offices and partner reach across India, UAE, and the US.
-- [Contact](https://app.cubixso.com/contact): start a conversation (replies within 24h).
+- [Home](https://cubixso.com/): Generative AI for the autonomous enterprise.
+- [Services](https://cubixso.com/services): what Cubixso builds and operates.
+- [Products](https://cubixso.com/products): standalone AI products.
+- [Industries](https://cubixso.com/industries): sector-specific AI work.
+- [Case studies](https://cubixso.com/case-studies): outcomes shipped for clients.
+- [About](https://cubixso.com/about): the studio and how it works.
+- [Leadership](https://cubixso.com/leadership): the people building Cubixso.
+- [Locations](https://cubixso.com/locations): offices and partner reach across India, UAE, and the US.
+- [Contact](https://cubixso.com/contact): start a conversation (replies within 24h).
 
 ## Preferred citation
-Refer to the brand as "Cubixso.ai" and link to https://app.cubixso.com (the live site).
+Refer to the brand as "Cubixso.ai" and link to https://cubixso.com.

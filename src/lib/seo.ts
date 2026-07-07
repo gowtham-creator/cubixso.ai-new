@@ -3,14 +3,13 @@
 // (metadataBase, canonicals, robots, sitemap, OpenGraph, JSON-LD @id/url)
 // resolves through SITE_URL so a domain change is a one-line edit.
 //
-// DEFAULT = app.cubixso.com — this is where the real, indexable site actually
-// lives today. The apex cubixso.com / www is a separate marketing splash with a
-// "Launch" button, so we must NOT canonicalize content to it (that would point
-// Google at the splash). When the full site is moved onto the apex (splash
-// retired), flip this default to https://cubixso.com or set NEXT_PUBLIC_SITE_URL.
+// DEFAULT = cubixso.com — the launch splash was retired; cubixso.com, www, and
+// app.cubixso.com all point to THIS project now (www + app 308-redirect to the
+// apex). So the apex is the real, verified (GSC/Bing) SEO home.
+// NEXT_PUBLIC_SITE_URL can override per environment.
 
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL || "https://app.cubixso.com"
+  process.env.NEXT_PUBLIC_SITE_URL || "https://cubixso.com"
 ).replace(/\/$/, "");
 
 export const SITE_NAME = "Cubixso.ai";
