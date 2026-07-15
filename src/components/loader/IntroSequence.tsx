@@ -8,7 +8,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useGLTF, Environment, Lightformer } from "@react-three/drei";
+import { useGLTF, Environment, Lightformer, Preload } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { AnimatePresence, motion } from "framer-motion";
 import * as THREE from "three";
@@ -61,9 +61,11 @@ function PreloaderCube({ dark }: { dark: boolean }) {
     return c;
   }, [scene, dark]);
 
-  // calm auto-rotate (slower than a full turn — was too fast)
+  // calm auto-rotate (slower than a full turn — was too fast).
+  // delta is clamped so a long frame (first-paint shader compile, tab jank)
+  // advances the cube smoothly instead of visibly jumping.
   useFrame((_, delta) => {
-    if (root.current) root.current.rotation.y += delta * 0.82;
+    if (root.current) root.current.rotation.y += Math.min(delta, 1 / 30) * 0.82;
   });
 
   return (
@@ -171,8 +173,10 @@ export function IntroSequence() {
             // Smaller zoom on phones/tablets so the cube isn't oversized and the
             // keyword caption + wordmark below it keep clear air.
             camera={{ position: [3.4, 3.4, 3.4], zoom: compact ? 88 : 118, near: 0.1, far: 100 }}
-            gl={{ antialias: true, alpha: true }}
-            dpr={[1, 2]}
+            gl={{ antialias: true, alpha: true, powerPreference: "high-performance", stencil: false }}
+            // phones/tablets cap at 1.75× — indistinguishable at this size, but it
+            // takes the antialias+bloom first-frame cost off the critical path.
+            dpr={compact ? [1, 1.75] : [1, 2]}
             onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
             style={{ position: "absolute", inset: 0 }}
           >
@@ -185,6 +189,9 @@ export function IntroSequence() {
                 <Lightformer intensity={1.8} color="#9fc0ff" position={[0, 3, 3]} scale={[7, 3, 1]} />
                 <Lightformer intensity={1.1} color="#cfe0ff" position={[4, -1, -3]} scale={[5, 3, 1]} />
               </Environment>
+              {/* Compile every material + the env cubemap up-front, so the cube's
+                  first visible frame doesn't stall on shader compilation. */}
+              <Preload all />
             </Suspense>
             <EffectComposer>
               {/* Tighter bloom: only the brightest edges glow (higher threshold,

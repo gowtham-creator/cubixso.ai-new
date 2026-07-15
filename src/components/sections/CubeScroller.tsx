@@ -10,7 +10,7 @@
 
 import { Suspense, useMemo, useRef, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useGLTF, Environment, Lightformer } from "@react-three/drei";
+import { useGLTF, Environment, Lightformer, Preload } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { useScroll, useMotionValueEvent } from "framer-motion";
 import * as THREE from "three";
@@ -125,6 +125,9 @@ export function CubeScroller() {
                 <Lightformer intensity={1.8} color="#9fc0ff" position={[0, 3, 3]} scale={[7, 3, 1]} />
                 <Lightformer intensity={1.1} color="#cfe0ff" position={[4, -1, -3]} scale={[5, 3, 1]} />
               </Environment>
+              {/* Pre-compile materials + env map while the intro curtain still
+                  covers the page, so the first scrolled frame never stutters. */}
+              <Preload all />
             </Suspense>
             <EffectComposer>
               <Bloom intensity={dark ? 1.1 : 0.4} luminanceThreshold={dark ? 0.12 : 0.5} luminanceSmoothing={0.9} mipmapBlur />

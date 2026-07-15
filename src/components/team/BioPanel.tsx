@@ -142,6 +142,24 @@ export function BioPanel({
                     ))}
                   </div>
 
+                  {member.skills?.length ? (
+                    <div className="mt-6">
+                      <p className="mono text-[10px] uppercase tracking-[0.2em] text-white/40">
+                        Skills
+                      </p>
+                      <ul className="mt-3 flex flex-wrap gap-2">
+                        {member.skills.map((s) => (
+                          <li
+                            key={s}
+                            className="rounded-full border border-white/12 bg-white/5 px-3 py-1 text-[12px] leading-snug text-(--color-fg-2)"
+                          >
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
                   {(member.links?.length || member.open) && (
                     <div className="mt-7 flex flex-wrap items-center gap-4">
                       {member.links?.map((l) => (
