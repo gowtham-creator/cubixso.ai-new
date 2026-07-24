@@ -189,6 +189,27 @@ export const TEAM: TeamMember[] = [
     ],
     links: [{ label: "Contact", href: "/contact" }],
   },
+  {
+    slug: "santanu-bhattacharjee",
+    name: "Santanu Bhattacharjee",
+    role: "Pro Bono ESG Advisor",
+    group: "Advisors",
+    initials: "SB",
+    photo: "/team/santanu-bhattacharjee.jpg",
+    bio: [
+      "An industry leader with over 20 years of experience, Santanu Bhattacharjee is a published author on strategic leadership and the Founder of the Bhattacharjee Foundation.",
+      "Through the Foundation's mission to mentor startups and drive positive societal impact, Santanu associates with Cubixso as a Pro Bono ESG Advisor. In this role he guides our founders on embedding Environmental, Social, and Governance (ESG) principles into Cubixso's core operations, fostering ethical growth, responsible innovation, and long-term sustainability.",
+    ],
+    skills: [
+      "ESG strategy",
+      "Strategic leadership",
+      "Startup mentorship",
+      "Governance & ethics",
+      "Responsible innovation",
+      "Sustainability",
+    ],
+    links: [{ label: "Contact", href: "/contact" }],
+  },
 ];
 
 export const TEAM_GROUPS = ["Executive", "Engineering", "Advisors"] as const;
