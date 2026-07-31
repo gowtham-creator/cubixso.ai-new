@@ -45,17 +45,21 @@ const SOCIALS = [
 export function NewsletterHero() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(false);
+  // Render time — the server drops submissions filled faster than a human could.
+  const [ts] = useState(() => Date.now());
 
   const handleEmailSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const email = new FormData(e.currentTarget).get("email")?.toString().trim();
+    const fd = new FormData(e.currentTarget);
+    const email = fd.get("email")?.toString().trim();
+    const company = fd.get("company")?.toString() ?? ""; // honeypot
     if (!email) return;
     setError(false);
     try {
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, company, ts }),
       });
       if (res.ok) setSubmitted(true);
       else setError(true);
@@ -123,6 +127,16 @@ export function NewsletterHero() {
                 <label htmlFor="nl-email" className="sr-only">
                   Email address
                 </label>
+                {/* Honeypot — off-screen, hidden from humans; bots fill it and
+                    the server silently drops the submission. Do not remove. */}
+                <input
+                  type="text"
+                  name="company"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+                />
                 <input
                   id="nl-email"
                   type="email"

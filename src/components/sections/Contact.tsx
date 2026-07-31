@@ -20,8 +20,10 @@ const reveal = (delay: number) => ({
 });
 
 export function Contact({ bare = false }: { bare?: boolean } = {}) {
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", message: "", company: "" });
   const [status, setStatus] = useState<"idle" | "sending" | "ok" | "error">("idle");
+  // Render time — the server drops submissions filled faster than a human could.
+  const [ts] = useState(() => Date.now());
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +34,7 @@ export function Contact({ bare = false }: { bare?: boolean } = {}) {
       const res = await fetch("/api/notify", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, ts }),
       });
       setStatus(res.ok ? "ok" : "error");
       if (res.ok) chime(); // glass strike — success path only, never on error
@@ -124,6 +126,20 @@ export function Contact({ bare = false }: { bare?: boolean } = {}) {
             onSubmit={submit}
             className="flex flex-col gap-6"
           >
+            {/* Honeypot — off-screen, hidden from humans and assistive tech, but
+                bots fill every field. A non-empty value makes the server silently
+                drop the submission. Do not remove. */}
+            <input
+              type="text"
+              name="company"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              value={form.company}
+              onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+              style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+            />
+
             <div>
               <label htmlFor="name" className="mono block text-(--color-fg-2)">NAME</label>
               <input

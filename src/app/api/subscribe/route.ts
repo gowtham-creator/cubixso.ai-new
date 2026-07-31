@@ -6,12 +6,25 @@
 
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { spamGuard, clientIp, EMAIL_RE } from "@/lib/antispam";
+
+const silentOk = () => NextResponse.json({ ok: true, queued: false });
 
 export async function POST(req: Request) {
   try {
-    const { email } = (await req.json()) as { email?: string };
-    if (!email) {
-      return NextResponse.json({ error: "email required" }, { status: 400 });
+    const { email, company, ts } = (await req.json()) as {
+      email?: string;
+      company?: string; // honeypot
+      ts?: number;
+    };
+
+    const guard = spamGuard({ origin: req.headers.get("origin"), ip: clientIp(req), honeypot: company, ts });
+    if (!guard.ok) {
+      console.log(`[subscribe] dropped (spam:${guard.reason})`);
+      return silentOk();
+    }
+    if (!email || !EMAIL_RE.test(email)) {
+      return NextResponse.json({ error: "valid email required" }, { status: 400 });
     }
 
     const key = process.env.RESEND_API_KEY;
