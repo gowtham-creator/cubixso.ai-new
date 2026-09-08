@@ -11,6 +11,24 @@ export const LEGAL_UPDATED = "Effective 1 June 2026" as const;
 export const LEGAL_NOTE =
   "This document is a template provided for general informational purposes and does not constitute legal advice. It remains pending review by qualified legal counsel and should be adapted to your specific circumstances before being relied upon." as const;
 
+// Cubixso's retained legal advisor, surfaced on /legal so anyone with a legal
+// question can reach counsel directly instead of routing through the general
+// inbox. Chambers address and professional email are as supplied by the firm.
+export const LEGAL_ADVISOR = {
+  name: "Abburi Ramdev",
+  quals: "MBA, LL.B.",
+  role: "High Court Advocate",
+  firm: "Ramdev & Associates",
+  relationship: "Legal Advisor to Cubixso.ai",
+  email: "Advocate.ramdev9999@gmail.com",
+  address: [
+    "Flat No. 514, Block A",
+    "Dollfine Estate, Janapriya Nagar",
+    "Miyapur, Hyderabad 500049",
+    "Telangana, India",
+  ],
+} as const;
+
 export interface LegalSection {
   /** stable anchor id, e.g. "acceptance" */
   id: string;

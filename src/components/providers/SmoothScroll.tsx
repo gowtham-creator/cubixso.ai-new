@@ -9,7 +9,7 @@
 // pins (KineticStack / Global) jank-free over smooth scroll.
 // Exported context lets descendants reach the instance if needed.
 
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import Lenis from "lenis";
 import { connectLenisToScrollTrigger } from "@/lib/gsap";
 
@@ -17,7 +17,10 @@ const LenisCtx = createContext<Lenis | null>(null);
 export const useLenis = () => useContext(LenisCtx);
 
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
-  const lenisRef = useRef<Lenis | null>(null);
+  // STATE, not a ref: the provider has to re-render once the instance exists,
+  // otherwise every useLenis() consumer is handed the initial null forever and
+  // silently no-ops (that is what broke the mobile menu's scroll lock).
+  const [lenis, setLenis] = useState<Lenis | null>(null);
 
   useEffect(() => {
     const lenis = new Lenis({
@@ -29,7 +32,7 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
       wheelMultiplier: 1,
       touchMultiplier: 1.5,
     });
-    lenisRef.current = lenis;
+    setLenis(lenis);
 
     // gsap.ticker drives lenis.raf + Lenis scroll → ScrollTrigger.update().
     const disconnect = connectLenisToScrollTrigger(lenis);
@@ -37,11 +40,9 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
     return () => {
       disconnect();
       lenis.destroy();
-      lenisRef.current = null;
+      setLenis(null);
     };
   }, []);
 
-  return (
-    <LenisCtx.Provider value={lenisRef.current}>{children}</LenisCtx.Provider>
-  );
+  return <LenisCtx.Provider value={lenis}>{children}</LenisCtx.Provider>;
 }

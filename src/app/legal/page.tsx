@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { FinalCTA } from "@/components/sections/FinalCTA";
 import { Ph } from "@/components/icons/Ph";
+import { LEGAL_ADVISOR } from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Legal — Cubixso.ai",
@@ -82,8 +83,44 @@ export default function LegalPage() {
             ))}
           </div>
 
+          {/* ── Legal advisor ─────────────────────────────────────────── */}
+          <div className="mt-4 rounded-2xl border border-(--color-line) bg-(--color-bg-soft)/40 p-8 backdrop-blur-sm md:mt-6 md:p-10">
+            <span className="mono text-(--color-muted-2)">03</span>
+
+            <div className="mt-6 grid grid-cols-1 gap-8 md:grid-cols-[1.1fr_1fr] md:gap-12">
+              <div>
+                <h2 className="font-display text-[clamp(24px,2.4vw,38px)] font-medium leading-[1.05] tracking-[-0.03em] text-(--color-fg)">
+                  {LEGAL_ADVISOR.name}
+                  <span className="text-(--color-muted)">, {LEGAL_ADVISOR.quals}</span>
+                </h2>
+                <p className="mt-3 text-[15px] leading-relaxed text-(--color-fg-2)">
+                  {LEGAL_ADVISOR.role} · {LEGAL_ADVISOR.firm}
+                </p>
+                <p className="mt-1 mono text-(--color-accent-2)">
+                  {LEGAL_ADVISOR.relationship.toUpperCase()}
+                </p>
+              </div>
+
+              <address className="not-italic">
+                <p className="mono text-(--color-muted-2)">CHAMBERS</p>
+                <div className="mt-3 flex flex-col gap-0.5 text-[14.5px] leading-relaxed text-(--color-fg-2)">
+                  {LEGAL_ADVISOR.address.map((line) => (
+                    <span key={line}>{line}</span>
+                  ))}
+                </div>
+                <a
+                  href={`mailto:${LEGAL_ADVISOR.email}`}
+                  className="mt-4 inline-flex items-center gap-2 text-[14.5px] text-(--color-fg-2) underline decoration-(--color-line-2) underline-offset-4 transition-colors duration-300 hover:text-(--color-fg) focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--color-accent-2) rounded-xs"
+                >
+                  <Ph name="envelope-simple" weight="thin" size={15} />
+                  {LEGAL_ADVISOR.email}
+                </a>
+              </address>
+            </div>
+          </div>
+
           <p className="mt-10 mono text-(--color-muted)">
-            Legal inquiries —{" "}
+            General legal inquiries —{" "}
             <a
               href="mailto:contact@cubixso.com"
               className="text-(--color-fg-2) underline decoration-(--color-line-2) underline-offset-4 transition-colors duration-300 hover:text-(--color-fg) focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--color-accent-2) rounded-xs"

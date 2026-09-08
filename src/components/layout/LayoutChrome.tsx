@@ -6,10 +6,20 @@
 // can always navigate away (the floating glass nav pill sits cleanly over the
 // newsletter's video hero).
 
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
-import { SplineMascot } from "@/components/scene/SplineMascot";
+
+// The mascot is a WebGL scene rendered on EVERY route, so a static import put
+// three/fiber/drei into the shared bundle site-wide — parsed and executed before
+// any page could become interactive, for a decorative element that is purely
+// below-the-fold garnish. Lazy + client-only: pages hydrate first, the mascot
+// arrives after.
+const SplineMascot = dynamic(
+  () => import("@/components/scene/SplineMascot").then((m) => m.SplineMascot),
+  { ssr: false },
+);
 
 const BARE_ROUTES = new Set(["/coming-soon"]);
 

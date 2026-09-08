@@ -25,6 +25,7 @@ import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-
 import { Magnetic } from "@/components/motion/Magnetic";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { LiquidGlass, GlassButton } from "@/components/glass/LiquidGlass";
+import { useLenis } from "@/components/providers/SmoothScroll";
 import { AudioToggle } from "@/components/audio/AudioToggle";
 import { Ph } from "@/components/icons/Ph";
 import { tick, click } from "@/lib/feedback";
@@ -146,6 +147,7 @@ export function Nav() {
   const [compact, setCompact] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollY } = useScroll();
+  const lenis = useLenis();
   const reducedRef = useRef(false);
   // Active-route indicator — a cobalt dot that GLIDES between links via
   // framer layoutId (no glide under reduced motion: layout anim is spring'd
@@ -163,11 +165,20 @@ export function Nav() {
     return () => mq.removeEventListener("change", apply);
   }, []);
 
-  // Lock body scroll when mobile menu is open
+  // Lock page scroll when the mobile menu is open. `overflow:hidden` alone is
+  // not enough here — Lenis drives its own inertial scroll and keeps running —
+  // so stop the instance too and restart it on close.
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
+    if (menuOpen) lenis?.stop();
+    else lenis?.start();
     return () => { document.body.style.overflow = ""; };
-  }, [menuOpen]);
+  }, [menuOpen, lenis]);
+
+  // A route change closes the sheet. Without this a link to the CURRENT route
+  // leaves the overlay stuck open over the page (the onClick close never fires
+  // for the active link on some browsers' tap handling).
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
 
   // WOW: on scroll-DOWN the pill compresses + raises blur so content bends
   // brighter behind it; on scroll-UP it relaxes. Deep scroll-down slips it away.
@@ -182,10 +193,13 @@ export function Nav() {
   });
 
   return (
+    <>
     <motion.header
       initial={{ y: -28, opacity: 0 }}
       animate={{
-        y: hidden ? -96 : 0,
+        // Never slip the bar away while the mobile sheet is open — the close (X)
+        // button lives in it and has to stay reachable.
+        y: hidden && !menuOpen ? -96 : 0,
         opacity: mounted ? 1 : 0,
       }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
@@ -297,62 +311,6 @@ export function Nav() {
         </LiquidGlass>
       </div>
 
-      {/* Mobile sheet — full overlay with all routes + CTA */}
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            style={{ top: "calc(var(--notice-h, 0px) + 64px)" }}
-            className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-(--color-bg)/90 backdrop-blur-2xl pointer-events-auto"
-          >
-            <nav className="flex flex-col gap-2 px-[var(--pad-x)] pt-10 pb-12">
-              {ROUTES.map((r, i) => (
-                <motion.div
-                  key={r.href}
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.45, delay: 0.05 + i * 0.05, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  <Link
-                    href={r.href}
-                    onClick={() => {
-                      click();
-                      setMenuOpen(false);
-                    }}
-                    className="block py-4 font-display text-[clamp(32px,8vw,52px)] font-medium tracking-[-0.025em] text-(--color-fg) border-b border-(--color-line)"
-                  >
-                    {r.label}
-                  </Link>
-                </motion.div>
-              ))}
-
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                className="mt-10"
-              >
-                <Link
-                  href="/contact"
-                  onClick={() => setMenuOpen(false)}
-                  aria-label="Start the conversation"
-                >
-                  <GlassButton as="span" className="lg-nav-cta-mobile group inline-flex items-center gap-3 pl-6 pr-2 py-2 font-medium tracking-tight">
-                    <span>Start the conversation</span>
-                    <span className="grid place-items-center w-9 h-9 rounded-full bg-(--color-bg)/30 text-(--color-fg) transition-transform group-hover:rotate-45">
-                      <Ph name="arrow-up-right" weight="light" size={16} />
-                    </span>
-                  </GlassButton>
-                </Link>
-              </motion.div>
-            </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Self-contained chrome styles — animate the compress (height/blur) on the
           Tier-1 pill without touching globals.css. Transform/filter only. */}
       <style>{`
@@ -374,5 +332,68 @@ export function Nav() {
         }
       `}</style>
     </motion.header>
+
+    {/* Mobile sheet — full-viewport overlay with all routes + CTA.
+        MUST be a SIBLING of <motion.header>, never a child: framer animates the
+        header with a transform, and a transformed ancestor becomes the
+        containing block for position:fixed descendants. Nested, this sheet
+        resolved its inset against the ~76px nav box instead of the viewport, so
+        the panel collapsed to a sliver and its links spilled unpainted over the
+        footer. As a sibling, `fixed` means the viewport again. */}
+    <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            style={{ paddingTop: "calc(var(--notice-h, 0px) + 76px)" }}
+            className="lg:hidden fixed inset-0 z-[45] overflow-y-auto overscroll-contain bg-(--color-bg)/95 backdrop-blur-2xl pointer-events-auto"
+          >
+            <nav className="flex min-h-full flex-col gap-2 px-[var(--pad-x)] pt-6 pb-[max(3rem,env(safe-area-inset-bottom))]">
+              {ROUTES.map((r, i) => (
+                <motion.div
+                  key={r.href}
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.45, delay: 0.05 + i * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <Link
+                    href={r.href}
+                    onClick={() => {
+                      click();
+                      setMenuOpen(false);
+                    }}
+                    className="block py-3 font-display text-[clamp(26px,6.4vw,44px)] font-medium tracking-[-0.025em] text-(--color-fg) border-b border-(--color-line)"
+                  >
+                    {r.label}
+                  </Link>
+                </motion.div>
+              ))}
+
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                className="mt-auto pt-10"
+              >
+                <Link
+                  href="/contact"
+                  onClick={() => setMenuOpen(false)}
+                  aria-label="Start the conversation"
+                >
+                  <GlassButton as="span" className="lg-nav-cta-mobile group inline-flex items-center gap-3 pl-6 pr-2 py-2 font-medium tracking-tight">
+                    <span>Start the conversation</span>
+                    <span className="grid place-items-center w-9 h-9 rounded-full bg-(--color-bg)/30 text-(--color-fg) transition-transform group-hover:rotate-45">
+                      <Ph name="arrow-up-right" weight="light" size={16} />
+                    </span>
+                  </GlassButton>
+                </Link>
+              </motion.div>
+            </nav>
+          </motion.div>
+        )}
+    </AnimatePresence>
+    </>
   );
 }

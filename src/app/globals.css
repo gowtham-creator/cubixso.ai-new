@@ -13,12 +13,18 @@
   --color-fg:        #ffffff;
   /* Secondary/muted inks lifted for legibility over the pure-black void —
      Apple-grey character kept, contrast floors raised (visibility pass). */
-  --color-fg-2:      #b4b4ba;
+  /* Secondary inks carry a COOL cast (12–15% saturation, not 3–4% neutral grey).
+     On a cobalt-branded near-black, dead-neutral greys read as washed-out and
+     detached from the palette; a slight blue bias keeps them part of the same
+     light. Contrast is also lifted a little across the board. */
+  --color-fg-2:      #b7bcca;  /* 11.06:1 (was #b4b4ba, 10.18:1 @4% sat) */
   --color-fg-elev:   #f5f5f7;
-  --color-muted:     #9a9aa1;
-  --color-muted-2:   #82828a;
-  --color-line:      #26262a;
-  --color-line-2:    #38383e;
+  --color-muted:     #9aa1b3;  /*  8.12:1 (was #9a9aa1,  7.51:1 @4% sat) */
+  --color-muted-2:   #868da0;  /*  6.33:1 (was #82828a,  5.51:1 @3% sat) */
+  /* Hairlines at 1.39:1 / 1.80:1 all but vanished on pure black — panel edges
+     and dividers disappeared entirely on dimmer screens. */
+  --color-line:      #33343d;  /* 1.70:1 (was #26262a, 1.39:1) */
+  --color-line-2:    #4d4e59;  /* 2.55:1 (was #38383e, 1.80:1) */
   /* Cubixso brand palette — electric cobalt (prompt spec) */
   --color-accent:    #1B4FFF;  /* electric cobalt */
   --color-accent-2:  #4A7BFF;  /* glow / emissive lighter */
@@ -67,13 +73,25 @@ html[data-theme="light"] {
   --color-bg-soft:   #ffffff;  /* elevated — white panels/glass pop forward */
   --color-surface:   #e9edf6;  /* recessed cool surface (insets, tracks) */
   --color-fg:        #0b1022;  /* ink with a blue cast — reads as designed */
-  --color-fg-2:      #565d70;  /* cool secondary ink */
+  --color-fg-2:      #565d70;  /* cool secondary ink — 6.13:1, AA */
   --color-fg-elev:   #0b1022;
-  --color-muted:     #727a8c;
-  --color-muted-2:   #969db0;
-  --color-line:      #dde3f1;  /* cool hairline */
-  --color-line-2:    #c4ccde;
-  /* accent stays the brand cobalt — works on both themes */
+  /* Muted inks were too pale to read on a near-white canvas: muted-2 measured
+     2.53:1 and muted 4.02:1 against #f5f7fc, so the 11px mono labels they carry
+     (section numerals, "Contents", captions) sat below AA. Darkened to clear
+     4.5:1 while keeping the cool cast. */
+  --color-muted:     #5b6377;  /* 5.60:1 (was #727a8c, 4.02:1) */
+  --color-muted-2:   #676f84;  /* 4.68:1 (was #969db0, 2.53:1) */
+  /* Hairlines were effectively invisible on the light canvas (1.20:1 / 1.50:1),
+     so cards and dividers lost their edges. Deepened for a readable boundary. */
+  --color-line:      #b6c3dd;  /* 1.65:1 (was #dde3f1, 1.20:1) */
+  --color-line-2:    #94a3c0;  /* 2.37:1 (was #c4ccde, 1.50:1) */
+  /* Accent: the dark-theme cobalt is 100% saturated, which on a near-white
+     canvas glares and vibrates — and accent-2 also failed AA at 3.52:1. Light
+     mode gets an optically compensated cobalt: same hue family, lower
+     saturation, higher contrast. (Same pattern already used for --color-powder.)
+     --color-cobalt is deliberately NOT changed — brand fills stay exact. */
+  --color-accent:    #1C46D6;  /* 6.76:1, 77% sat (was #1B4FFF, 5.43:1 @100%) */
+  --color-accent-2:  #2E5FD9;  /* 5.22:1, 69% sat (was #4A7BFF, 3.52:1 @100%) */
   /* powder (#AFD2FA) is a near-white tint — invisible on white. In light mode
      it carries leadership names, initials avatars, and bio-panel links, so swap
      it for a deep cobalt that reads on white while staying on-brand. */

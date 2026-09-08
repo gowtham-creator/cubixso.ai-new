@@ -52,9 +52,33 @@ export function connectLenisToScrollTrigger(lenis: Lenis): () => void {
       : null;
   ro?.observe(document.body);
 
+  // ── ScrollTrigger → framer-motion re-measure bridge ──────────────────────
+  // Two scroll systems run on this page: GSAP ScrollTrigger (the KineticStack
+  // and Global PINS) and framer-motion's useScroll (CubeScroller, Hero, the
+  // rail + counter). Pinning inserts a pin-spacer and re-lays-out everything
+  // below it, but framer caches each target's offsets and only re-measures on
+  // a window resize — which a ScrollTrigger.refresh() does not produce. So from
+  // the first pinned section downward, every framer-driven progress value was
+  // reading against stale geometry and drifting out of sync with the content.
+  //
+  // Nudging framer with a synthetic resize after ST settles fixes the drift.
+  // ScrollTrigger also listens for resize, so the nudge would echo back as
+  // another refresh forever; the time window swallows that echo (ST's resize
+  // is debounced well under 1s) while still letting genuine later refreshes —
+  // orientation change, lazy content — through.
+  let ignoreRefreshUntil = 0;
+  const onRefresh = () => {
+    const now = performance.now();
+    if (now < ignoreRefreshUntil) return;
+    ignoreRefreshUntil = now + 1000;
+    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
+  };
+  ScrollTrigger.addEventListener("refresh", onRefresh);
+
   return () => {
     lenisConnected = false;
     lenis.off("scroll", onScroll);
+    ScrollTrigger.removeEventListener("refresh", onRefresh);
     window.clearTimeout(refreshTimer);
     ro?.disconnect();
     gsap.ticker.remove(tick);

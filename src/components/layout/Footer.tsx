@@ -50,7 +50,7 @@ function LinkColumn({ title, links }: { title: string; links: { href: string; la
   return (
     <nav
       aria-label={title}
-      className="flex flex-col gap-5 p-10 transition-colors duration-500 hover:bg-white/[0.02]"
+      className="flex flex-col gap-5 p-7 sm:p-10 transition-colors duration-500 hover:bg-white/[0.02]"
     >
       <span className="mono text-[11px] tracking-[0.2em] text-(--color-fg-2)">
         {title.toUpperCase()}
@@ -75,9 +75,13 @@ export function Footer() {
       {/* Hairline grid: a clean Klarheit-style ruled grid. The top border above,
           plus the column dividers below, form thin --color-line verticals +
           horizontals that read on both themes. */}
-      <div className="grid grid-cols-1 divide-y divide-(--color-line) md:grid-cols-4 md:divide-x md:divide-y-0">
+      {/* Tablets used to jump straight from 1 column to 4 at 768px, which left
+          the two link columns ~110px wide and wrapped "Case Studies" mid-word.
+          Now: 1 col on phones → 2 on tablets (brand on its own row) → 4 on
+          desktop, with the dividers flipping to vertical only at that point. */}
+      <div className="grid grid-cols-1 divide-y divide-(--color-line) md:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-y-0">
         {/* Brand + direct contact */}
-        <div className="flex flex-col justify-between gap-12 p-10 transition-colors duration-500 hover:bg-white/[0.02] md:col-span-2 md:min-h-[400px]">
+        <div className="flex flex-col justify-between gap-10 p-7 sm:p-10 transition-colors duration-500 hover:bg-white/[0.02] md:col-span-2 md:gap-12 lg:min-h-[400px]">
           <Link
             href="/"
             onPointerEnter={hoverTick}
@@ -131,8 +135,8 @@ export function Footer() {
       </div>
 
       {/* Socials + legal bar */}
-      <div className="flex flex-col gap-6 border-t border-(--color-line) px-10 py-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-6">
+      <div className="flex flex-col gap-6 border-t border-(--color-line) px-7 py-6 sm:px-10 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
           {SOCIALS.map((s) => (
             <a
               key={s.name}
@@ -154,7 +158,7 @@ export function Footer() {
             </a>
           ))}
         </div>
-        <div className="flex items-center gap-6 mono text-[11px] text-(--color-fg-2)">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mono text-[11px] text-(--color-fg-2)">
           {LEGAL.map((l) => (
             <Link
               key={l.href}
@@ -169,7 +173,7 @@ export function Footer() {
       </div>
 
       {/* Copyright bar */}
-      <div className="flex flex-col gap-2 border-t border-(--color-line) px-10 py-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 border-t border-(--color-line) px-7 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-10">
         <span className="mono text-[11px] text-(--color-fg-2)">
           © 2026 Cubixso.ai — All rights reserved.
         </span>
