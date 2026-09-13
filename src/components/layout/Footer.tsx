@@ -188,14 +188,23 @@ export function Footer() {
           (cobalt-glow → cobalt → deep-blue) to pop on the near-black void;
           LIGHT resolves to dark ink (cobalt → deep-blue, both dark colors) so
           it never washes out on white. The ancestor variant retargets the
-          stops when html[data-theme="light"] is set by the ThemeProvider. */}
+          stops when html[data-theme="light"] is set by the ThemeProvider.
+
+          CENTRED via text-center on the wrapper + inline-block on the span.
+          inline-block matters: as a full-width block the gradient painted
+          across the whole footer, so centring the glyphs would have parked them
+          in the middle of the ramp and thrown away the light-to-deep range.
+          Shrink-wrapped, the gradient maps to the wordmark itself. The 0.04em
+          paddingLeft cancels the trailing letter-space (tracking applies after
+          every glyph, including the last), which would otherwise leave the
+          wordmark reading a hair left of true centre. */}
       <div
         aria-hidden
-        className="pointer-events-none select-none overflow-hidden border-t border-(--color-line) px-4 pt-6"
+        className="pointer-events-none select-none overflow-hidden border-t border-(--color-line) px-4 pt-6 text-center"
       >
         <span
-          className="block bg-clip-text font-display font-semibold leading-[0.78] tracking-[-0.04em] text-transparent [-webkit-background-clip:text] [background-image:linear-gradient(100deg,var(--color-cobalt-glow),var(--color-cobalt)_45%,var(--color-deep-blue))] [html[data-theme=light]_&]:[background-image:linear-gradient(100deg,var(--color-cobalt),var(--color-deep-blue)_60%,var(--color-cobalt))]"
-          style={{ fontSize: "clamp(72px, 19vw, 320px)", marginBottom: "-0.14em" }}
+          className="inline-block bg-clip-text font-display font-semibold leading-[0.78] tracking-[-0.04em] text-transparent [-webkit-background-clip:text] [background-image:linear-gradient(100deg,var(--color-cobalt-glow),var(--color-cobalt)_45%,var(--color-deep-blue))] [html[data-theme=light]_&]:[background-image:linear-gradient(100deg,var(--color-cobalt),var(--color-deep-blue)_60%,var(--color-cobalt))]"
+          style={{ fontSize: "clamp(72px, 19vw, 320px)", marginBottom: "-0.14em", paddingLeft: "0.04em" }}
         >
           Cubixso
         </span>

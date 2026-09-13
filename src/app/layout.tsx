@@ -95,8 +95,29 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      // The inline script below writes data-theme before React hydrates, so the
+      // server HTML and the first client render legitimately differ on <html>.
+      suppressHydrationWarning
       className={`${inter.variable} ${instrument.variable} ${jetbrains.variable} ${caveat.variable} h-full antialiased`}
     >
+      <head>
+        {/*
+          THEME BOOT — must run BEFORE first paint, so it is a blocking inline
+          script in <head> rather than an effect. ThemeProvider only set
+          data-theme inside useEffect, which runs after hydration: every
+          light-mode visitor got a full dark flash on every page load and every
+          navigation. Resolving the theme here removes that flash entirely.
+
+          Keep LS_KEY ("cubixso.theme") and the "dark" brand default in sync
+          with src/components/providers/ThemeProvider.tsx. colorScheme is set
+          too so native scrollbars, form controls and the URL bar match.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem("cubixso.theme");var t=(s==="light"||s==="dark"||s==="system")?s:"dark";var r=t==="system"?(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):t;var d=document.documentElement;d.setAttribute("data-theme",r);d.style.colorScheme=r;}catch(e){var d2=document.documentElement;d2.setAttribute("data-theme","dark");d2.style.colorScheme="dark";}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-full">
         <a href="#main" className="skip-link">Skip to main content</a>
         <JsonLd data={[organizationSchema(), websiteSchema()]} />

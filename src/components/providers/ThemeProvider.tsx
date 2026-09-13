@@ -33,6 +33,15 @@ function systemPref(): Resolved {
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
+// Single place that touches the DOM, so data-theme (our CSS tokens) and
+// color-scheme (native scrollbars, form controls, browser UI) can never drift
+// apart. Mirrors what the boot script in app/layout.tsx does pre-hydration.
+function apply(r: Resolved) {
+  const d = document.documentElement;
+  d.setAttribute("data-theme", r);
+  d.style.colorScheme = r;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark"); // SSR default
   const [resolved, setResolved] = useState<Resolved>("dark");
@@ -44,14 +53,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const sys = systemPref();
     const next = stored === "system" ? sys : stored;
     setResolved(next);
-    document.documentElement.setAttribute("data-theme", next);
-    // Listen to system changes if user is in "system" mode
+    apply(next); // normally a no-op — the boot script already set this
+    // DEVICE SYNC: while the user is on "system", follow the OS as it flips
+    // (macOS/iOS auto light-dark at sunset, Android battery saver, etc.) with
+    // no reload. Registered unconditionally and gated inside the handler, so
+    // switching INTO "system" later is picked up by this same listener.
     const mq = window.matchMedia("(prefers-color-scheme: light)");
     const onChange = () => {
       if (readStored() === "system") {
         const r: Resolved = mq.matches ? "light" : "dark";
         setResolved(r);
-        document.documentElement.setAttribute("data-theme", r);
+        apply(r);
       }
     };
     mq.addEventListener("change", onChange);
@@ -63,11 +75,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     try { localStorage.setItem(LS_KEY, t); } catch { /* private mode */ }
     const r: Resolved = t === "system" ? systemPref() : t;
     setResolved(r);
-    document.documentElement.setAttribute("data-theme", r);
+    apply(r);
   }, []);
 
+  // Cycle order is LIGHT -> DARK -> SYSTEM, matching the order the toggle's
+  // tooltip advertises. "system" has to stay in the rotation: it is the only
+  // way back to following the device theme once a user has picked a side.
   const cycle = useCallback(() => {
-    setTheme(theme === "dark" ? "light" : theme === "light" ? "system" : "dark");
+    setTheme(theme === "light" ? "dark" : theme === "dark" ? "system" : "light");
   }, [theme, setTheme]);
 
   return (

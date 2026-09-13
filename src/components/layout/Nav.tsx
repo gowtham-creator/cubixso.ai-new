@@ -46,54 +46,67 @@ const ROUTES = [
   { href: "/newsletter",   label: "Newsletter" },
 ];
 
-// Theme toggle — animated sun ↔ moon morph (Skiper-style, rebuilt on framer):
-// rays fade + the clip-path slides to carve a crescent. Binary light/dark, wired
-// to the ThemeProvider; icon rides --color-fg so it reads on either theme.
+// Theme icons — stroke glyphs on currentColor, so they read on either theme.
+const ThemeIcon = (p: React.SVGProps<SVGSVGElement>) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden {...p} />
+);
+const SunGlyph = () => (
+  <ThemeIcon>
+    <circle cx="12" cy="12" r="4.2" />
+    <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4" />
+  </ThemeIcon>
+);
+const MoonGlyph = () => (
+  <ThemeIcon><path d="M20 14.2A8.2 8.2 0 0 1 9.8 4 8.4 8.4 0 1 0 20 14.2Z" /></ThemeIcon>
+);
+// "System" = follow the device. A display, the universal affordance for it.
+const SystemGlyph = () => (
+  <ThemeIcon>
+    <rect x="2.5" y="4" width="19" height="12.5" rx="2" />
+    <path d="M9 20h6M12 16.5V20" />
+  </ThemeIcon>
+);
+
+// Theme toggle — THREE states, cycling LIGHT -> DARK -> SYSTEM.
+//
+// "System" has to be reachable from the UI. ThemeProvider has always supported
+// following the device theme (and live-updates when the OS flips), but this
+// button only ever wrote "light" or "dark" — so the moment a visitor tapped it
+// they were locked out of device sync until they cleared site data. Now the
+// cycle includes it, and the label always states the mode plus what the next
+// press does, rather than leaving the user to guess from an icon.
 function ThemeToggle() {
-  const { resolved, setTheme } = useTheme();
-  const isDark = resolved === "dark";
+  const { theme, resolved, cycle } = useTheme();
+
+  const label =
+    theme === "system" ? `System (currently ${resolved})`
+    : theme === "light" ? "Light"
+    : "Dark";
+  const next = theme === "light" ? "Dark" : theme === "dark" ? "System" : "Light";
+
   return (
     <button
       type="button"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      aria-label={`Switch to ${isDark ? "light" : "dark"} theme`}
-      title={isDark ? "Switch to light" : "Switch to dark"}
+      onClick={() => { click(); cycle(); }}
+      aria-label={`Theme: ${label}. Activate for ${next}.`}
+      title={`Theme: ${label} — next: ${next}`}
       className="grid place-items-center w-9 h-9 rounded-full border border-(--color-line-2) text-(--color-fg) hover:border-(--color-fg) hover:bg-(--color-surface)/40 transition-all active:scale-95"
     >
-      <svg width="17" height="17" viewBox="0 0 32 32" fill="currentColor" strokeLinecap="round" aria-hidden>
-        <clipPath id="nav-theme-moon">
-          <motion.path
-            animate={{ y: isDark ? 10 : 0, x: isDark ? -12 : 0 }}
-            transition={{ ease: "easeInOut", duration: 0.4 }}
-            d="M0-5h30a1 1 0 0 0 9 13v24H0Z"
-          />
-        </clipPath>
-        <g clipPath="url(#nav-theme-moon)">
-          <motion.circle
-            initial={{ r: isDark ? 10 : 7 }}
-            animate={{ r: isDark ? 10 : 7 }}
-            transition={{ ease: "easeInOut", duration: 0.4 }}
-            cx="16"
-            cy="16"
-          />
-          <motion.g
-            animate={{ rotate: isDark ? -100 : 0, scale: isDark ? 0.4 : 1, opacity: isDark ? 0 : 1 }}
-            transition={{ ease: "easeInOut", duration: 0.4 }}
-            style={{ transformOrigin: "center", transformBox: "fill-box" }}
-            stroke="currentColor"
-            strokeWidth="1.6"
-          >
-            <path d="M16 5.5v-4" />
-            <path d="M16 30.5v-4" />
-            <path d="M1.5 16h4" />
-            <path d="M26.5 16h4" />
-            <path d="m23.4 8.6 2.8-2.8" />
-            <path d="m5.7 26.3 2.9-2.9" />
-            <path d="m5.8 5.8 2.8 2.8" />
-            <path d="m23.4 23.4 2.9 2.9" />
-          </motion.g>
-        </g>
-      </svg>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={theme}
+          initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
+          animate={{ opacity: 1, rotate: 0, scale: 1 }}
+          exit={{ opacity: 0, rotate: 90, scale: 0.5 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="grid place-items-center"
+        >
+          {theme === "light" ? <SunGlyph /> : theme === "dark" ? <MoonGlyph /> : <SystemGlyph />}
+        </motion.span>
+      </AnimatePresence>
+      {/* Announce the change to assistive tech without stealing focus. */}
+      <span className="sr-only" aria-live="polite">{label} theme</span>
     </button>
   );
 }
