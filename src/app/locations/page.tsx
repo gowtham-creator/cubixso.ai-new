@@ -70,7 +70,12 @@ export default function LocationsPage() {
               ].map((l) => (
                 <span
                   key={l.alt}
-                  className="flex h-14 items-center justify-center rounded-xl border border-(--color-line) bg-white/90 px-6 [html[data-theme=dark]_&]:border-white/10"
+                  // Solid white, not white/90: the logos carry dark ink, so they
+                  // need a real plate to read against the dark canvas. At 90%
+                  // the page bled through and the plate looked muddy grey —
+                  // which, next to the logos' own baked-in white boxes (now
+                  // keyed out to alpha), read as two mismatched backgrounds.
+                  className="flex h-14 items-center justify-center rounded-xl border border-(--color-line) bg-white px-6 [html[data-theme=dark]_&]:border-white/10"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img

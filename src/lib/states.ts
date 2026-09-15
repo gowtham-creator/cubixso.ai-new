@@ -70,6 +70,18 @@ export const STATES: StatePresence[] = [
     blurb:
       "Karnataka is our innovation bench: Bengaluru's startup and SaaS density makes it the fastest-moving market in the network. Partners here run growth experiments and AI campaign pilots that we refine and roll out across the rest of the country.",
   },
+  {
+    id: "arunachal-pradesh",
+    name: "Arunachal Pradesh",
+    geoName: "Arunachal Pradesh",
+    tagline: "The northeast corridor",
+    cities: ["Itanagar", "Naharlagun", "Pasighat"],
+    // NOTE: deliberately no partner COUNT here — unlike the other five, that
+    // number has not been supplied. Swap in the real figure when you have it.
+    reach: "Northeast corridor · public + education",
+    blurb:
+      "Arunachal Pradesh extends the network into India's northeast. Distance and terrain make service delivery expensive here, which is exactly where remote-first AI tooling earns its place — putting the same decision systems in reach of institutions far from the metro corridors.",
+  },
 ];
 
 export const DEFAULT_STATE_ID = "telangana";

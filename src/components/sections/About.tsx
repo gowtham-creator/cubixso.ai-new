@@ -222,8 +222,11 @@ export function About({ bare = false }: { bare?: boolean } = {}) {
                     }}
                     className="group relative bg-(--color-bg) p-8 transition-colors hover:bg-(--color-bg-soft)"
                   >
-                    <span className="mono text-(--color-accent-2)">{w.tag}</span>
-                    <p className="mt-4 text-[15.5px] leading-relaxed text-(--color-fg-2) group-hover:text-(--color-fg) transition-colors">
+                    <span className="mono font-semibold text-(--color-accent)">{w.tag}</span>
+                    {/* Was 15.5px/regular on --color-fg-2, which read as washed
+                        out against the light canvas. Bumped to 17px, medium
+                        weight and full-strength ink so the pillars carry. */}
+                    <p className="mt-4 text-[17px] font-medium leading-relaxed text-(--color-fg) transition-colors">
                       {w.body}
                     </p>
                   </motion.div>
