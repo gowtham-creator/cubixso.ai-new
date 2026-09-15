@@ -25,8 +25,10 @@ import { whoosh } from "@/lib/feedback";
 import { useTheme } from "@/components/providers/ThemeProvider";
 
 const SIG = [0.16, 1, 0.3, 1] as const;
-const HOLD_AFTER_READY = 2200; // beat to admire the cube once it is truly on screen
-const MAX_WAIT = 5000;         // hard cap — a stalled asset must never trap anyone
+const HOLD_AFTER_READY = 3250; // the clip gets a full 3.25s on screen once playing
+const MAX_WAIT = 6800;         // hard cap — a stalled asset must never trap anyone.
+                               // Sits above HOLD + a realistic start delay so the
+                               // ceiling never truncates a healthy playthrough.
 
 // Capability keywords. DESKTOP: they ORBIT the cube on a slow ellipse (positions
 // computed per-frame). MOBILE/TABLET: cycled one-at-a-time in a band below it.
@@ -109,34 +111,66 @@ export function IntroSequence() {
   // the index on a gentle interval.
   useEffect(() => {
     if (!show || !compact || reduced) return;
-    const id = window.setInterval(() => setWordIdx((i) => (i + 1) % WORDS.length), 1150);
+    // 5 words in the 3.25s window — keep the cadence quick enough that most of
+    // the set is seen before the curtain lifts.
+    const id = window.setInterval(() => setWordIdx((i) => (i + 1) % WORDS.length), 620);
     return () => clearInterval(id);
   }, [show, compact, reduced]);
 
-  // DESKTOP: the keywords ORBIT the cube — they ride a slow elliptical path
-  // around the centre, evenly spaced, staying upright (pure translation, no
-  // tumble). Direct ref writes per frame (no React re-render). ~36s/rev.
+  // DESKTOP: the keywords ORBIT the cube — a tilted ring in 3D, evenly spaced,
+  // staying upright (no tumble). Direct ref writes per frame, no re-render.
+  //
+  // The radius is derived from the CUBE'S MEASURED SIZE, not from viewport
+  // fractions. The old code used min(40vw,600) x min(28vh,300): on a typical
+  // laptop that made Ry ~224px while the cube's own radius is up to 260px, so
+  // the orbit ran straight THROUGH the cube. Measuring the video element means
+  // clearance is guaranteed at every viewport, and the ring stays circular
+  // rather than collapsing into a flat sliver on short screens.
+  //
+  // Depth sells the dimension: the near side of the ring (bottom) renders
+  // bigger, brighter and sharp; the far side (top) smaller, dimmer and slightly
+  // blurred. Those cues live on an INNER span because the outer element's
+  // entrance opacity is owned by the cbx-orbit-word CSS animation, and a
+  // running animation beats an inline style.
   useEffect(() => {
     if (!show || compact || reduced) return;
     let raf = 0;
     let start = 0;
     const N = WORDS.length;
+    const GAP = 76; // clear of the cube's glow + the word's own height
+
     const loop = (ts: number) => {
       if (!start) start = ts;
       const t = ts - start;
-      // Ry was 0.34/360, which swung the lowest word straight through the
-      // "cubixso.ai" wordmark sitting at bottom-[10vh] — they visibly collided.
-      // Tightened so the orbit always clears the wordmark band.
-      const Rx = Math.min(window.innerWidth * 0.4, 600);
-      const Ry = Math.min(window.innerHeight * 0.28, 300);
-      const base = t * 0.000175; // rad/ms → ~36s per revolution
+
+      const vid = videoRef.current;
+      const cubeR = (vid?.clientWidth || 320) / 2;
+      const need = cubeR + GAP; // never orbit closer than this
+      const halfW = window.innerWidth / 2;
+      const halfH = window.innerHeight / 2;
+
+      // Clamp outward so words stay on screen and clear the wordmark band at
+      // the bottom, but never inward past `need`.
+      const Rx = Math.max(need, Math.min(halfW - 130, Math.max(need, halfW * 0.62)));
+      const Ry = Math.max(need, Math.min(halfH - 130, Math.max(need, halfH * 0.58)));
+
+      const base = t * 0.000393; // rad/ms → ~16s per revolution (visible flow)
+
       for (let i = 0; i < N; i++) {
         const el = wordRefs.current[i];
         if (!el) continue;
         const a = base + (i / N) * Math.PI * 2 - Math.PI / 2; // start at top
-        const x = Math.cos(a) * Rx;
-        const y = Math.sin(a) * Ry;
-        el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+        el.style.transform =
+          `translate(-50%, -50%) translate(${Math.cos(a) * Rx}px, ${Math.sin(a) * Ry}px)`;
+
+        // depth 0 = far side (top), 1 = near side (bottom)
+        const d = (Math.sin(a) + 1) / 2;
+        const inner = el.firstElementChild as HTMLElement | null;
+        if (inner) {
+          inner.style.transform = `scale(${(0.78 + 0.22 * d).toFixed(3)})`;
+          inner.style.opacity = (0.38 + 0.62 * d).toFixed(3);
+          inner.style.filter = d > 0.92 ? "none" : `blur(${((1 - d) * 1.5).toFixed(2)}px)`;
+        }
       }
       raf = requestAnimationFrame(loop);
     };
@@ -176,7 +210,7 @@ export function IntroSequence() {
               onCanPlay={() => setReady(true)}
               onError={() => setReady(true)}
               onStalled={() => setReady(true)}
-              className="h-auto w-[min(62vw,62vh,520px)] select-none"
+              className="h-auto w-[min(50vw,40vh,400px)] select-none"
               style={{
                 mixBlendMode: dark ? "screen" : "multiply",
                 filter: dark ? undefined : "invert(1)",
@@ -187,18 +221,28 @@ export function IntroSequence() {
             </video>
           </div>
 
-          {/* Capability keywords. DESKTOP: they ORBIT the cube on a slow ellipse
-              (transform set per-frame by the orbit effect; fade-in via CSS so it
-              never fights the JS transform). MOBILE/TABLET: no room beside the
-              cube, so cycle ONE keyword at a time in a band below it. */}
+          {/* Capability keywords. DESKTOP: they ORBIT the cube on a tilted 3D
+              ring (position per-frame from the orbit effect; entrance fade via
+              CSS on the OUTER element so it never fights the JS transform,
+              depth cues on the INNER span so they never fight that animation).
+              MOBILE/TABLET: no room beside the cube, so cycle ONE at a time. */}
           {!reduced && !compact && WORDS.map((w, i) => (
             <div
               key={w}
               ref={(el) => { wordRefs.current[i] = el; }}
-              style={{ transform: "translate(-50%, -50%)", animationDelay: `${0.4 + i * 0.12}s` }}
-              className={`cbx-orbit-word pointer-events-none absolute left-1/2 top-1/2 whitespace-nowrap font-display text-[15px] font-medium tracking-[0.005em] ${dark ? "text-white/90" : "text-black/85"}`}
+              style={{
+                transform: "translate(-50%, -50%)",
+                animationDelay: `${0.25 + i * 0.1}s`,
+                willChange: "transform",
+              }}
+              className="cbx-orbit-word pointer-events-none absolute left-1/2 top-1/2 whitespace-nowrap"
             >
-              {w}
+              <span
+                className={`block font-display text-[15px] font-medium tracking-[0.005em] ${dark ? "text-white" : "text-black"}`}
+                style={{ willChange: "transform, opacity, filter" }}
+              >
+                {w}
+              </span>
             </div>
           ))}
 

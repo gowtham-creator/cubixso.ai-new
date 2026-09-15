@@ -294,6 +294,12 @@ export function KineticStack() {
               ref={stackPlaneRef}
               style={freeParallax ? { transform: stackParallax } : undefined}
             >
+              {/* .kinetic-window clips the scrubbed crawl to one viewport-tall
+                  frame (see globals.css). Without it the stack translated up
+                  over the eyebrow and lede above this grid. The class is inert
+                  below 768px and under reduced motion — exactly where the pin
+                  does not run and the column must flow at full height. */}
+              <div className="kinetic-window">
               <div ref={stackRef} className="flex flex-col gap-1 will-change-transform">
                 {PHRASE.map((w, i) => (
                   <motion.span
@@ -324,6 +330,7 @@ export function KineticStack() {
                     </span>
                   </motion.span>
                 ))}
+              </div>
               </div>
             </motion.div>
           </Reveal>
