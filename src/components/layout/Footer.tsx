@@ -34,10 +34,32 @@ const COMPANY = [
   { href: "/contact", label: "Contact" },
 ];
 
-// TODO: drop in the real profile URLs (placeholders for now).
+// Filled badge marks (rounded square + knocked-out glyph), matching the supplied
+// icons. Drawn inline rather than shipped as the 50px PNGs so they stay crisp at
+// any size and ride currentColor — a baked black badge would vanish on the dark
+// footer and a white one on the light theme.
+const LinkedInMark = () => (
+  <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden>
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M4.8 0h14.4A4.8 4.8 0 0 1 24 4.8v14.4a4.8 4.8 0 0 1-4.8 4.8H4.8A4.8 4.8 0 0 1 0 19.2V4.8A4.8 4.8 0 0 1 4.8 0ZM7.2 9.6H4.32v9.6H7.2V9.6Zm.24-3.12a1.68 1.68 0 1 0-3.36 0 1.68 1.68 0 0 0 3.36 0ZM19.68 13.7c0-2.77-1.48-4.06-3.46-4.06-1.6 0-2.31.88-2.71 1.5V9.6H10.8c.04.82 0 9.6 0 9.6h2.71v-5.36c0-.24.02-.49.09-.66.19-.49.63-.99 1.38-.99.97 0 1.36.74 1.36 1.83v5.18h2.88s.46-4.52.46-5.5Z"
+    />
+  </svg>
+);
+const InstagramMark = () => (
+  <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden>
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M4.8 0h14.4A4.8 4.8 0 0 1 24 4.8v14.4a4.8 4.8 0 0 1-4.8 4.8H4.8A4.8 4.8 0 0 1 0 19.2V4.8A4.8 4.8 0 0 1 4.8 0Zm7.2 5.76a6.24 6.24 0 1 0 0 12.48 6.24 6.24 0 0 0 0-12.48Zm0 2.16a4.08 4.08 0 1 1 0 8.16 4.08 4.08 0 0 1 0-8.16Zm6.72-2.88a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z"
+    />
+  </svg>
+);
+
 const SOCIALS = [
-  { name: "LinkedIn", icon: "linkedin-logo", href: "https://www.linkedin.com/company/cubixso/" },
-  { name: "Instagram", icon: "instagram-logo", href: "https://www.instagram.com/cubixso.ai/" },
+  { name: "LinkedIn", Mark: LinkedInMark, href: "https://www.linkedin.com/company/cubixso/" },
+  { name: "Instagram", Mark: InstagramMark, href: "https://www.instagram.com/cubixso.ai/" },
 ];
 
 const LEGAL = [
@@ -147,7 +169,7 @@ export function Footer() {
               aria-label={s.name}
               className="group/link inline-flex items-center gap-1.5 mono text-[12px] text-(--color-fg-2) transition-colors hover:text-(--color-fg)"
             >
-              <Ph name={s.icon} weight="regular" size={16} />
+              <s.Mark />
               <span>{s.name}</span>
               <Ph
                 name="arrow-up-right"

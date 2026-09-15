@@ -70,13 +70,18 @@ export function Testimonial() {
                 className="block w-16 h-px bg-(--color-line-2)"
                 aria-hidden
               />
+              {/* Named attribution, published with the client's approval.
+                  PenFed and USAA are named as clients OF THE SAVANTS
+                  ENGAGEMENT — the work Logic Gen was delivered into — not as
+                  Cubixso's own clients. Keep that distinction if this copy is
+                  ever reworded. */}
               <div className="text-right">
-                <div>DIRECTOR OF UNDERWRITING</div>
+                <div className="text-(--color-fg)">RAJASHEKAR REDDY</div>
                 <div className="mt-1 text-(--color-muted)">
-                  TIER-1 INSURE-TECH · INDIA
+                  FOUNDER · SAVANTS GROUP USA LLC
                 </div>
                 <div className="mt-2 text-[10px] text-(--color-muted-2)">
-                  [ PENDING CLIENT APPROVAL ]
+                  LOGIC GEN · ENGAGEMENT CLIENTS: PENFED · USAA
                 </div>
               </div>
             </figcaption>
