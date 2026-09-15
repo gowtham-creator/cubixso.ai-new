@@ -34,7 +34,7 @@ import { LiquidGlass } from "@/components/glass/LiquidGlass";
 import { GlassLensFilter } from "@/components/glass/GlassLensFilter";
 import { Reveal } from "@/components/scroll/Reveal";
 import { useDepthParallax } from "@/components/scroll/useDepthParallax";
-import { gsap } from "@/lib/gsap";
+import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 const PHRASE = [
   "What",
@@ -93,6 +93,7 @@ export function KineticStack() {
   const sectionRef = useRef<HTMLElement>(null);
   const stackRef = useRef<HTMLDivElement>(null); // word column (internal crawl)
   const lensDriftRef = useRef<HTMLDivElement>(null); // lens counter-drift plane
+  const stackWindowRef = useRef<HTMLDivElement>(null); // clipping frame for the crawl
   const stackPlaneRef = useRef<HTMLDivElement>(null); // free-parallax wrappers —
   const lensPlaneRef = useRef<HTMLDivElement>(null); //  cleared when pin owns motion
   // True while the ScrollTrigger pin owns this section's motion (desktop, no
@@ -192,14 +193,36 @@ export function KineticStack() {
 
       // Internal crawl — the stack is taller than one viewport at display
       // sizes, so it drifts up across the pin to keep the lit word in frame.
-      // Function-based value + invalidateOnRefresh = resize-correct.
+      //
+      // availH() is the ONE source of truth for "how much vertical room the
+      // column actually has on screen while pinned", used for BOTH the window's
+      // height and the crawl distance. It has to be MEASURED, not guessed: the
+      // old constant 320 ignored both the eyebrow+lede stack above the column
+      // (~314px) and the pin's own "top 11%" offset, so it overestimated the
+      // room by roughly 100px and the last words were cut off by the bottom of
+      // the viewport.
+      const availH = () => {
+        const vh = window.innerHeight;
+        const win = stackWindowRef.current;
+        if (!win) return Math.max(260, vh - 420);
+        const top =
+          win.getBoundingClientRect().top - section.getBoundingClientRect().top;
+        return Math.max(260, vh - vh * 0.11 - top - 40);
+      };
+
+      // Size the clipping window before ScrollTrigger measures, so the pin and
+      // the spacer are computed against the final layout.
+      const applyWindowHeight = () => {
+        const win = stackWindowRef.current;
+        if (win) win.style.height = `${availH()}px`;
+      };
+      applyWindowHeight();
+      ScrollTrigger.addEventListener("refreshInit", applyWindowHeight);
+
       tl.to(
         stack,
         {
-          y: () => {
-            const avail = Math.max(window.innerHeight - 320, 300);
-            return -Math.max(0, stack.offsetHeight - avail);
-          },
+          y: () => -Math.max(0, stack.offsetHeight - availH()),
           duration: total,
         },
         0,
@@ -217,6 +240,10 @@ export function KineticStack() {
       return () => {
         setPinActive(false);
         setScrubConfidence(0);
+        ScrollTrigger.removeEventListener("refreshInit", applyWindowHeight);
+        // Hand the window back to CSS — below 768px / under reduced motion the
+        // column must flow at its natural height, not a pinned-desktop one.
+        if (stackWindowRef.current) stackWindowRef.current.style.height = "";
         gsap.set(words, { clearProps: "opacity,transform" });
         gsap.set(stack, { clearProps: "transform" });
         if (lensDrift) gsap.set(lensDrift, { clearProps: "transform" });
@@ -299,7 +326,7 @@ export function KineticStack() {
                   over the eyebrow and lede above this grid. The class is inert
                   below 768px and under reduced motion — exactly where the pin
                   does not run and the column must flow at full height. */}
-              <div className="kinetic-window">
+              <div ref={stackWindowRef} className="kinetic-window">
               <div ref={stackRef} className="flex flex-col gap-1 will-change-transform">
                 {PHRASE.map((w, i) => (
                   <motion.span

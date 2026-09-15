@@ -189,7 +189,12 @@ html[data-theme="light"] {
      `Math.max(window.innerHeight - 320, 300)`. */
   @media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
     .kinetic-window {
-      height: max(300px, calc(100svh - 320px));
+      /* Fallback only. The real height is measured and set inline by the pin
+         effect (availH in KineticStack.tsx), which accounts for the eyebrow +
+         lede above the column AND the pin's "top 11%" offset. A constant here
+         cannot: it overestimated the room and clipped the last words off the
+         bottom of the viewport. */
+      height: max(260px, calc(100svh - 420px));
       overflow: hidden;
       -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 6%, #000 94%, transparent 100%);
       mask-image: linear-gradient(to bottom, transparent 0, #000 6%, #000 94%, transparent 100%);
