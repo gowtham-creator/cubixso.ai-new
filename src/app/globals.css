@@ -139,13 +139,41 @@ html[data-theme="light"] {
     border-radius: 4px;
   }
 
-  /* Hide native cursor only on the precise-pointer desktop case — the minimal
-     dot+ring CursorFollower replaces it. Keep the NATIVE cursor on inputs so
-     text entry always shows a caret. Touch / reduced-motion keep native. */
+  /* Hide the native cursor only on the precise-pointer desktop case — the
+     minimal dot+ring CursorFollower replaces it. Keep the NATIVE cursor on
+     inputs so text entry always shows a caret. Touch / reduced-motion keep
+     native.
+
+     INTERACTIVE ELEMENTS ARE EXEMPT. This rule used to include a, button and
+     [role="button"], which meant the only pointer feedback over a control was
+     the CursorFollower dot — and that dot is spring-damped, so it trails the
+     real pointer. Users aimed at where the dot was, not where the cursor
+     actually was, and reported controls as unclickable / mis-pointing. The dot
+     stays as decoration over the page body; controls now show a truthful
+     pointer that sits exactly where the click will land. */
   @media (hover: hover) and (pointer: fine) {
     @media (prefers-reduced-motion: no-preference) {
-      body, a, button, [role="button"] { cursor: none; }
+      body { cursor: none; }
+      a, button, [role="button"], label[for], summary { cursor: pointer; }
+      :disabled, [aria-disabled="true"] { cursor: not-allowed; }
     }
+  }
+
+  /* Tailwind v4 no longer ships cursor:pointer on buttons, so state it once
+     here for every pointer type rather than per-component. Also kills the
+     ~300ms synthetic-click delay on touch. */
+  button, [role="button"], summary { cursor: pointer; touch-action: manipulation; }
+  button:disabled, [aria-disabled="true"] { cursor: not-allowed; }
+
+  /* Minimum comfortable touch target (WCAG 2.5.8 / Apple HIG). Applies to the
+     small round icon controls in the nav, whose visual circle is 36px — the
+     invisible ::after grows the HIT AREA to ~48px without changing layout. */
+  .tap-target { position: relative; }
+  .tap-target::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 9999px;
   }
 
   /* Visually-hidden helper for screen-reader-only content */

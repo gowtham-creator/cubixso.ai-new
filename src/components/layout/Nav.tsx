@@ -91,7 +91,7 @@ function ThemeToggle() {
       onClick={() => { click(); cycle(); }}
       aria-label={`Theme: ${label}. Activate for ${next}.`}
       title={`Theme: ${label} — next: ${next}`}
-      className="grid place-items-center w-9 h-9 rounded-full border border-(--color-line-2) text-(--color-fg) hover:border-(--color-fg) hover:bg-(--color-surface)/40 transition-all active:scale-95"
+      className="tap-target cursor-pointer grid place-items-center w-9 h-9 shrink-0 rounded-full border border-(--color-line-2) text-(--color-fg) hover:border-(--color-fg) hover:bg-(--color-surface)/40 transition-all active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent-2)"
     >
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
@@ -119,7 +119,7 @@ function MenuButton({ open, onClick }: { open: boolean; onClick: () => void }) {
       onClick={onClick}
       aria-label={open ? "Close menu" : "Open menu"}
       aria-expanded={open}
-      className="lg:hidden grid place-items-center w-9 h-9 rounded-full border border-(--color-line-2) text-(--color-fg) hover:border-(--color-fg) transition-colors"
+      className="tap-target cursor-pointer lg:hidden grid place-items-center w-9 h-9 shrink-0 rounded-full border border-(--color-line-2) text-(--color-fg) hover:border-(--color-fg) transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent-2)"
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
         {open ? (

@@ -104,7 +104,7 @@ export function AudioToggle() {
       // hubtown placement: a compact pill living in the nav's top-right
       // cluster (rendered by Nav). Label collapses to bars-only on small
       // screens so the cluster never crowds the hamburger.
-      className="group flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-(--color-line-2) px-3 py-2 mono text-[10.5px] text-(--color-fg-2) hover:text-(--color-fg) hover:border-(--color-fg) hover:bg-(--color-surface)/40 transition-colors"
+      className="group cursor-pointer flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-(--color-line-2) px-3 py-2.5 mono text-[10.5px] text-(--color-fg-2) hover:text-(--color-fg) hover:border-(--color-fg) hover:bg-(--color-surface)/40 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent-2)"
     >
       {/* Animated bars — three rectangles that pulse when sound is on */}
       <span className="inline-flex items-end gap-[2px] w-[14px] h-[12px]" aria-hidden>

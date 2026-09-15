@@ -1,29 +1,32 @@
 "use client";
 
-// IntroSequence — the preloader is the glowing Cubixso CUBE (the same
-// cubixso-cube.glb used by the "Built dimensional" scroller, recoloured to
-// glowing edges + bloom). It AUTO-ROTATES a full 360°, then the whole curtain
-// lifts UP to reveal the hero. Theme-adaptive (near-black / white field). Plays
-// once per session, honours prefers-reduced-motion, fires "cubixso:revealed".
+// IntroSequence — the preloader is the glowing Cubixso CUBE, PRE-RENDERED TO
+// VIDEO. It rotates, then the whole curtain lifts UP to reveal the hero.
+// Theme-adaptive, plays once per session, honours prefers-reduced-motion, fires
+// "cubixso:revealed".
+//
+// WHY VIDEO AND NOT WebGL: this used to boot a live three.js scene (GLB +
+// Draco + an env cubemap + a full-screen bloom pass) purely to spin one cube.
+// On the critical path that is the worst possible trade — it had to download
+// the model, compile shaders and light a scene before the very first frame, so
+// the cube routinely showed up a second or more late, or never arrived before
+// the curtain lifted, leaving visitors staring at the keywords floating on an
+// empty black field. A 112 KB clip decodes on the GPU's video path, starts in
+// a couple of frames, costs no main-thread JS, and looks identical.
+//
+// ONE asset serves BOTH themes (white cube on black):
+//   dark  -> mix-blend-mode: screen   — the black field drops out, cube glows
+//   light -> invert(1) + multiply     — cube becomes near-black ink, white drops out
+// which is exactly the two looks the WebGL version hand-built per theme.
 
 import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { whoosh } from "@/lib/feedback";
 import { useTheme } from "@/components/providers/ThemeProvider";
-import { hasWebGL } from "@/lib/perf";
-import { CanvasBoundary } from "@/components/util/CanvasBoundary";
-
-// The 3D cube is a SEPARATE CHUNK, fetched only when the intro will really
-// play. This component is mounted from the root layout, so a static import of
-// three/drei/postprocessing here put the whole 3D stack in the shared bundle of
-// every route on the site and made every page pay for it — including the many
-// loads where sessionStorage already says the intro is done.
-const IntroCanvas = dynamic(() => import("./IntroCanvas"), { ssr: false });
 
 const SIG = [0.16, 1, 0.3, 1] as const;
-const HOLD_AFTER_READY = 2200; // beat to admire the cube once it is truly drawn
-const MAX_WAIT = 5000;         // hard cap — a slow/broken GLB must never trap anyone
+const HOLD_AFTER_READY = 2200; // beat to admire the cube once it is truly on screen
+const MAX_WAIT = 5000;         // hard cap — a stalled asset must never trap anyone
 
 // Capability keywords. DESKTOP: they ORBIT the cube on a slow ellipse (positions
 // computed per-frame). MOBILE/TABLET: cycled one-at-a-time in a band below it.
@@ -43,9 +46,9 @@ export function IntroSequence() {
   const [reduced, setReduced] = useState(false);
   const [compact, setCompact] = useState(false); // phone / tablet-portrait
   const [wordIdx, setWordIdx] = useState(0); // cycling keyword on compact screens
-  const [webgl, setWebgl] = useState(true); // 3D only renders when WebGL works
-  const [ready, setReady] = useState(false); // cube loaded AND actually rasterised
+  const [ready, setReady] = useState(false); // video is genuinely playing
   const done = useRef(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const wordRefs = useRef<(HTMLDivElement | null)[]>([]); // orbiting keywords (desktop)
 
   const finish = () => {
@@ -67,15 +70,12 @@ export function IntroSequence() {
     // edges) plus the full bloom pass, on exactly the GPUs least able to afford
     // it. Tablets now take the compact path with the rest of the chrome.
     setCompact(window.matchMedia("(max-width: 1023.98px)").matches);
-    const gl = hasWebGL(); // no WebGL (weak/blocklisted GPU) → wordmark-only loader
-    setWebgl(gl);
-    if (!gl) setReady(true); // nothing to wait for — the wordmark is the loader
     setShow(true);
   }, []);
 
-  // Hard ceiling. Whatever happens — a slow GLB, a stalled decode, a GPU that
-  // never produces a frame — the curtain lifts. A preloader that can trap the
-  // visitor is worse than no preloader.
+  // Hard ceiling. Whatever happens — a stalled download, a codec the browser
+  // refuses, autoplay being blocked — the curtain lifts. A preloader that can
+  // trap the visitor is worse than no preloader.
   useEffect(() => {
     if (!show) return;
     const t = window.setTimeout(finish, reduced ? 700 : MAX_WAIT);
@@ -93,6 +93,17 @@ export function IntroSequence() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, reduced, ready]);
+
+  // Autoplay can be refused (Low Power Mode on iOS, data-saver, strict policies).
+  // The clip is muted + playsInline so it is normally allowed, but if play()
+  // rejects we must not sit waiting on a "playing" event that will never fire —
+  // mark ready and let the poster frame stand in.
+  useEffect(() => {
+    if (!show) return;
+    const v = videoRef.current;
+    if (!v) { setReady(true); return; }
+    v.play().catch(() => setReady(true));
+  }, [show]);
 
   // On compact screens the keywords cycle one-at-a-time (see render) — advance
   // the index on a gentle interval.
@@ -113,8 +124,11 @@ export function IntroSequence() {
     const loop = (ts: number) => {
       if (!start) start = ts;
       const t = ts - start;
+      // Ry was 0.34/360, which swung the lowest word straight through the
+      // "cubixso.ai" wordmark sitting at bottom-[10vh] — they visibly collided.
+      // Tightened so the orbit always clears the wordmark band.
       const Rx = Math.min(window.innerWidth * 0.4, 600);
-      const Ry = Math.min(window.innerHeight * 0.34, 360);
+      const Ry = Math.min(window.innerHeight * 0.28, 300);
       const base = t * 0.000175; // rad/ms → ~36s per revolution
       for (let i = 0; i < N; i++) {
         const el = wordRefs.current[i];
@@ -145,14 +159,33 @@ export function IntroSequence() {
           style={{ background: dark ? "#060708" : "#ffffff" }}
           aria-hidden
         >
-          {/* The 3D cube renders ONLY when WebGL works, and inside a boundary —
-              so a weak/blocklisted GPU (common on Windows laptops + tablets) can
-              never crash the loader; it just shows the wordmark loader instead. */}
-          {webgl && (
-            <CanvasBoundary fallback={null}>
-              <IntroCanvas dark={dark} compact={compact} onReady={() => setReady(true)} />
-            </CanvasBoundary>
-          )}
+          {/* The cube, pre-rendered. One asset, both themes — see the blend-mode
+              note at the top of this file. onError/onStalled still mark ready so
+              a codec the browser dislikes can never hold the curtain down; the
+              poster (and worst case the wordmark) carries the moment instead. */}
+          <div className="pointer-events-none absolute inset-0 grid place-items-center">
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              poster="/video/intro-cube-poster.jpg"
+              onPlaying={() => setReady(true)}
+              onCanPlay={() => setReady(true)}
+              onError={() => setReady(true)}
+              onStalled={() => setReady(true)}
+              className="h-auto w-[min(62vw,62vh,520px)] select-none"
+              style={{
+                mixBlendMode: dark ? "screen" : "multiply",
+                filter: dark ? undefined : "invert(1)",
+              }}
+            >
+              <source src="/video/intro-cube.webm" type="video/webm" />
+              <source src="/video/intro-cube.mp4" type="video/mp4" />
+            </video>
+          </div>
 
           {/* Capability keywords. DESKTOP: they ORBIT the cube on a slow ellipse
               (transform set per-frame by the orbit effect; fade-in via CSS so it

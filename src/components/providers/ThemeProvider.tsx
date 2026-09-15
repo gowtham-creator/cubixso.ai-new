@@ -20,12 +20,15 @@ const ThemeCtx = createContext<ThemeCtxValue | null>(null);
 const LS_KEY = "cubixso.theme";
 
 function readStored(): Theme {
-  // Brand default is DARK — the Cobalt Aperture is a dark, immersive system.
-  // The toggle still lets users pick light/system, which then persists.
-  if (typeof window === "undefined") return "dark";
+  // DEFAULT IS "system" — a first-time visitor follows their device, and keeps
+  // following it as the OS flips (macOS/iOS auto light-dark, Android battery
+  // saver) with no reload. Previously this defaulted to "dark", so the site
+  // ignored a light-mode device until the visitor found the toggle themselves.
+  // An explicit light/dark choice still wins and persists.
+  if (typeof window === "undefined") return "system";
   const v = window.localStorage.getItem(LS_KEY);
   if (v === "light" || v === "dark" || v === "system") return v;
-  return "dark";
+  return "system";
 }
 
 function systemPref(): Resolved {
@@ -43,7 +46,7 @@ function apply(r: Resolved) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark"); // SSR default
+  const [theme, setThemeState] = useState<Theme>("system"); // SSR default — follow the device
   const [resolved, setResolved] = useState<Resolved>("dark");
 
   // Hydrate from localStorage + system on mount

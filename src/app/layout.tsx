@@ -108,13 +108,16 @@ export default function RootLayout({
           light-mode visitor got a full dark flash on every page load and every
           navigation. Resolving the theme here removes that flash entirely.
 
-          Keep LS_KEY ("cubixso.theme") and the "dark" brand default in sync
-          with src/components/providers/ThemeProvider.tsx. colorScheme is set
-          too so native scrollbars, form controls and the URL bar match.
+          Keep LS_KEY ("cubixso.theme") and the "system" default in sync with
+          src/components/providers/ThemeProvider.tsx — an unset visitor follows
+          their DEVICE. colorScheme is set too so native scrollbars, form
+          controls and the URL bar match. A blocked localStorage (private mode,
+          embedded webviews) falls through to the device preference rather than
+          forcing dark.
         */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var s=localStorage.getItem("cubixso.theme");var t=(s==="light"||s==="dark"||s==="system")?s:"dark";var r=t==="system"?(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):t;var d=document.documentElement;d.setAttribute("data-theme",r);d.style.colorScheme=r;}catch(e){var d2=document.documentElement;d2.setAttribute("data-theme","dark");d2.style.colorScheme="dark";}})();`,
+            __html: `(function(){function sys(){try{return window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}catch(e){return "dark"}}var t="system";try{var s=localStorage.getItem("cubixso.theme");if(s==="light"||s==="dark"||s==="system")t=s;}catch(e){}var r=t==="system"?sys():t;try{var d=document.documentElement;d.setAttribute("data-theme",r);d.style.colorScheme=r;}catch(e){}})();`,
           }}
         />
       </head>
