@@ -376,7 +376,15 @@ export function KineticStack() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.9, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="block lg:sticky lg:top-[14vh]"
+            // Sticky ONLY when the pin is not running. Above 1024px both were
+            // active at once: ScrollTrigger already holds the whole section
+            // fixed, so an additional sticky pinned the panel to the top of the
+            // viewport while its ~780px grid cell scrolled past underneath —
+            // hollowing out the bottom of the section. That hollow, plus the
+            // word column having crawled up out of its own cell, is the large
+            // empty area reported after this section. Below 1024px (and under
+            // reduced motion) there is no pin, so sticky still earns its keep.
+            className={pinActive ? "block" : "block lg:sticky lg:top-[14vh]"}
           >
             <div ref={lensDriftRef} className="will-change-transform">
               <LiquidGlass

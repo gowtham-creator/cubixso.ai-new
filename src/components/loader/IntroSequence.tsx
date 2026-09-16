@@ -190,7 +190,11 @@ export function IntroSequence() {
           exit={reduced ? { opacity: 0 } : { y: "-100%" }}
           transition={{ duration: reduced ? 0.4 : 0.9, ease: SIG }}
           className="fixed inset-0 z-[9999] overflow-hidden"
-          style={{ background: dark ? "#060708" : "#ffffff" }}
+          // PURE black (not #060708) so it matches the clip's own black
+          // background exactly — that match is what replaces the blend mode.
+          // Light stays pure white, which the inverted clip's background
+          // becomes. Any drift here reintroduces a visible box around the cube.
+          style={{ background: dark ? "#000000" : "#ffffff" }}
           aria-hidden
         >
           {/* The cube, pre-rendered. One asset, both themes — see the blend-mode
@@ -211,13 +215,21 @@ export function IntroSequence() {
               onError={() => setReady(true)}
               onStalled={() => setReady(true)}
               className="h-auto w-[min(50vw,40vh,400px)] select-none"
-              style={{
-                mixBlendMode: dark ? "screen" : "multiply",
-                filter: dark ? undefined : "invert(1)",
-              }}
+              // NO mix-blend-mode. iOS Safari composites <video> in its own
+              // layer and silently ignores blend modes, so the previous
+              // screen/multiply blend produced a blank cube on phones while
+              // working fine on desktop — the reported mobile failure.
+              //
+              // Instead the CURTAIN's background is matched to the clip's own
+              // background (pure black behind the untouched clip, pure white
+              // behind the inverted one), so the two composite seamlessly with
+              // plain alpha-less painting on every engine.
+              style={{ filter: dark ? undefined : "invert(1)" }}
             >
-              <source src="/video/intro-cube.webm" type="video/webm" />
+              {/* mp4 first: every mobile engine decodes h264, and putting the
+                  webm first made some Safari builds stall on a VP9 probe. */}
               <source src="/video/intro-cube.mp4" type="video/mp4" />
+              <source src="/video/intro-cube.webm" type="video/webm" />
             </video>
           </div>
 
