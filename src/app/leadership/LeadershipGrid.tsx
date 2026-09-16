@@ -106,7 +106,10 @@ function MemberCounter() {
       initial={reduced ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      className="flex items-baseline gap-3 text-(--color-fg)"
+      // items-center, not items-baseline: baseline alignment dropped the small
+      // copy onto the 76px numeral's baseline, so it hung off the bottom-right
+      // of the digits instead of sitting beside them.
+      className="flex items-center gap-4 text-(--color-fg)"
     >
       <span
         className="font-display tabular-nums text-[clamp(40px,6vw,76px)] leading-none tracking-[-0.04em] text-(--color-cobalt-glow)"
@@ -114,11 +117,12 @@ function MemberCounter() {
       >
         {String(n).padStart(2, "0")}
       </span>
-      <span className="text-[clamp(13px,1.1vw,16px)] leading-snug text-(--color-fg-2)">
-        people building
-        <br className="hidden sm:block" /> Cubixso.
+      <span className="max-w-[26ch] text-[clamp(13px,1.1vw,16px)] leading-snug text-(--color-fg-2)">
+        The Board and Leadership behind the massive team building Cubixso.
       </span>
-      <span className="sr-only">{total} people are building Cubixso.</span>
+      <span className="sr-only">
+        {total} people on the board and leadership team building Cubixso.
+      </span>
     </motion.p>
   );
 }

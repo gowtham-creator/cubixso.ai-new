@@ -146,7 +146,13 @@ export function PresenceMap({
               <MarkerContent>
                 <span className="relative flex h-3 w-3 items-center justify-center">
                   <span
-                    className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping motion-reduce:animate-none ${dot}`}
+                    // Explicit h-3/w-3 rather than h-full/w-full. The percentage
+                    // form only stays small while the marker wrapper keeps its
+                    // own 12px box; if the map library ever sizes that wrapper
+                    // to the map pane, animate-ping scales the FULL PANE to 2x
+                    // and paints a map-sized pulsing disc. Pinning the size
+                    // removes that failure mode entirely.
+                    className={`absolute inline-flex h-3 w-3 rounded-full opacity-60 animate-ping motion-reduce:animate-none ${dot}`}
                   />
                   <span
                     className={`relative inline-flex h-2 w-2 rounded-full ring-2 ring-white/70 ${dot}`}
