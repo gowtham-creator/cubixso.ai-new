@@ -52,6 +52,23 @@ export function connectLenisToScrollTrigger(lenis: Lenis): () => void {
       : null;
   ro?.observe(document.body);
 
+  // ── Re-measure once the page has actually finished assembling ────────────
+  // Pins compute their spacer height from the layout present at creation time.
+  // On this site that layout is NOT final: the intro curtain covers everything
+  // for ~3.25s, and PresenceMap / the inference lens / the mascot are all
+  // dynamic imports that mount late. A pin measured against the shorter,
+  // pre-hydration layout keeps a spacer sized for content that has since grown
+  // — and that leftover padding is dead, blank scroll after the pinned section,
+  // which is exactly the empty space reported after BOTH pinned sections
+  // (KineticStack and Global — the only two that pin).
+  //
+  // The body ResizeObserver below catches growth it can see, but it fires on a
+  // 400ms debounce and can settle before the last lazy panel paints. These two
+  // explicit re-measures close that window. refresh() is idempotent.
+  const refreshNow = () => ScrollTrigger.refresh();
+  window.addEventListener("cubixso:revealed", refreshNow);
+  window.addEventListener("load", refreshNow);
+
   // NOTE: a ScrollTrigger-refresh -> synthetic-window-resize bridge used to live
   // here, meant to make framer-motion's useScroll re-measure after pins insert
   // their spacers. It was removed: ScrollTrigger ALSO refreshes on window
@@ -63,6 +80,8 @@ export function connectLenisToScrollTrigger(lenis: Lenis): () => void {
   return () => {
     lenisConnected = false;
     lenis.off("scroll", onScroll);
+    window.removeEventListener("cubixso:revealed", refreshNow);
+    window.removeEventListener("load", refreshNow);
     window.clearTimeout(refreshTimer);
     ro?.disconnect();
     gsap.ticker.remove(tick);

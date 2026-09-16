@@ -74,7 +74,11 @@ function LinkColumn({ title, links }: { title: string; links: { href: string; la
       aria-label={title}
       className="flex flex-col gap-5 p-7 sm:p-10 transition-colors duration-500 hover:bg-white/[0.02]"
     >
-      <span className="mono text-[11px] tracking-[0.2em] text-(--color-fg-2)">
+      {/* Column headings were 11px regular on --color-fg-2 and read as faint
+          grey noise above the links they label. Now semibold, full-strength
+          ink, with a short cobalt rule to anchor them. */}
+      <span className="mono inline-flex items-center gap-2.5 text-[11px] font-semibold tracking-[0.2em] text-(--color-fg)">
+        <span aria-hidden className="h-px w-5 bg-(--color-accent)" />
         {title.toUpperCase()}
       </span>
       {links.map((l) => (
@@ -82,9 +86,18 @@ function LinkColumn({ title, links }: { title: string; links: { href: string; la
           key={l.href}
           href={l.href}
           onPointerEnter={hoverTick}
-          className="w-fit text-[16px] font-light text-(--color-fg-2) transition-all duration-300 hover:translate-x-1.5 hover:text-(--color-fg)"
+          // Same swipe-mask fill as the nav pills: a cobalt plate slides UP
+          // from below on hover and the label flips to read on it. Classes, not
+          // inline transforms — an inline style would beat group-hover.
+          className="group/nav relative w-fit overflow-hidden rounded-md px-2 py-1 -ml-2 text-[16px] font-normal text-(--color-fg-2) transition-colors duration-300"
         >
-          {l.label}
+          <span
+            aria-hidden
+            className="absolute inset-0 rounded-md bg-(--color-accent) translate-y-full transition-transform duration-300 ease-out group-hover/nav:translate-y-0"
+          />
+          <span className="relative z-10 transition-colors duration-300 group-hover/nav:text-white">
+            {l.label}
+          </span>
         </Link>
       ))}
     </nav>
@@ -107,7 +120,11 @@ export function Footer() {
           <Link
             href="/"
             onPointerEnter={hoverTick}
-            className="inline-flex w-fit items-center font-display text-[26px] font-semibold tracking-[-0.015em] text-(--color-fg)"
+            aria-label="Cubixso — back to homepage"
+            // Reads as a control, not decoration: explicit pointer, a hover
+            // tint and a focus ring. It always routed home; nothing signalled
+            // that it was clickable.
+            className="group/brand inline-flex w-fit cursor-pointer items-center rounded-md font-display text-[26px] font-semibold tracking-[-0.015em] text-(--color-fg) transition-colors duration-300 hover:text-(--color-accent) focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--color-accent-2)"
           >
             {/* Solid ink wordmark — must read in both themes (the aurora gradient
                 fades to #fff and vanishes on a light background). */}
@@ -197,10 +214,14 @@ export function Footer() {
       {/* Copyright bar */}
       <div className="flex flex-col gap-2 border-t border-(--color-line) px-7 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-10">
         <span className="mono text-[11px] text-(--color-fg-2)">
-          © 2026 Cubixso.ai — All rights reserved.
+          © 2026 Cubixso Solutions Private Limited — All rights reserved.
         </span>
+        {/* WeWork RMZ Spire, Knowledge City, Raidurg, Hyderabad 500081.
+            VERIFY: these are the Raidurg/Knowledge City coordinates, replacing
+            the old 17.385/78.486 which pointed at central Hyderabad (Abids),
+            not the office. */}
         <span className="mono text-[11px] text-(--color-fg-2)">
-          17.385°N · 78.486°E — HYDERABAD · IN
+          17.4239°N · 78.3707°E — HYDERABAD · IN
         </span>
       </div>
 

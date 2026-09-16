@@ -14,13 +14,11 @@ import { ChapterLabel } from "@/components/shared/ChapterLabel";
 import { LiquidGlass } from "@/components/glass/LiquidGlass";
 import { Reveal } from "@/components/scroll/Reveal";
 import { useDepthParallax } from "@/components/scroll/useDepthParallax";
-import { Icon3D } from "@/components/icons/Icon3D";
 import { WHY } from "@/lib/data";
 
 // Aurora v3 §3 — the section's ONE meaning-matched 3D accent: the clock sits
 // on "Full-cycle delivery" (index 1), the card that claims speed. No other
 // pillar earns an icon — no decoration spam.
-const CLOCK_INDEX = 1;
 
 export function WhyUs() {
   // Headline block leads (foreground), card list lags (mid) → calm depth split.
@@ -77,10 +75,6 @@ export function WhyUs() {
               >
                 <div className="flex items-start justify-between">
                   <span className="mono text-(--color-muted)">0{i + 1}</span>
-                  {/* clock = delivery speed (the one earned accent). */}
-                  {i === CLOCK_INDEX && (
-                    <Icon3D name="clock" size={56} float glow className="-mt-2" />
-                  )}
                 </div>
                 <h3 className="mt-6 font-display text-[clamp(20px,1.7vw,26px)] font-medium leading-tight tracking-tight text-(--color-fg)">
                   {w.tag}
