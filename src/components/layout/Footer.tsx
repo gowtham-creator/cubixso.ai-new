@@ -216,12 +216,12 @@ export function Footer() {
         <span className="mono text-[11px] text-(--color-fg-2)">
           © 2026 Cubixso Solutions Private Limited — All rights reserved.
         </span>
-        {/* WeWork RMZ Spire, Knowledge City, Raidurg, Hyderabad 500081.
-            VERIFY: these are the Raidurg/Knowledge City coordinates, replacing
-            the old 17.385/78.486 which pointed at central Hyderabad (Abids),
-            not the office. */}
+        {/* WeWork RMZ Spire, Hyderabad — exact coordinates supplied by the
+            client (17.43302345275879, 78.38460540771484), rounded to 4dp.
+            Replaces the old 17.385/78.486, which pointed at central Hyderabad
+            (Abids) rather than the office. */}
         <span className="mono text-[11px] text-(--color-fg-2)">
-          17.4239°N · 78.3707°E — HYDERABAD · IN
+          17.4330°N · 78.3846°E — HYDERABAD · IN
         </span>
       </div>
 

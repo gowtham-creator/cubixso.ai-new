@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { FinalCTA } from "@/components/sections/FinalCTA";
 import { Ph } from "@/components/icons/Ph";
-import { LEGAL_ADVISOR } from "@/lib/legal";
+import { LEGAL_ADVISOR, LEGAL_ENTITY } from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Legal — Cubixso.ai",
@@ -81,6 +81,28 @@ export default function LegalPage() {
                 </div>
               </Link>
             ))}
+          </div>
+
+          {/* ── Registered entity ─────────────────────────────────────── */}
+          <div className="mt-10 rounded-2xl border border-(--color-line) bg-(--color-bg-soft)/40 p-8 backdrop-blur-sm md:p-10">
+            <span className="mono text-(--color-muted-2)">ENTITY</span>
+            <h2 className="mt-5 font-display text-[clamp(22px,2.1vw,32px)] font-medium leading-[1.1] tracking-[-0.03em] text-(--color-fg)">
+              {LEGAL_ENTITY.name}
+            </h2>
+            <dl className="mt-6 grid grid-cols-1 gap-x-12 gap-y-4 sm:grid-cols-2">
+              {LEGAL_ENTITY.rows
+                .filter((r) => r.value)
+                .map((r) => (
+                  <div key={r.label} className="flex flex-col gap-1">
+                    <dt className="mono text-(--color-muted-2)">
+                      {r.label.toUpperCase()}
+                    </dt>
+                    <dd className="text-[15px] leading-relaxed text-(--color-fg-2)">
+                      {r.value}
+                    </dd>
+                  </div>
+                ))}
+            </dl>
           </div>
 
           {/* ── Legal advisor ─────────────────────────────────────────── */}

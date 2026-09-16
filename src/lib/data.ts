@@ -90,6 +90,7 @@ export const COLLABORATORS = [
       "STARTUP INDIA RECOGNISED",
       "DPIIT REGISTERED",
       "MEITY · AI MISSION",
+      "BUILDSPACE",
     ],
   },
   {

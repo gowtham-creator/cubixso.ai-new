@@ -11,6 +11,22 @@ export const LEGAL_UPDATED = "Effective 1 June 2026" as const;
 export const LEGAL_NOTE =
   "This document is a template provided for general informational purposes and does not constitute legal advice. It remains pending review by qualified legal counsel and should be adapted to your specific circumstances before being relied upon." as const;
 
+// Registered-entity identifiers, shown on /legal.
+//
+// Each row RENDERS ONLY WHEN ITS VALUE IS NON-EMPTY, so a blank field is simply
+// absent rather than displayed as a dash — a half-filled statutory block reads
+// worse than a short one. Fill CIN and GSTIN from the incorporation / GST
+// certificate and they appear automatically; no component change needed.
+export const LEGAL_ENTITY = {
+  name: "Cubixso Solutions Private Limited",
+  rows: [
+    { label: "CIN", value: "" },            // TODO: from the incorporation certificate
+    { label: "GSTIN", value: "" },          // TODO: from the GST registration
+    { label: "DPIIT Recognition", value: "DIPP183547" },
+    { label: "Registered office", value: "WeWork RMZ Spire, Hyderabad, Telangana, India" },
+  ],
+} as const;
+
 // Cubixso's retained legal advisor, surfaced on /legal so anyone with a legal
 // question can reach counsel directly instead of routing through the general
 // inbox. Chambers address and professional email are as supplied by the firm.
