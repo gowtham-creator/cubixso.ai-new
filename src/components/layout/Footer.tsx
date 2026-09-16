@@ -116,7 +116,12 @@ export function Footer() {
           desktop, with the dividers flipping to vertical only at that point. */}
       <div className="grid grid-cols-1 divide-y divide-(--color-line) md:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-y-0">
         {/* Brand + direct contact */}
-        <div className="flex flex-col justify-between gap-10 p-7 sm:p-10 transition-colors duration-500 hover:bg-white/[0.02] md:col-span-2 md:gap-12 lg:min-h-[400px]">
+        {/* justify-start, not justify-between: paired with lg:min-h-[400px] the
+            latter pushed the wordmark and the headline to opposite ends of the
+            cell, opening a ~150px void between them whenever the column was
+            shorter than the minimum. The gap is now stated once and holds at
+            every height. */}
+        <div className="flex flex-col justify-start gap-9 p-7 sm:p-10 transition-colors duration-500 hover:bg-white/[0.02] md:col-span-2 md:gap-10 lg:min-h-[400px]">
           <Link
             href="/"
             onPointerEnter={hoverTick}
@@ -133,7 +138,17 @@ export function Footer() {
           </Link>
 
           <div>
-            <h2 className="max-w-[16ch] font-display text-[clamp(28px,3.4vw,46px)] font-semibold leading-[1.04] tracking-[-0.02em] text-(--color-fg)">
+            {/* data-cursor="cta" is what CursorFollower matches on (alongside
+                a/button/[role=button]) to swell the ring and light it cobalt.
+                The heading is not a link, so without the hook it stayed inert
+                while the brand wordmark above it glowed — the mismatch shown in
+                the screenshot. The colour shift is paired with it so the type
+                and the cursor react together. */}
+            <h2
+              data-cursor="cta"
+              onPointerEnter={hoverTick}
+              className="max-w-[16ch] font-display text-[clamp(28px,3.4vw,46px)] font-semibold leading-[1.04] tracking-[-0.02em] text-(--color-fg) transition-colors duration-300 hover:text-(--color-accent)"
+            >
               Generative AI for the autonomous enterprise.
             </h2>
             <div className="mt-7 flex flex-col gap-1.5 mono text-[12px] text-(--color-fg-2)">

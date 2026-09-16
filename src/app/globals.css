@@ -176,31 +176,6 @@ html[data-theme="light"] {
     border-radius: 9999px;
   }
 
-  /* KineticStack (section 03) — the pinned word crawl translates the stack up
-     by its own overflow height to keep the lit word in frame. Nothing clipped
-     it, so the column rode straight up over the "03 [ THE IDEA ]" eyebrow and
-     the lede paragraph above it — the long-standing overlap on that section.
-     The crawl now runs inside a fixed window with a soft fade at both edges.
-
-     The media condition MIRRORS PIN_MEDIA in KineticStack.tsx exactly. That
-     matters: if this window applied where the pin does not run, the crawl
-     would never happen and the later words would be permanently clipped out
-     of the document. Height matches the timeline's own
-     `Math.max(window.innerHeight - 320, 300)`. */
-  @media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
-    .kinetic-window {
-      /* Fallback only. The real height is measured and set inline by the pin
-         effect (availH in KineticStack.tsx), which accounts for the eyebrow +
-         lede above the column AND the pin's "top 11%" offset. A constant here
-         cannot: it overestimated the room and clipped the last words off the
-         bottom of the viewport. */
-      height: max(260px, calc(100svh - 420px));
-      overflow: hidden;
-      -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 6%, #000 94%, transparent 100%);
-      mask-image: linear-gradient(to bottom, transparent 0, #000 6%, #000 94%, transparent 100%);
-    }
-  }
-
   /* Visually-hidden helper for screen-reader-only content */
   .sr-only {
     position: absolute;

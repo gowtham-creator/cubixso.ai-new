@@ -93,7 +93,6 @@ export function KineticStack() {
   const sectionRef = useRef<HTMLElement>(null);
   const stackRef = useRef<HTMLDivElement>(null); // word column (internal crawl)
   const lensDriftRef = useRef<HTMLDivElement>(null); // lens counter-drift plane
-  const stackWindowRef = useRef<HTMLDivElement>(null); // clipping frame for the crawl
   const stackPlaneRef = useRef<HTMLDivElement>(null); // free-parallax wrappers —
   const lensPlaneRef = useRef<HTMLDivElement>(null); //  cleared when pin owns motion
   // True while the ScrollTrigger pin owns this section's motion (desktop, no
@@ -152,86 +151,73 @@ export function KineticStack() {
 
       setPinActive(true);
 
-      // Words rest dimmed; the scrub re-lights them one at a time. (Entrance
-      // opacity/x/blur lives on the OUTER framer span — no shared properties,
-      // so gsap and framer never fight.)
-      gsap.set(words, { opacity: 0.24 });
-
-      const tl = gsap.timeline({
-        defaults: { ease: "none" },
-        scrollTrigger: {
-          trigger: section,
-          start: "top 11%", // clears the fixed banner + nav pill
-          end: "+=150%", // ~1.5 viewports of scrub
-          scrub: true,
-          pin: true,
-          anticipatePin: 1,
-          invalidateOnRefresh: true,
-          onUpdate: (self) => {
-            // Confidence interpolates with the scrub. Quantized to 0.25% so
-            // setState only fires when the displayed value actually moves.
-            const next =
-              Math.round(self.progress * CONFIDENCE_TARGET * 4) / 4;
-            setScrubConfidence((prev) => (prev === next ? prev : next));
-          },
-        },
-      });
-
-      // Word-by-word emphasis wave: the current word pops to full presence
-      // (slight x lead), then settles to a readable afterglow as the next
-      // takes focus. The final word ("production?") stays lit.
-      const STEP = 0.5;
-      words.forEach((el, i) => {
-        const at = i * STEP;
-        const last = i === words.length - 1;
-        tl.to(el, { opacity: 1, x: 14, duration: 0.4 }, at);
-        tl.to(el, { opacity: last ? 1 : 0.6, x: 0, duration: 0.4 }, at + STEP);
-      });
-
-      // Hold beat after the last word so the release never feels abrupt.
-      const total = tl.duration() + 0.8;
-
-      // Internal crawl — the stack is taller than one viewport at display
-      // sizes, so it drifts up across the pin to keep the lit word in frame.
+      // ── NO PIN. Each word lights as IT passes the reading line ───────────
       //
-      // availH() is the ONE source of truth for "how much vertical room the
-      // column actually has on screen while pinned", used for BOTH the window's
-      // height and the crawl distance. It has to be MEASURED, not guessed: the
-      // old constant 320 ignored both the eyebrow+lede stack above the column
-      // (~314px) and the pin's own "top 11%" offset, so it overestimated the
-      // room by roughly 100px and the last words were cut off by the bottom of
-      // the viewport.
-      const availH = () => {
-        const vh = window.innerHeight;
-        const win = stackWindowRef.current;
-        if (!win) return Math.max(260, vh - 420);
-        const top =
-          win.getBoundingClientRect().top - section.getBoundingClientRect().top;
-        return Math.max(260, vh - vh * 0.11 - top - 40);
-      };
+      // This replaces a pinned, scrubbed timeline that also crawled the whole
+      // column upward inside a clipping window. That one mechanism was behind
+      // most of this section's problems: pinning a section taller than the
+      // viewport left dead scroll after it, the crawl rode the words up over
+      // the eyebrow and lede, clipping them back caused words to be cut
+      // mid-glyph, and the whole thing read as "it scrolls away before I can
+      // look at it". Removing the pin removes all four at once — there is no
+      // spacer to leave a gap, no crawl to collide with anything, and nothing
+      // to clip, so the column simply flows at its natural height.
+      //
+      // The motion itself is now per-word and position-based: a word brightens
+      // and eases right as it crosses the lower-middle of the viewport, and
+      // holds once it is past. Scrub ties it to scroll position, so reading
+      // speed is the visitor's, not a fixed timeline's.
+      gsap.set(words, { opacity: 0.22 });
 
-      // Size the clipping window before ScrollTrigger measures, so the pin and
-      // the spacer are computed against the final layout.
-      const applyWindowHeight = () => {
-        const win = stackWindowRef.current;
-        if (win) win.style.height = `${availH()}px`;
-      };
-      applyWindowHeight();
-      ScrollTrigger.addEventListener("refreshInit", applyWindowHeight);
+      words.forEach((el) => {
+        gsap.to(el, {
+          opacity: 1,
+          x: 10,
+          ease: "none",
+          scrollTrigger: {
+            trigger: el,
+            start: "top 88%",
+            end: "top 45%",
+            scrub: 0.6, // slight lag: the light trails the scroll, never snaps
+            invalidateOnRefresh: true,
+          },
+        });
+      });
 
-      tl.to(
-        stack,
-        {
-          y: () => -Math.max(0, stack.offsetHeight - availH()),
-          duration: total,
+      // Confidence readout still interpolates with the section's own progress,
+      // just without owning a pin. Quantized to 0.25% so setState only fires
+      // when the displayed value actually moves.
+      ScrollTrigger.create({
+        trigger: section,
+        start: "top 70%",
+        end: "bottom 60%",
+        scrub: true,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          const next = Math.round(self.progress * CONFIDENCE_TARGET * 4) / 4;
+          setScrubConfidence((prev) => (prev === next ? prev : next));
         },
-        0,
-      );
+      });
 
-      // Lens panel parallax counter-drift across the whole pin — mass in
-      // zero-g while the type does the talking.
+      // Lens panel counter-drift — a gentle parallax while the section
+      // passes, driven by the section's own scroll range now that there is no
+      // pin timeline to hang it on.
       if (lensDrift) {
-        tl.fromTo(lensDrift, { y: 40 }, { y: -40, duration: total }, 0);
+        gsap.fromTo(
+          lensDrift,
+          { y: 40 },
+          {
+            y: -40,
+            ease: "none",
+            scrollTrigger: {
+              trigger: section,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: true,
+              invalidateOnRefresh: true,
+            },
+          },
+        );
       }
 
       // Cleanup when the media condition stops matching (resize / rm toggle)
@@ -240,12 +226,7 @@ export function KineticStack() {
       return () => {
         setPinActive(false);
         setScrubConfidence(0);
-        ScrollTrigger.removeEventListener("refreshInit", applyWindowHeight);
-        // Hand the window back to CSS — below 768px / under reduced motion the
-        // column must flow at its natural height, not a pinned-desktop one.
-        if (stackWindowRef.current) stackWindowRef.current.style.height = "";
         gsap.set(words, { clearProps: "opacity,transform" });
-        gsap.set(stack, { clearProps: "transform" });
         if (lensDrift) gsap.set(lensDrift, { clearProps: "transform" });
       };
     });
@@ -321,12 +302,6 @@ export function KineticStack() {
               ref={stackPlaneRef}
               style={freeParallax ? { transform: stackParallax } : undefined}
             >
-              {/* .kinetic-window clips the scrubbed crawl to one viewport-tall
-                  frame (see globals.css). Without it the stack translated up
-                  over the eyebrow and lede above this grid. The class is inert
-                  below 768px and under reduced motion — exactly where the pin
-                  does not run and the column must flow at full height. */}
-              <div ref={stackWindowRef} className="kinetic-window">
               <div ref={stackRef} className="flex flex-col gap-1 will-change-transform">
                 {PHRASE.map((w, i) => (
                   <motion.span
@@ -358,7 +333,6 @@ export function KineticStack() {
                   </motion.span>
                 ))}
               </div>
-              </div>
             </motion.div>
           </Reveal>
 
@@ -384,7 +358,7 @@ export function KineticStack() {
             // word column having crawled up out of its own cell, is the large
             // empty area reported after this section. Below 1024px (and under
             // reduced motion) there is no pin, so sticky still earns its keep.
-            className={pinActive ? "block" : "block lg:sticky lg:top-[14vh]"}
+            className="block lg:sticky lg:top-[14vh]"
           >
             <div ref={lensDriftRef} className="will-change-transform">
               <LiquidGlass
