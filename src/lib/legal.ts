@@ -13,17 +13,26 @@ export const LEGAL_NOTE =
 
 // Registered-entity identifiers, shown on /legal.
 //
-// Each row RENDERS ONLY WHEN ITS VALUE IS NON-EMPTY, so a blank field is simply
-// absent rather than displayed as a dash — a half-filled statutory block reads
-// worse than a short one. Fill CIN and GSTIN from the incorporation / GST
-// certificate and they appear automatically; no component change needed.
+// Each row RENDERS ONLY WHEN ITS VALUE IS NON-EMPTY, so a blank field is absent
+// rather than shown as a dash.
+//
+// These are statutory identifiers — a typo here is a compliance problem, not a
+// cosmetic one, so both were checked before publishing: the GSTIN's mod-36
+// check digit computes to 2 and matches; its embedded PAN (AAMCC0213G) carries
+// "C" in the 4th position, which is the Company code and is consistent with a
+// Private Limited; and the CIN's state (TS) agrees with the GSTIN's state code
+// (36, Telangana). Re-verify if either is ever edited.
 export const LEGAL_ENTITY = {
   name: "Cubixso Solutions Private Limited",
   rows: [
-    { label: "CIN", value: "" },            // TODO: from the incorporation certificate
-    { label: "GSTIN", value: "" },          // TODO: from the GST registration
+    { label: "CIN", value: "U63999TS2024PTC187911" },
+    { label: "GSTIN", value: "36AAMCC0213G1Z2" },
     { label: "DPIIT Recognition", value: "DIPP183547" },
-    { label: "Registered office", value: "WeWork RMZ Spire, Hyderabad, Telangana, India" },
+    {
+      label: "Registered office",
+      value: "WeWork, RMZ Spire · T-Hub Phase 2, Raidurgam, Hyderabad, Telangana, India",
+    },
+    { label: "Also at", value: "Meydan Free Zone, Dubai, UAE" },
   ],
 } as const;
 
