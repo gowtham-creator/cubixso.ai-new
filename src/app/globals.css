@@ -234,6 +234,33 @@ html[data-theme="light"] {
   .headline-shimmer { animation: none; background-position: 50% center; }
 }
 
+/* ─── Testimonial marquee ──────────────────────────────────────────────────
+   Tailwind v4 is CSS-first — there is no tailwind.config.js to extend, so the
+   keyframes live here rather than in a theme.extend block.
+
+   The track holds the card set exactly twice and travels half its own width
+   plus half a gap, which puts copy 2 precisely where copy 1 started: seamless.
+   (Translating a full -100%, as the upstream block does, scrolls the track off
+   screen and snaps back — a visible blank stutter once per cycle.)              */
+.marquee-track {
+  --gap: 1rem;
+  --duration: 50s;
+  gap: var(--gap);
+  animation: marquee var(--duration) linear infinite;
+  will-change: transform;
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(calc(-50% - (var(--gap) / 2))); }
+}
+/* The global reduced-motion rule collapses animations to 0.01ms, which would
+   snap the track straight to its END position and hide the first copy. Stop it
+   outright instead, leaving the cards parked and readable. */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none !important; transform: none !important; }
+  .marquee-viewport { overflow-x: auto; }
+}
+
 /* Aurora gradient display text (Aurora Glass v3) — powder→cobalt-glow→white
    lives INSIDE the glyphs via background-clip. Max ONE per section. */
 .text-aurora {

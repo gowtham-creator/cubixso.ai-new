@@ -11,6 +11,7 @@ import { Work }        from "@/components/sections/Work";
 import { Industries }  from "@/components/sections/Industries";
 import { WhyUs }       from "@/components/sections/WhyUs";
 import { CubeScroller } from "@/components/sections/CubeScroller";
+import { ClientTestimonials } from "@/components/sections/ClientTestimonials";
 import { Metrics }     from "@/components/sections/Metrics";
 import { Testimonial } from "@/components/sections/Testimonial";
 import { BackedBy }    from "@/components/sections/BackedBy";
@@ -31,6 +32,7 @@ export default function Home() {
       <Industries />    {/* 06 · INDUSTRIES              */}
       <WhyUs />         {/* 07 · EDGE                    */}
       <CubeScroller />  {/* 07b · DIMENSIONAL (scrub)    */}
+      <ClientTestimonials /> {/* 07c · CLIENT VOICES (marquee) */}
       <Metrics />       {/* 08 · PROOF                   */}
       <Testimonial />   {/*       (bridge — bold quote)  */}
       <Global />        {/* 10 · REACH                   */}
