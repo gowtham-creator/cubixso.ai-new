@@ -65,3 +65,4 @@ uploads/
 
 # Stray tool lockfiles
 uv-*.lock
+.gstack/

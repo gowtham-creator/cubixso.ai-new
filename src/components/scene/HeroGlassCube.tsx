@@ -205,8 +205,25 @@ export function HeroGlassCube({
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  // High tier keeps the approved adaptive DPR; low tier clamps to 1.
-  const dpr: 1 | [number, number] = low ? 1 : [1, 2];
+  // High tier keeps the approved adaptive DPR. Low tier used to clamp to 1,
+  // which on a 3x phone rendered the cube into a 343x343 buffer — a third of
+  // the screen's resolution, so it read soft and aliased next to the crisp
+  // desktop cube ("the hero isn't the same as on desktop"). 1.5x is still far
+  // cheaper than native 3x but removes the visible softness.
+  const dpr: [number, number] = low ? [1, 1.5] : [1, 2];
+
+  // Keeping the canvas mounted forever is what freezes the cube on iOS. Safari
+  // caps live WebGL contexts and evicts the OLDEST one when a new canvas asks
+  // for another — measured on this page: hero + scroll cube + map = 3 contexts
+  // alive at once. The evicted canvas keeps its last frame painted, so the cube
+  // looks rendered but never moves. Eviction does not reliably fire
+  // `webglcontextlost` either, so we cannot only react to that event.
+  //
+  // So: unmount the canvas once the hero is more than half a viewport away, and
+  // mount a FRESH one (new `gen` key) on the way back. One hero context, only
+  // while it is actually near the screen.
+  const [near, setNear] = useState(true);
+  const [gen, setGen] = useState(0);
 
   useEffect(() => {
     const el = ref.current;
@@ -215,9 +232,19 @@ export function HeroGlassCube({
       ([entry]) => setActive(entry.isIntersecting),
       { threshold: 0.02 },
     );
+    const ioNear = new IntersectionObserver(
+      ([entry]) => setNear(entry.isIntersecting),
+      { rootMargin: "50% 0px" },
+    );
     io.observe(el);
-    return () => io.disconnect();
+    ioNear.observe(el);
+    return () => { io.disconnect(); ioNear.disconnect(); };
   }, []);
+
+  // Coming back into view after a loss: drop the dead canvas and build a new one.
+  useEffect(() => {
+    if (near && lost) { setLost(false); setGen((g) => g + 1); }
+  }, [near, lost]);
 
   return (
     <div
@@ -228,9 +255,10 @@ export function HeroGlassCube({
       <div className={boxClassName ?? "aspect-square w-[min(80vw,680px)]"}>
         {!webgl || lost ? (
           <StaticCubeFallback dark={dark} />
-        ) : (
+        ) : !near ? null : (
         <CanvasBoundary fallback={<StaticCubeFallback dark={dark} />}>
         <Canvas
+          key={gen}
           camera={{ position: [0, 2.4, 5.8], fov: 28, near: 0.1, far: 100 }}
           gl={{ antialias: true, alpha: true }}
           dpr={dpr}

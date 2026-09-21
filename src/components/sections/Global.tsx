@@ -82,11 +82,16 @@ export function Global() {
   const [pinActive, setPinActive] = useState(false);
   const [mapNear, setMapNear] = useState(false);
 
-  // Defer the map's WebGL context until it is nearly on screen (see below).
+  // Hold the map's WebGL context only while it is near the screen. This used to
+  // latch on (disconnect after the first intersection), so once you had scrolled
+  // past the map its context stayed alive for the rest of the session — the
+  // third simultaneous context on the page. iOS Safari evicts the oldest context
+  // when it runs out, which is what left the hero cube frozen on its last frame.
+  // Releasing it on the way out keeps the page to one live context at a time.
   useEffect(() => {
     const el = paneRef.current;
     if (!el || typeof IntersectionObserver === "undefined") { setMapNear(true); return; }
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setMapNear(true); io.disconnect(); } },
+    const io = new IntersectionObserver(([e]) => setMapNear(e.isIntersecting),
       { rootMargin: "100% 0px" });
     io.observe(el);
     return () => io.disconnect();
