@@ -80,6 +80,17 @@ export function Global() {
   // True while the ScrollTrigger pin owns this section's motion — suspends
   // the free depth-parallax plane so the two never fight over transforms.
   const [pinActive, setPinActive] = useState(false);
+  const [mapNear, setMapNear] = useState(false);
+
+  // Defer the map's WebGL context until it is nearly on screen (see below).
+  useEffect(() => {
+    const el = paneRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") { setMapNear(true); return; }
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setMapNear(true); io.disconnect(); } },
+      { rootMargin: "100% 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   // THE PIN — ~1 viewport of scrub. Letter-spacing cinches, live city nodes
   // pulse in sequence through the existing focus/lens system, content crawls
@@ -247,7 +258,11 @@ export function Global() {
               <div ref={paneRef} className="relative" style={lensVars}>
                 {/* The live globe. Its cobalt arc + glowing markers are the
                     "world" the spine cube blooms into behind this glass. */}
-                <PresenceMap />
+                {/* MapLibre spins up its own WebGL context. Mounting it at
+                    page load cost a context while the visitor was still at the
+                    hero — and on iOS that can evict the hero's own context and
+                    freeze it. Deferred until the map is within a viewport. */}
+                {mapNear ? <PresenceMap /> : <div className="relative w-full h-[clamp(360px,52vh,620px)] overflow-hidden rounded-2xl border border-(--color-line) bg-(--color-bg)" aria-hidden />}
 
                 {/* MAGNIFY LENS — a refractive disc that warps + enlarges the
                     map node beneath the focal point. filter:url(lens) bends the

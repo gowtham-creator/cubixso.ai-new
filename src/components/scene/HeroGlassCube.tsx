@@ -187,6 +187,9 @@ export function HeroGlassCube({
   // and there's no hydration mismatch; the client re-detects after mount.
   const tier = useDeviceTier();
   const [webgl, setWebgl] = useState(true);
+  // A lost context leaves the last frame painted, so the cube looks rendered
+  // but frozen. Swap to the static mark instead of lying about being live.
+  const [lost, setLost] = useState(false);
   useEffect(() => setWebgl(hasWebGL()), []);
   const low = tier === "low";
 
@@ -223,7 +226,7 @@ export function HeroGlassCube({
       className={className ?? "pointer-events-none absolute inset-0 z-0 flex items-center justify-center"}
     >
       <div className={boxClassName ?? "aspect-square w-[min(80vw,680px)]"}>
-        {!webgl ? (
+        {!webgl || lost ? (
           <StaticCubeFallback dark={dark} />
         ) : (
         <CanvasBoundary fallback={<StaticCubeFallback dark={dark} />}>
@@ -232,7 +235,10 @@ export function HeroGlassCube({
           gl={{ antialias: true, alpha: true }}
           dpr={dpr}
           frameloop={active ? "always" : "never"}
-          onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
+          onCreated={({ camera, gl }) => {
+            camera.lookAt(0, 0, 0);
+            gl.domElement.addEventListener("webglcontextlost", (e) => { e.preventDefault(); setLost(true); }, { once: true });
+          }}
           style={{ position: "absolute", inset: 0 }}
         >
           <ambientLight intensity={dark ? 0.35 : 0.7} />

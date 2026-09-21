@@ -73,6 +73,12 @@ export function CubeScroller() {
   const progressRef = useRef(0);
   const [frame, setFrame] = useState(1);
   const [active, setActive] = useState(true);
+  // iOS Safari caps simultaneous WebGL contexts and evicts the OLDEST when the
+  // cap is hit, leaving that canvas frozen on its last frame. This section sits
+  // far below the fold but used to create its context at page load, competing
+  // with the hero's. `near` defers creation until the section is within a
+  // viewport of the fold — mounted in time to be ready, not at first paint.
+  const [near, setNear] = useState(false);
 
   // Device-adaptive quality. Both default to high / WebGL-present on the server
   // and first client paint (see @/lib/perf), so desktop renders pixel-identical
@@ -96,7 +102,9 @@ export function CubeScroller() {
     if (!el || typeof IntersectionObserver === "undefined") return;
     const io = new IntersectionObserver(([e]) => setActive(e.isIntersecting), { threshold: 0.01 });
     io.observe(el);
-    return () => io.disconnect();
+    const ioNear = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { rootMargin: "100% 0px" });
+    ioNear.observe(el);
+    return () => { io.disconnect(); ioNear.disconnect(); };
   }, []);
 
   return (
@@ -106,7 +114,7 @@ export function CubeScroller() {
           [ DIMENSIONAL ]
         </div>
 
-        {webgl && (
+        {webgl && near && (
         <div className="pointer-events-none absolute inset-0">
           <Canvas
             orthographic
