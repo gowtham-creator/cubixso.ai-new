@@ -104,16 +104,47 @@ export function IntroSequence() {
     if (!show) return;
     const v = videoRef.current;
     if (!v) { setReady(true); return; }
-    v.play().catch(() => setReady(true));
+
+    // Set muted/playsInline on the ELEMENT, not just via JSX. React sets the
+    // `muted` DOM property but does not reliably emit the `muted` ATTRIBUTE,
+    // and iOS Safari checks the attribute when deciding whether inline
+    // autoplay is allowed — so the clip was refused and the poster (a still
+    // frame) stood in, which is why the cube looked frozen on phones.
+    v.muted = true;
+    v.defaultMuted = true;
+    v.playsInline = true;
+
+    let cleanup = () => {};
+    const attempt = () => v.play().then(() => true).catch(() => false);
+
+    attempt().then((ok) => {
+      if (ok) return;
+      // Still refused (iOS Low Power Mode blocks autoplay outright). Mark ready
+      // so the curtain is never stuck, and retry once on the first touch —
+      // a user gesture lifts the restriction.
+      setReady(true);
+      const onGesture = () => { void v.play().catch(() => {}); cleanup(); };
+      window.addEventListener("pointerdown", onGesture, { once: true, passive: true });
+      window.addEventListener("touchstart", onGesture, { once: true, passive: true });
+      cleanup = () => {
+        window.removeEventListener("pointerdown", onGesture);
+        window.removeEventListener("touchstart", onGesture);
+      };
+    });
+
+    return () => cleanup();
   }, [show]);
 
   // On compact screens the keywords cycle one-at-a-time (see render) — advance
   // the index on a gentle interval.
   useEffect(() => {
     if (!show || !compact || reduced) return;
-    // 5 words in the 3.25s window — keep the cadence quick enough that most of
-    // the set is seen before the curtain lifts.
-    const id = window.setInterval(() => setWordIdx((i) => (i + 1) % WORDS.length), 620);
+    // The interval MUST exceed the enter+exit transition. At 620ms against a
+    // 0.5s-each crossfade under AnimatePresence mode="wait", every word was
+    // interrupted mid-fade and none ever reached full opacity — the flicker
+    // reported on mobile. 1150ms against a 0.32s fade leaves ~0.5s of steady
+    // hold per word.
+    const id = window.setInterval(() => setWordIdx((i) => (i + 1) % WORDS.length), 1150);
     return () => clearInterval(id);
   }, [show, compact, reduced]);
 
@@ -266,7 +297,7 @@ export function IntroSequence() {
                   initial={{ opacity: 0, y: 8, filter: "blur(6px)" }}
                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                   exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
-                  transition={{ duration: 0.5, ease: SIG }}
+                  transition={{ duration: 0.32, ease: SIG }}
                   className={`text-center font-display text-[15px] font-medium tracking-[0.04em] ${dark ? "text-white/85" : "text-black/80"}`}
                 >
                   {WORDS[wordIdx]}
