@@ -1,12 +1,15 @@
 "use client";
 
-// CubeScroller — a scroll-SCRUBBED 360° turntable of the Cubixso cube. As you
-// scroll the tall section, the cube's Y-rotation is driven by scroll progress
-// and QUANTIZED to exactly 94 steps, so it advances frame-by-frame like a baked
-// image sequence (the "94 frames" the brief asks for) — but it's a live GLB, so
-// it stays razor-sharp at any size and needs no pre-rendered PNG pipeline. A
-// live "FRAME xx / 94" counter makes the frame-scrub literal. Theme-adaptive;
-// the canvas pauses when the section is off-screen; reduced-motion holds frame 1.
+// CubeScroller — a scroll-SCRUBBED 360° turntable of the Cubixso cube, which
+// you can also grab and spin yourself. It's a live GLB, so it stays razor-sharp
+// at any size and needs no pre-rendered PNG pipeline, and a live "FRAME xx / 94"
+// counter reads out scroll progress. Theme-adaptive; the canvas pauses when the
+// section is off-screen; reduced-motion holds frame 1.
+//
+// The rotation was originally quantized to 94 discrete steps to imitate a baked
+// image sequence. It now turns continuously with exponential smoothing, and a
+// manual drag offset composes on top of the scroll-driven angle — see ScrubCube
+// for the motion and the drag effect below for the gesture.
 
 import { Suspense, useMemo, useRef, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
@@ -24,10 +27,12 @@ const FRAMES = 94;
 
 function ScrubCube({
   progressRef,
+  dragRef,
   dark,
   active,
 }: {
   progressRef: React.MutableRefObject<number>;
+  dragRef: React.MutableRefObject<{ x: number; y: number }>;
   dark: boolean;
   active: boolean;
 }) {
@@ -51,12 +56,23 @@ function ScrubCube({
     return c;
   }, [scene, dark]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!root.current) return;
-    // quantize scroll progress to 94 discrete frames → a full 360° turn
+    // Rotation used to be QUANTIZED to 94 discrete steps, to read like a baked
+    // image sequence. On a real scroll that is what "not smooth" means: the cube
+    // snaps between frames roughly 4° at a time instead of turning. It is now
+    // continuous, with exponential smoothing so it eases toward the scroll
+    // position rather than tracking it rigidly — that also absorbs the coarse,
+    // bursty deltas a trackpad or wheel produces. The FRAME counter still reads
+    // out of 94, so the concept survives; only the motion changed.
     const p = Math.min(1, Math.max(0, progressRef.current));
-    const step = Math.round(p * (FRAMES - 1)) / (FRAMES - 1);
-    root.current.rotation.y = step * Math.PI * 2;
+    const targetY = p * Math.PI * 2 + dragRef.current.x;
+    const targetX = 0.34 + dragRef.current.y;
+
+    // Frame-rate independent smoothing: the same easing at 60fps and 120fps.
+    const k = 1 - Math.exp(-9 * Math.min(delta, 0.1));
+    root.current.rotation.y += (targetY - root.current.rotation.y) * k;
+    root.current.rotation.x += (targetX - root.current.rotation.x) * k;
   });
 
   return (
@@ -79,6 +95,59 @@ export function CubeScroller() {
   // with the hero's. `near` defers creation until the section is within a
   // viewport of the fold — mounted in time to be ready, not at first paint.
   const [near, setNear] = useState(false);
+  // Manual rotation offset, added on top of the scroll-driven rotation so the
+  // two compose instead of fighting. Kept in a ref: it changes every pointermove
+  // and must not re-render React on each one.
+  const dragRef = useRef({ x: 0, y: 0 });
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  // Drag to rotate, matching the contact-page globe's interaction. Pointer (not
+  // mouse) events so it works on touch, and setPointerCapture so the gesture
+  // survives the cursor leaving the canvas.
+  //
+  // touch-action is pan-y, NOT none: this is a scroll-driven section, so taking
+  // vertical panning away from touch users would trap them inside it. The
+  // browser keeps vertical scroll; we take horizontal drag. On a mouse, where
+  // there is no such conflict, both axes are ours.
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+
+    const onPointerDown = (e: PointerEvent) => {
+      const touch = e.pointerType === "touch";
+      const sx = e.clientX, sy = e.clientY;
+      const start = { ...dragRef.current };
+      let dragging = false;
+      try { el.setPointerCapture(e.pointerId); } catch { /* not captureable */ }
+
+      const move = (m: PointerEvent) => {
+        const dx = m.clientX - sx;
+        const dy = m.clientY - sy;
+        // On touch, only claim the gesture once it is clearly horizontal —
+        // otherwise a vertical swipe meant as a scroll would rotate the cube.
+        if (touch && !dragging && Math.abs(dx) < Math.abs(dy)) return;
+        dragging = true;
+        dragRef.current.x = start.x + dx * 0.008;
+        // Clamp tilt so the cube can never flip onto its head.
+        if (!touch) {
+          dragRef.current.y = Math.max(-0.8, Math.min(0.8, start.y - dy * 0.006));
+        }
+        el.style.cursor = "grabbing";
+      };
+      const up = () => {
+        el.style.cursor = "grab";
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up);
+        document.removeEventListener("pointercancel", up);
+      };
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up);
+      document.addEventListener("pointercancel", up);
+    };
+
+    el.addEventListener("pointerdown", onPointerDown);
+    return () => el.removeEventListener("pointerdown", onPointerDown);
+  }, [near]);
 
   // Device-adaptive quality. Both default to high / WebGL-present on the server
   // and first client paint (see @/lib/perf), so desktop renders pixel-identical
@@ -102,20 +171,37 @@ export function CubeScroller() {
     if (!el || typeof IntersectionObserver === "undefined") return;
     const io = new IntersectionObserver(([e]) => setActive(e.isIntersecting), { threshold: 0.01 });
     io.observe(el);
-    const ioNear = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { rootMargin: "100% 0px" });
+    // 250% (was 100%): the GLB + Draco decode + material compile is not instant,
+    // and mounting only one viewport ahead meant the canvas was still warming up
+    // when the section arrived — the "cube takes time to show up" report. Two
+    // and a half viewports of lead time covers the download at typical scroll
+    // speeds while still keeping the WebGL context released for most of the page.
+    const ioNear = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { rootMargin: "250% 0px" });
     ioNear.observe(el);
     return () => { io.disconnect(); ioNear.disconnect(); };
   }, []);
 
   return (
-    <section ref={ref} id="forge" aria-label="Built dimensional" className="relative z-10 h-[320vh]">
+    // 220vh (was 320vh). The sticky panel pins for track-height minus one
+    // viewport, so 320vh meant 2.2 viewports of scrolling spent on one rotation
+    // — and because the cube sits centred in the panel, the lower half of every
+    // one of those screens is empty. That dead space below the cube is the "so
+    // much gap" report. 220vh keeps a full turn with 1.2 viewports of scrub.
+    <section ref={ref} id="forge" aria-label="Built dimensional" className="relative z-10 h-[220vh]">
       <div className="sticky top-0 flex h-svh flex-col items-center justify-center overflow-hidden">
         <div className="absolute left-[var(--pad-x)] top-[clamp(80px,14vh,140px)] mono text-[11px] tracking-[0.3em] text-(--color-muted)">
           [ DIMENSIONAL ]
         </div>
 
         {webgl && near && (
-        <div className="pointer-events-none absolute inset-0">
+        <div
+          ref={stageRef}
+          // Was pointer-events-none. The cube is now grabbable, so the stage has
+          // to receive pointers — see the drag effect above for why touch-action
+          // is pan-y rather than none.
+          className="absolute inset-0 cursor-grab"
+          style={{ touchAction: "pan-y" }}
+        >
           <Canvas
             orthographic
             camera={{ position: [3.4, 3.4, 3.4], zoom: 105, near: 0.1, far: 100 }}
@@ -128,7 +214,7 @@ export function CubeScroller() {
             <directionalLight position={[4, 6, 3]} intensity={0.8} color="#cdd9ff" />
             <pointLight position={[-3, 2, -2]} intensity={dark ? 14 : 5} color="#5f8bff" distance={18} />
             <Suspense fallback={null}>
-              <ScrubCube progressRef={progressRef} dark={dark} active={active} />
+              <ScrubCube progressRef={progressRef} dragRef={dragRef} dark={dark} active={active} />
               <Environment resolution={128} frames={1} environmentIntensity={dark ? 0.45 : 0.85}>
                 <Lightformer intensity={1.8} color="#9fc0ff" position={[0, 3, 3]} scale={[7, 3, 1]} />
                 <Lightformer intensity={1.1} color="#cfe0ff" position={[4, -1, -3]} scale={[5, 3, 1]} />
