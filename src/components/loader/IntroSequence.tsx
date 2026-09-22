@@ -248,7 +248,7 @@ export function IntroSequence() {
               /* Animated WebP — same cube, same framing, same invert-for-light
                  treatment. Used only when play() was refused. */
               <img
-                src="/video/intro-cube-anim.webp"
+                src="/video/intro-cube-anim-v1.webp"
                 alt=""
                 className="h-auto w-[min(50vw,40vh,400px)] select-none"
                 style={{ filter: dark ? undefined : "invert(1)" }}
