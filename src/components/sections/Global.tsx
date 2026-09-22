@@ -27,6 +27,8 @@ import { LiquidGlass } from "@/components/glass/LiquidGlass";
 import { Reveal } from "@/components/scroll/Reveal";
 import { useDepthParallax } from "@/components/scroll/useDepthParallax";
 import { PRESENCE } from "@/lib/data";
+import { useDeviceTier } from "@/lib/perf";
+import { useWarmMount, afterReveal } from "@/lib/useWarmMount";
 import type { GlobeMarker, Globe3DConfig } from "@/components/ui/3d-globe";
 
 const GLOBE_FRAME =
@@ -47,23 +49,46 @@ const GLOBE_MARKERS: GlobeMarker[] = PRESENCE.flatMap((p) => {
 
 // Module-level so its identity is stable: Globe3D memoises its merged config on
 // this reference, and an inline literal would re-merge on every render.
-const GLOBE_CONFIG: Globe3DConfig = {
+const GLOBE_BASE: Globe3DConfig = {
+  // Lit by the REAL sun for this moment: the day side, the night side (with city
+  // lights) and the twilight line all match the clock, and keep moving live.
+  realtimeSun: true,
   showAtmosphere: true,
-  atmosphereColor: "#4A7BFF", // brand cobalt-glow, not Aceternity's sky blue
-  atmosphereIntensity: 20,
-  bumpScale: 5,
+  atmosphereColor: "#4A7BFF", // brand cobalt-glow
+  // A soft limb glow. The demo's intensity of 20 saturated the old shader into a
+  // solid blue ring around the planet.
+  atmosphereIntensity: 0.85,
+  atmosphereBlur: 2.5,
+  bumpScale: 4,
   autoRotateSpeed: 0.4,
   enableZoom: true,
-  // The camera starts at radius x 3.5 = 7 and the pins stand to radius x 1.18.
-  // 3.6 is as close as it can come before sliding in among the pins; 9 caps the
-  // zoom-out so the globe can never shrink to a small ball lost in the frame.
+  // Framing: the upstream camera sat at radius x 3.5 = 7, drawing the globe at
+  // ~62% of the frame height. 6.2 draws it at ~84% with the halo still inside.
+  cameraDistance: 6.2,
+  // 3.6 is as close as it can come before sliding in among the pins (which stand
+  // to radius x 1.18). 8 caps the zoom-out at ~64% of the frame height, so it can
+  // never shrink to a small ball lost in the pane.
   minDistance: 3.6,
-  maxDistance: 9,
+  maxDistance: 8,
   // Open facing longitude ~67°E (between Dubai and Hyderabad) instead of the
   // component's default −90° (the Americas), tilted ~17° so the northern-
   // hemisphere hubs sit near the centre. Rotation for longitude L is −90° − L.
   initialRotation: { x: 0.3, y: ((-90 - 67) * Math.PI) / 180 },
 };
+const TEX_HIGH = {
+  textureUrl: "/textures/earth-4096.webp",
+  bumpMapUrl: "/textures/earth-bump-2048.webp",
+  nightTextureUrl: "/textures/earth-night-4096.webp",
+};
+// Phones: a 4096 map with mipmaps is ~43 MB of GPU memory, which on iOS raises
+// the odds of the WebGL context being evicted.
+const TEX_LOW = {
+  textureUrl: "/textures/earth-2048.webp",
+  bumpMapUrl: "/textures/earth-bump-1024.webp",
+  nightTextureUrl: "/textures/earth-night-2048.webp",
+};
+const GLOBE_CONFIG_HIGH: Globe3DConfig = { ...GLOBE_BASE, ...TEX_HIGH };
+const GLOBE_CONFIG_LOW: Globe3DConfig = { ...GLOBE_BASE, ...TEX_LOW };
 
 // Client + WebGL only — load lazily, never on the server. The placeholder has
 // the globe's exact footprint so nothing shifts when it swaps in.
@@ -81,6 +106,26 @@ export function Global() {
   const sectionRef = useRef<HTMLElement>(null);
   const mapPlaneRef = useRef<HTMLDivElement>(null); // free-parallax wrapper
   const [mapNear, setMapNear] = useState(false);
+  const tier = useDeviceTier();
+  // Desktop builds the globe once, in idle time after the intro, and keeps it;
+  // phones mount it only near the viewport. Staggered 1.5s after the cube's
+  // warm-up so the two never compile shaders in the same idle slot.
+  const showGlobe = useWarmMount(mapNear, tier, 1500);
+  const globeConfig = tier === "low" ? GLOBE_CONFIG_LOW : GLOBE_CONFIG_HIGH;
+
+  // Fetch + decode the textures early on EVERY tier. This is the real preload:
+  // the globe module is behind next/dynamic, so it only evaluates on mount, and
+  // anything it preloads itself arrives exactly too late. Loading the module here
+  // warms the chunk and the textures without creating a WebGL context, so it is
+  // safe on phones too.
+  useEffect(() => {
+    const tex = tier === "low" ? TEX_LOW : TEX_HIGH;
+    return afterReveal(() => {
+      void import("@/components/ui/3d-globe").then((m) =>
+        m.preloadGlobeTextures(Object.values(tex)),
+      );
+    });
+  }, [tier]);
 
   // Hold the map's WebGL context only while it is near the screen. This used to
   // latch on (disconnect after the first intersection), so once you had scrolled
@@ -149,16 +194,15 @@ export function Global() {
               className="relative block overflow-hidden p-2 sm:p-3"
             >
               <div ref={paneRef} className="relative">
-                {/* The globe holds its own WebGL context, so it mounts only
-                    while the pane is near the screen: on iOS a third live
-                    context evicts the oldest one, which is what once froze the
-                    hero cube on its last frame. Textures are preloaded as soon
-                    as the component module loads, so by the time this mounts
-                    they are normally already decoded. */}
-                {mapNear ? (
+                {/* The globe holds its own WebGL context. Desktop builds it
+                    once in idle time and keeps it; phones mount it only near
+                    the viewport, because iOS evicts the oldest context when it
+                    runs out (see useWarmMount). Textures are prefetched by this
+                    section after the intro lifts, not by the globe module. */}
+                {showGlobe ? (
                   <Globe3D
                     markers={GLOBE_MARKERS}
-                    config={GLOBE_CONFIG}
+                    config={globeConfig}
                     className={GLOBE_FRAME}
                   />
                 ) : (

@@ -25,6 +25,7 @@ import * as THREE from "three";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { cdn } from "@/lib/cdn";
 import { useDeviceTier, hasWebGL } from "@/lib/perf";
+import { useWarmMount } from "@/lib/useWarmMount";
 
 const MODEL = cdn("/models/cubixso-cube.glb");
 const DRACO = cdn("/draco/");
@@ -171,35 +172,9 @@ export function CubeScroller() {
   // Low tier (phones): keep the near-gated mount. iOS evicts the oldest WebGL
   // context when it runs out, so a phone genuinely cannot afford to hold this one
   // for the whole session.
-  const [warm, setWarm] = useState(false);
-  useEffect(() => {
-    if (tier === "low") return;
-    let idle: number | undefined;
-    let timer: number | undefined;
-    const schedule = () => {
-      const ric = (window as Window & {
-        requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
-      }).requestIdleCallback;
-      if (ric) idle = ric(() => setWarm(true), { timeout: 2500 });
-      else timer = window.setTimeout(() => setWarm(true), 1200);
-    };
-    // Don't compete with the intro curtain for the main thread: wait for it to
-    // lift. It only plays once per session, so on later visits start at once.
-    let seen = false;
-    try { seen = sessionStorage.getItem("cubixso.seen") === "1"; } catch { /* private mode */ }
-    if (seen) schedule();
-    else window.addEventListener("cubixso:revealed", schedule, { once: true });
-    return () => {
-      window.removeEventListener("cubixso:revealed", schedule);
-      if (idle !== undefined) (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(idle);
-      if (timer !== undefined) window.clearTimeout(timer);
-    };
-  }, [tier]);
-
-  // Once mounted on a high-tier device it stays mounted.
-  const [latched, setLatched] = useState(false);
-  useEffect(() => { if (near || warm) setLatched(true); }, [near, warm]);
-  const showCanvas = webgl && (tier === "low" ? near : latched);
+  // Called unconditionally (Rules of Hooks), combined with `webgl` afterwards.
+  const mounted = useWarmMount(near, tier);
+  const showCanvas = webgl && mounted;
 
   // Fade the stage in on its first real frame rather than letting the cube pop.
   const [ready, setReady] = useState(false);

@@ -49,6 +49,14 @@ export interface Globe3DConfig {
   maxDistance?: number;
   /** Initial rotation */
   initialRotation?: { x: number; y: number };
+  /** Initial camera distance from the globe centre (default radius x 3.5) */
+  cameraDistance?: number;
+  /** Light the globe from the REAL sun position for the current moment */
+  realtimeSun?: boolean;
+  /** City-lights texture shown on the night side (realtimeSun only) */
+  nightTextureUrl?: string;
+  /** Brightness of the night-side city lights */
+  nightLightsIntensity?: number;
   /** Marker default size */
   markerSize?: number;
   /** Show wireframe overlay */
@@ -80,19 +88,71 @@ interface Globe3DProps {
 // Constants - Earth Texture URLs (NASA Blue Marble)
 // ============================================================================
 
-// Self-hosted, resized WebP. Upstream fetched a 4096x2048 JPEG (1.4 MB) and a
-// 2048x1024 PNG (369 KB) from unpkg.com at mount time — 1.8 MB from a third-party
-// CDN, on the critical path of the globe appearing at all. The globe renders at
-// roughly 550px, so 2048 wide is still crisp at 2x DPR. Now 192 KB, same origin,
-// served with a one-year immutable cache header (see next.config.ts).
-const DEFAULT_EARTH_TEXTURE = "/textures/earth-2048.webp";
-const DEFAULT_BUMP_TEXTURE = "/textures/earth-bump-1024.webp";
+// Self-hosted WebP at full resolution. Upstream fetched a 4096x2048 JPEG
+// (1.4 MB) and a 2048x1024 PNG (369 KB) from unpkg.com at mount time — 1.8 MB
+// from a third-party CDN on the critical path of the globe appearing. The same
+// resolutions re-encoded as WebP are 657 KB + 42 KB, same origin, one-year
+// immutable cache (see next.config.ts).
+//
+// Resolution is deliberately NOT reduced. A 2048-wide earth map was tried and
+// read as blurred: only half the map faces the camera, so 2048 wide leaves
+// ~1024 texels across a globe drawn ~700 device pixels wide on a 2x display —
+// and anisotropic filtering at the limb eats into that further.
+const DEFAULT_EARTH_TEXTURE = "/textures/earth-4096.webp";
+const DEFAULT_BUMP_TEXTURE = "/textures/earth-bump-2048.webp";
 
-// Start the download as soon as this module is evaluated, instead of waiting
-// for the <Canvas> to mount and suspend. By the time the section scrolls into
-// view the textures are normally already decoded and in the loader cache.
-if (typeof window !== "undefined") {
-  useTexture.preload([DEFAULT_EARTH_TEXTURE, DEFAULT_BUMP_TEXTURE]);
+// Texture sets per device tier. Phones get 2048-wide maps: a 4096x2048 RGBA
+// texture with mipmaps is ~43 MB of GPU memory, which on iOS raises the odds of
+// the WebGL context being evicted.
+export const GLOBE_TEXTURES = {
+  high: {
+    textureUrl: DEFAULT_EARTH_TEXTURE,
+    bumpMapUrl: DEFAULT_BUMP_TEXTURE,
+    nightTextureUrl: "/textures/earth-night-4096.webp",
+  },
+  low: {
+    textureUrl: "/textures/earth-2048.webp",
+    bumpMapUrl: "/textures/earth-bump-1024.webp",
+    nightTextureUrl: "/textures/earth-night-2048.webp",
+  },
+} as const;
+
+/**
+ * Download + decode globe textures into the loader cache ahead of mounting.
+ *
+ * This must be called by the page, not at module scope: the globe is loaded via
+ * next/dynamic, so its module only evaluates when the <Canvas> first mounts —
+ * a module-level preload there fires at exactly the moment it was meant to beat.
+ * Creates no WebGL context, so it is safe on phones too.
+ */
+export function preloadGlobeTextures(urls: readonly string[]) {
+  useTexture.preload(urls as string[]);
+}
+
+// ============================================================================
+// Real-time sun
+// ============================================================================
+
+const DEG = Math.PI / 180;
+
+/**
+ * Sub-solar point — where the sun is directly overhead — for a given instant.
+ * Low-precision solar ephemeris (Astronomical Almanac), good to well under a
+ * degree: declination from the sun's ecliptic longitude, longitude from right
+ * ascension minus Greenwich mean sidereal time. Checked against equinox and
+ * solstice declinations and the November equation-of-time maximum.
+ */
+export function subsolarPoint(date: Date): { lat: number; lng: number } {
+  const n = date.getTime() / 86400000 + 2440587.5 - 2451545.0; // days since J2000
+  const L = (280.46 + 0.9856474 * n) % 360; // mean longitude
+  const g = ((357.528 + 0.9856003 * n) % 360) * DEG; // mean anomaly
+  const lambda = (L + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * DEG;
+  const eps = (23.439 - 0.0000004 * n) * DEG; // obliquity of the ecliptic
+  const decl = Math.asin(Math.sin(eps) * Math.sin(lambda));
+  const ra = Math.atan2(Math.cos(eps) * Math.sin(lambda), Math.cos(lambda));
+  const gmst = (280.46061837 + 360.98564736629 * n) % 360;
+  const lng = ((((ra / DEG - gmst) % 360) + 540) % 360) - 180;
+  return { lat: decl / DEG, lng };
 }
 
 // ============================================================================
@@ -298,12 +358,16 @@ function RotatingGlobe({
   onMarkerHover,
 }: RotatingGlobeProps) {
   const groupRef = useRef<THREE.Group>(null);
+  const sunRef = useRef<THREE.DirectionalLight>(null);
+  const { camera } = useThree();
 
-  // Load Earth textures
-  const [earthTexture, bumpTexture] = useTexture([
-    config.textureUrl,
-    config.bumpMapUrl,
-  ]);
+  // Load Earth textures (city lights too when lit by the real sun)
+  const textures = useTexture(
+    config.realtimeSun
+      ? [config.textureUrl, config.bumpMapUrl, config.nightTextureUrl]
+      : [config.textureUrl, config.bumpMapUrl],
+  );
+  const [earthTexture, bumpTexture, nightTexture] = textures as THREE.Texture[];
 
   // Configure textures
   useMemo(() => {
@@ -314,7 +378,62 @@ function RotatingGlobe({
     if (bumpTexture) {
       bumpTexture.anisotropy = 8;
     }
-  }, [earthTexture, bumpTexture]);
+    if (nightTexture) {
+      nightTexture.colorSpace = THREE.SRGBColorSpace;
+      nightTexture.anisotropy = 8;
+    }
+  }, [earthTexture, bumpTexture, nightTexture]);
+
+  // ── Real-time day / night ─────────────────────────────────────────────
+  // The sun light is a CHILD of the globe group, positioned at the live
+  // sub-solar point in Earth coordinates. That anchors daylight to geography,
+  // not to the camera: orbit or drag the globe and the terminator stays where
+  // it really is. It is re-derived from the clock every few seconds, so the
+  // day/night line keeps sweeping west in real time (15° an hour).
+  //
+  // City lights ride the emissive channel and are masked to the night side in
+  // the shader, with a soft ~15° twilight band so they fade in at dusk rather
+  // than switching on along a hard line.
+  const sunUniform = useMemo(() => ({ value: new THREE.Vector3(0, 0, 1) }), []);
+  const onBeforeCompile = useCallback(
+    (shader: THREE.WebGLProgramParametersWithUniforms) => {
+      shader.uniforms.uSunView = sunUniform;
+      shader.fragmentShader = shader.fragmentShader
+        .replace("#include <common>", "#include <common>\nuniform vec3 uSunView;")
+        .replace(
+          "#include <emissivemap_fragment>",
+          `#include <emissivemap_fragment>
+          {
+            // view-space normal (bump-perturbed) against view-space sun direction
+            float sunFacing = dot(normalize(normal), normalize(uSunView));
+            float nightSide = 1.0 - smoothstep(-0.2, 0.1, sunFacing);
+            totalEmissiveRadiance *= nightSide;
+          }`,
+        );
+    },
+    [sunUniform],
+  );
+
+  const placeSun = useCallback(() => {
+    if (!sunRef.current) return;
+    const { lat, lng } = subsolarPoint(new Date());
+    sunRef.current.position.copy(latLngToVector3(lat, lng, config.radius * 20));
+  }, [config.radius]);
+
+  React.useEffect(() => {
+    if (!config.realtimeSun) return;
+    placeSun();
+    const id = window.setInterval(placeSun, 5000);
+    return () => window.clearInterval(id);
+  }, [config.realtimeSun, placeSun]);
+
+  const sunWorld = useMemo(() => new THREE.Vector3(), []);
+  useFrame(() => {
+    if (!config.realtimeSun || !sunRef.current) return;
+    // The emissive mask runs in view space, so hand it the sun direction there.
+    sunRef.current.getWorldPosition(sunWorld);
+    sunUniform.value.copy(sunWorld).transformDirection(camera.matrixWorldInverse);
+  });
 
   // Create geometries
   const geometry = useMemo(() => {
@@ -337,14 +456,32 @@ function RotatingGlobe({
     >
       {/* Main globe mesh with Earth texture */}
       <mesh geometry={geometry}>
-        <meshStandardMaterial
-          map={earthTexture}
-          bumpMap={bumpTexture}
-          bumpScale={config.bumpScale * 0.05}
-          roughness={0.7}
-          metalness={0.0}
-        />
+        {config.realtimeSun ? (
+          <meshStandardMaterial
+            map={earthTexture}
+            bumpMap={bumpTexture}
+            bumpScale={config.bumpScale * 0.05}
+            roughness={0.75}
+            metalness={0.0}
+            emissiveMap={nightTexture}
+            emissive="#ffffff"
+            emissiveIntensity={config.nightLightsIntensity}
+            onBeforeCompile={onBeforeCompile}
+          />
+        ) : (
+          <meshStandardMaterial
+            map={earthTexture}
+            bumpMap={bumpTexture}
+            bumpScale={config.bumpScale * 0.05}
+            roughness={0.7}
+            metalness={0.0}
+          />
+        )}
       </mesh>
+
+      {config.realtimeSun && (
+        <directionalLight ref={sunRef} intensity={2.6} color="#fff6e8" />
+      )}
 
       {/* Wireframe overlay */}
       {config.showWireframe && (
@@ -384,17 +521,32 @@ interface AtmosphereProps {
   blur: number;
 }
 
-function Atmosphere({ radius, color, intensity, blur }: AtmosphereProps) {
-  // blur controls the fresnel exponent: lower = more diffuse, higher = sharper edge
-  // We invert it so higher blur value = more diffuse (lower exponent)
-  const fresnelPower = Math.max(0.5, 5 - blur);
+// Shell radius relative to the planet. The glow lives in the band between the
+// planet's limb and this shell's silhouette.
+const ATMO_SCALE = 1.15;
+// |n·v| on the back face of the shell, measured where a view ray just grazes the
+// planet: sqrt(1 - (1/ATMO_SCALE)^2). It runs 0 at the shell's outer silhouette
+// up to this value at the planet's edge.
+const ATMO_LIMB = Math.sqrt(1 - 1 / (ATMO_SCALE * ATMO_SCALE));
 
+function Atmosphere({ radius, color, intensity, blur }: AtmosphereProps) {
+  // blur -> falloff exponent: higher blur = softer, wider halo.
+  const falloff = Math.max(0.6, 4 - blur);
+
+  // Upstream wrote alpha = fresnel * intensity with NORMAL blending. On a
+  // back-facing shell that fresnel term peaks at the shell's OUTER edge, so the
+  // brightest part was the rim furthest from the planet — a hard ring, not an
+  // atmosphere — and at the demo's intensity of 20 the alpha clamped to 1
+  // across the whole band: the solid blue circle. This version is brightest at
+  // the planet's edge and fades to zero at the shell silhouette, and blends
+  // ADDITIVELY so it reads as emitted light rather than a painted stroke.
   const atmosphereMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       uniforms: {
         atmosphereColor: { value: new THREE.Color(color) },
         intensity: { value: intensity },
-        fresnelPower: { value: fresnelPower },
+        falloff: { value: falloff },
+        limb: { value: ATMO_LIMB },
       },
       vertexShader: `
         varying vec3 vNormal;
@@ -408,22 +560,26 @@ function Atmosphere({ radius, color, intensity, blur }: AtmosphereProps) {
       fragmentShader: `
         uniform vec3 atmosphereColor;
         uniform float intensity;
-        uniform float fresnelPower;
+        uniform float falloff;
+        uniform float limb;
         varying vec3 vNormal;
         varying vec3 vPosition;
         void main() {
-          float fresnel = pow(1.0 - abs(dot(vNormal, normalize(-vPosition))), fresnelPower);
-          gl_FragColor = vec4(atmosphereColor, fresnel * intensity);
+          float t = abs(dot(normalize(vNormal), normalize(-vPosition)));
+          // 0 at the shell's outer silhouette -> 1 at the planet's edge.
+          float g = pow(smoothstep(0.0, limb, t), falloff);
+          gl_FragColor = vec4(atmosphereColor * g * intensity, 1.0);
         }
       `,
       side: THREE.BackSide,
       transparent: true,
       depthWrite: false,
+      blending: THREE.AdditiveBlending,
     });
-  }, [color, intensity, fresnelPower]);
+  }, [color, intensity, falloff]);
 
   return (
-    <mesh scale={[1.12, 1.12, 1.12]}>
+    <mesh scale={[ATMO_SCALE, ATMO_SCALE, ATMO_SCALE]}>
       <sphereGeometry args={[radius, 64, 32]} />
       <primitive object={atmosphereMaterial} attach="material" />
     </mesh>
@@ -446,9 +602,9 @@ function Scene({ markers, config, onMarkerClick, onMarkerHover }: SceneProps) {
 
   // Set initial camera position (pulled back to accommodate markers)
   React.useEffect(() => {
-    camera.position.set(0, 0, config.radius * 3.5);
+    camera.position.set(0, 0, config.cameraDistance || config.radius * 3.5);
     camera.lookAt(0, 0, 0);
-  }, [camera, config.radius]);
+  }, [camera, config.radius, config.cameraDistance]);
 
   // OrbitControls sets touch-action:none on the canvas, which on a phone means
   // a full-width globe swallows every vertical swipe and traps the visitor
@@ -463,18 +619,27 @@ function Scene({ markers, config, onMarkerClick, onMarkerHover }: SceneProps) {
 
   return (
     <>
-      {/* Lighting */}
-      <ambientLight intensity={config.ambientIntensity} />
-      <directionalLight
-        position={[config.radius * 5, config.radius * 2, config.radius * 5]}
-        intensity={config.pointLightIntensity}
-        color="#ffffff"
-      />
-      <directionalLight
-        position={[-config.radius * 3, config.radius, -config.radius * 2]}
-        intensity={config.pointLightIntensity * 0.3}
-        color="#88ccff"
-      />
+      {/* Lighting. With the real sun on, the only direct light is the sun inside
+          RotatingGlobe; the two fixed lights would otherwise illuminate the night
+          side and erase the terminator. A faint ambient keeps night-side
+          coastlines just readable under the city lights. */}
+      {config.realtimeSun ? (
+        <ambientLight intensity={0.07} />
+      ) : (
+        <>
+          <ambientLight intensity={config.ambientIntensity} />
+          <directionalLight
+            position={[config.radius * 5, config.radius * 2, config.radius * 5]}
+            intensity={config.pointLightIntensity}
+            color="#ffffff"
+          />
+          <directionalLight
+            position={[-config.radius * 3, config.radius, -config.radius * 2]}
+            intensity={config.pointLightIntensity * 0.3}
+            color="#88ccff"
+          />
+        </>
+      )}
 
       {/* Rotating Globe with Markers */}
       <RotatingGlobe
@@ -515,16 +680,22 @@ function Scene({ markers, config, onMarkerClick, onMarkerHover }: SceneProps) {
 // Loading Fallback
 // ============================================================================
 
+// Nothing drawn while textures load: the wrapper stays at opacity 0 until the
+// first real frame (see Globe3D), so there is no "Loading globe..." text and no
+// half-textured sphere flashing in.
 function LoadingFallback() {
-  return (
-    <Html center>
-      <div className="flex shrink-0 flex-col items-center gap-3">
-        <span className="inline-block shrink-0 text-sm text-neutral-400">
-          Loading globe...
-        </span>
-      </div>
-    </Html>
-  );
+  return null;
+}
+
+// Fires once, on the first frame rendered after the textures have resolved.
+function OnFirstFrame({ onReady }: { onReady: () => void }) {
+  const done = useRef(false);
+  useFrame(() => {
+    if (done.current) return;
+    done.current = true;
+    onReady();
+  });
+  return null;
 }
 
 // ============================================================================
@@ -547,6 +718,10 @@ const defaultConfig: Required<Globe3DConfig> = {
   minDistance: 5,
   maxDistance: 15,
   initialRotation: { x: 0, y: 0 },
+  cameraDistance: 0, // 0 = radius x 3.5, the upstream framing
+  realtimeSun: false,
+  nightTextureUrl: "/textures/earth-night-4096.webp",
+  nightLightsIntensity: 1.6,
   markerSize: 0.06,
   showWireframe: false,
   wireframeColor: "#4a9eff",
@@ -566,6 +741,7 @@ export function Globe3D({
     () => ({ ...defaultConfig, ...config }),
     [config],
   );
+  const [ready, setReady] = useState(false);
 
   return (
     <div className={cn("relative h-[500px] w-full", className)}>
@@ -580,10 +756,13 @@ export function Globe3D({
           fov: 45,
           near: 0.1,
           far: 1000,
-          position: [0, 0, mergedConfig.radius * 3.5],
+          position: [0, 0, mergedConfig.cameraDistance || mergedConfig.radius * 3.5],
         }}
         style={{
           background: mergedConfig.backgroundColor || "transparent",
+          // Fade in on the first real frame instead of popping in.
+          opacity: ready ? 1 : 0,
+          transition: "opacity 0.7s ease-out",
         }}
       >
         <Suspense fallback={<LoadingFallback />}>
@@ -593,6 +772,7 @@ export function Globe3D({
             onMarkerClick={onMarkerClick}
             onMarkerHover={onMarkerHover}
           />
+          <OnFirstFrame onReady={() => setReady(true)} />
         </Suspense>
       </Canvas>
     </div>
