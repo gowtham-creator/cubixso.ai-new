@@ -1,21 +1,26 @@
 "use client";
 
-// CubeScroller — a scroll-SCRUBBED 360° turntable of the Cubixso cube, which
-// you can also grab and spin yourself. It's a live GLB, so it stays razor-sharp
-// at any size and needs no pre-rendered PNG pipeline, and a live "FRAME xx / 94"
-// counter reads out scroll progress. Theme-adaptive; the canvas pauses when the
-// section is off-screen; reduced-motion holds frame 1.
+// CubeScroller — a continuously spinning Cubixso cube you can grab and throw,
+// modelled on the contact-page globe. A live GLB, so it stays razor-sharp at any
+// size with no pre-rendered PNG pipeline. Theme-adaptive; the render loop stops
+// when the section is off-screen.
 //
-// The rotation was originally quantized to 94 discrete steps to imitate a baked
-// image sequence. It now turns continuously with exponential smoothing, and a
-// manual drag offset composes on top of the scroll-driven angle — see ScrubCube
-// for the motion and the drag effect below for the gesture.
+// It began as a scroll-SCRUB across a 320vh sticky track, with rotation
+// quantized to 94 discrete steps to imitate a baked image sequence. Three
+// separate complaints all traced back to that design:
+//   • it snapped ~4° at a time, which is what "not smooth" meant;
+//   • it only rendered on demand (frameloop="never" between scroll events), so
+//     the cube could sit blank until a click forced a frame;
+//   • one full turn needed 2.2 viewports of scrolling, and with the cube centred
+//     in a sticky panel the lower half of every one of those screens was empty —
+//     the "gap" below this section.
+// Auto-spin plus pointer control removes all three: no track, no dead space, and
+// the cube is always moving.
 
 import { Suspense, useMemo, useRef, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useGLTF, Environment, Lightformer, Preload } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
-import { useScroll, useMotionValueEvent } from "framer-motion";
 import * as THREE from "three";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { cdn } from "@/lib/cdn";
@@ -23,16 +28,19 @@ import { useDeviceTier, hasWebGL } from "@/lib/perf";
 
 const MODEL = cdn("/models/cubixso-cube.glb");
 const DRACO = cdn("/draco/");
-const FRAMES = 94;
+// Idle spin rate in radians/sec — one full turn every ~28s, the same unhurried
+// pace as the contact-page globe.
+const AUTO_SPIN = (Math.PI * 2) / 28;
+const BASE_TILT = 0.34;
+
+type Drag = { x: number; y: number; vx: number; dragging: boolean };
 
 function ScrubCube({
-  progressRef,
   dragRef,
   dark,
   active,
 }: {
-  progressRef: React.MutableRefObject<number>;
-  dragRef: React.MutableRefObject<{ x: number; y: number }>;
+  dragRef: React.MutableRefObject<Drag>;
   dark: boolean;
   active: boolean;
 }) {
@@ -58,19 +66,27 @@ function ScrubCube({
 
   useFrame((_, delta) => {
     if (!root.current) return;
-    // Rotation used to be QUANTIZED to 94 discrete steps, to read like a baked
-    // image sequence. On a real scroll that is what "not smooth" means: the cube
-    // snaps between frames roughly 4° at a time instead of turning. It is now
-    // continuous, with exponential smoothing so it eases toward the scroll
-    // position rather than tracking it rigidly — that also absorbs the coarse,
-    // bursty deltas a trackpad or wheel produces. The FRAME counter still reads
-    // out of 94, so the concept survives; only the motion changed.
-    const p = Math.min(1, Math.max(0, progressRef.current));
-    const targetY = p * Math.PI * 2 + dragRef.current.x;
-    const targetX = 0.34 + dragRef.current.y;
+    const d = Math.min(delta, 0.1); // clamp after a tab-switch stall
 
-    // Frame-rate independent smoothing: the same easing at 60fps and 120fps.
-    const k = 1 - Math.exp(-9 * Math.min(delta, 0.1));
+    // Continuous auto-spin, exactly like the contact-page globe: the cube turns
+    // on its own and the visitor can grab it. It used to be scroll-scrubbed and
+    // quantized to 94 steps, which meant it only moved while you scrolled, it
+    // snapped ~4° at a time, and it needed a 320vh track to turn once — that
+    // track is where the dead space below this section came from.
+    if (!dragRef.current.dragging) {
+      // Momentum: a flick keeps spinning and decays back to the idle rate,
+      // rather than stopping dead the instant you let go.
+      dragRef.current.vx += (AUTO_SPIN - dragRef.current.vx) * (1 - Math.exp(-1.6 * d));
+      dragRef.current.x += dragRef.current.vx * d;
+      // Tilt eases back to rest so the cube always recomposes itself.
+      dragRef.current.y += (0 - dragRef.current.y) * (1 - Math.exp(-1.2 * d));
+    }
+
+    const targetY = dragRef.current.x;
+    const targetX = BASE_TILT + dragRef.current.y;
+
+    // Frame-rate independent smoothing: same easing at 60fps and 120fps.
+    const k = 1 - Math.exp(-14 * d);
     root.current.rotation.y += (targetY - root.current.rotation.y) * k;
     root.current.rotation.x += (targetX - root.current.rotation.x) * k;
   });
@@ -86,8 +102,6 @@ export function CubeScroller() {
   const ref = useRef<HTMLElement>(null);
   const { resolved } = useTheme();
   const dark = resolved === "dark";
-  const progressRef = useRef(0);
-  const [frame, setFrame] = useState(1);
   const [active, setActive] = useState(true);
   // iOS Safari caps simultaneous WebGL contexts and evicts the OLDEST when the
   // cap is hit, leaving that canvas frozen on its last frame. This section sits
@@ -98,43 +112,57 @@ export function CubeScroller() {
   // Manual rotation offset, added on top of the scroll-driven rotation so the
   // two compose instead of fighting. Kept in a ref: it changes every pointermove
   // and must not re-render React on each one.
-  const dragRef = useRef({ x: 0, y: 0 });
+  const dragRef = useRef<Drag>({ x: 0, y: 0, vx: AUTO_SPIN, dragging: false });
   const stageRef = useRef<HTMLDivElement>(null);
 
-  // Drag to rotate, matching the contact-page globe's interaction. Pointer (not
-  // mouse) events so it works on touch, and setPointerCapture so the gesture
-  // survives the cursor leaving the canvas.
+  // Drag to rotate, matching the contact-page globe. Pointer (not mouse) events
+  // so it works on touch, and setPointerCapture so the gesture survives the
+  // cursor leaving the canvas.
   //
-  // touch-action is pan-y, NOT none: this is a scroll-driven section, so taking
-  // vertical panning away from touch users would trap them inside it. The
-  // browser keeps vertical scroll; we take horizontal drag. On a mouse, where
-  // there is no such conflict, both axes are ours.
+  // touch-action is pan-y, NOT none: the page still has to scroll past this
+  // section on a phone, so removing vertical panning would trap touch users
+  // inside it. The browser keeps vertical scroll; we claim horizontal drag, and
+  // only once the gesture is clearly horizontal.
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
 
     const onPointerDown = (e: PointerEvent) => {
       const touch = e.pointerType === "touch";
+      let lastX = e.clientX, lastY = e.clientY;
+      let lastT = performance.now();
+      let claimed = !touch; // a mouse press is ours immediately
       const sx = e.clientX, sy = e.clientY;
-      const start = { ...dragRef.current };
-      let dragging = false;
       try { el.setPointerCapture(e.pointerId); } catch { /* not captureable */ }
 
       const move = (m: PointerEvent) => {
-        const dx = m.clientX - sx;
-        const dy = m.clientY - sy;
-        // On touch, only claim the gesture once it is clearly horizontal —
-        // otherwise a vertical swipe meant as a scroll would rotate the cube.
-        if (touch && !dragging && Math.abs(dx) < Math.abs(dy)) return;
-        dragging = true;
-        dragRef.current.x = start.x + dx * 0.008;
-        // Clamp tilt so the cube can never flip onto its head.
-        if (!touch) {
-          dragRef.current.y = Math.max(-0.8, Math.min(0.8, start.y - dy * 0.006));
+        if (!claimed) {
+          // Wait until the gesture is clearly horizontal before stealing it
+          // from the page's vertical scroll.
+          if (Math.abs(m.clientX - sx) < Math.abs(m.clientY - sy)) return;
+          claimed = true;
         }
+        dragRef.current.dragging = true;
         el.style.cursor = "grabbing";
+
+        const now = performance.now();
+        const dt = Math.max(16, now - lastT) / 1000;
+        const dx = m.clientX - lastX;
+        const dy = m.clientY - lastY;
+
+        dragRef.current.x += dx * 0.008;
+        // Track throw speed so releasing hands off real momentum.
+        dragRef.current.vx = (dx * 0.008) / dt;
+        if (!touch) {
+          dragRef.current.y = Math.max(-0.8, Math.min(0.8, dragRef.current.y - dy * 0.006));
+        }
+        lastX = m.clientX; lastY = m.clientY; lastT = now;
       };
       const up = () => {
+        dragRef.current.dragging = false;
+        // Cap the throw so a violent flick cannot spin it into a blur.
+        const max = AUTO_SPIN * 14;
+        dragRef.current.vx = Math.max(-max, Math.min(max, dragRef.current.vx));
         el.style.cursor = "grab";
         document.removeEventListener("pointermove", move);
         document.removeEventListener("pointerup", up);
@@ -159,12 +187,6 @@ export function CubeScroller() {
   // High tier keeps the approved adaptive DPR; low tier clamps to 1.
   const dpr: 1 | [number, number] = tier === "low" ? 1 : [1, 2];
 
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
-  useMotionValueEvent(scrollYProgress, "change", (v) => {
-    progressRef.current = v;
-    setFrame(Math.min(FRAMES, Math.max(1, Math.round(v * (FRAMES - 1)) + 1)));
-  });
-
   // Pause the render loop when the section is off-screen.
   useEffect(() => {
     const el = ref.current;
@@ -182,14 +204,14 @@ export function CubeScroller() {
   }, []);
 
   return (
-    // 180vh, down from 320vh via 220vh. The sticky panel pins for track height
-    // minus one viewport, so the original spent 2.2 viewports of scrolling on a
-    // single rotation, and with the cube centred the lower half of each of those
-    // screens was empty — that dead run is what read as "so much gap" between
-    // this section and the testimonials. 180vh still gives a full 360° turn
-    // across 0.8 of a viewport of scrub, which is plenty at this rotation speed.
-    <section ref={ref} id="forge" aria-label="Built dimensional" className="relative z-10 h-[180vh]">
-      <div className="sticky top-0 flex h-svh flex-col items-center justify-center overflow-hidden">
+    // One screen, no scroll track. This was 320vh of sticky scrub (then 220, then
+    // 180): the cube only turned while you scrolled, and because it sat centred
+    // in a full-viewport sticky panel, the lower half of every screen in that
+    // track was empty. That dead run — not the section spacing, which measured
+    // flush at 0px — is the gap. Now the cube spins on its own and responds to
+    // the mouse, so the section needs exactly the height it occupies.
+    <section ref={ref} id="forge" aria-label="Built dimensional" className="relative z-10 h-svh">
+      <div className="flex h-full flex-col items-center justify-center overflow-hidden">
         <div className="absolute left-[var(--pad-x)] top-[clamp(80px,14vh,140px)] mono text-[11px] tracking-[0.3em] text-(--color-muted)">
           [ DIMENSIONAL ]
         </div>
@@ -215,7 +237,7 @@ export function CubeScroller() {
             <directionalLight position={[4, 6, 3]} intensity={0.8} color="#cdd9ff" />
             <pointLight position={[-3, 2, -2]} intensity={dark ? 14 : 5} color="#5f8bff" distance={18} />
             <Suspense fallback={null}>
-              <ScrubCube progressRef={progressRef} dragRef={dragRef} dark={dark} active={active} />
+              <ScrubCube dragRef={dragRef} dark={dark} active={active} />
               <Environment resolution={128} frames={1} environmentIntensity={dark ? 0.45 : 0.85}>
                 <Lightformer intensity={1.8} color="#9fc0ff" position={[0, 3, 3]} scale={[7, 3, 1]} />
                 <Lightformer intensity={1.1} color="#cfe0ff" position={[4, -1, -3]} scale={[5, 3, 1]} />
@@ -231,13 +253,14 @@ export function CubeScroller() {
         </div>
         )}
 
-        {/* copy + live frame counter — the 94-frame scrub, made literal */}
+        {/* The frame counter went with the scrub — there are no frames now, and
+            "SCROLL TO ROTATE" would be a lie. */}
         <div className="pointer-events-none absolute bottom-[clamp(48px,9vh,110px)] left-1/2 z-10 -translate-x-1/2 text-center">
           <h2 className="font-display text-[clamp(26px,4.4vw,56px)] font-medium leading-[0.95] tracking-[-0.03em] text-(--color-fg)">
             Built dimensional.
           </h2>
           <p className="mono mt-4 text-[11px] tracking-[0.3em] text-(--color-muted)">
-            FRAME {String(frame).padStart(2, "0")} / {FRAMES} · SCROLL TO ROTATE
+            DRAG TO ROTATE
           </p>
         </div>
       </div>
