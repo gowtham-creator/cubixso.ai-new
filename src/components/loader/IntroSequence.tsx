@@ -49,6 +49,9 @@ export function IntroSequence() {
   const [compact, setCompact] = useState(false); // phone / tablet-portrait
   const [wordIdx, setWordIdx] = useState(0); // cycling keyword on compact screens
   const [ready, setReady] = useState(false); // video is genuinely playing
+  // Autoplay was refused — swap the <video> for an animated WebP, which no
+  // autoplay policy applies to. See the play() effect below.
+  const [fallback, setFallback] = useState(false);
   const done = useRef(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const wordRefs = useRef<(HTMLDivElement | null)[]>([]); // orbiting keywords (desktop)
@@ -119,9 +122,17 @@ export function IntroSequence() {
 
     attempt().then((ok) => {
       if (ok) return;
-      // Still refused (iOS Low Power Mode blocks autoplay outright). Mark ready
-      // so the curtain is never stuck, and retry once on the first touch —
-      // a user gesture lifts the restriction.
+      // Still refused. iOS blocks inline autoplay OUTRIGHT in Low Power Mode and
+      // Low Data Mode, and no amount of muted/playsInline/gesture-priming beats
+      // that — play() simply rejects. The poster then stands in, which is the
+      // "cube is frozen on the loading screen" report: the still frame is doing
+      // exactly what it was asked to.
+      //
+      // So stop depending on video at all in this branch. An animated WebP is an
+      // IMAGE: no autoplay policy applies, it animates in Low Power Mode, and it
+      // needs no gesture. It is only fetched here, so the 95% path still gets
+      // the smaller 30fps clip and pays nothing for this.
+      setFallback(true);
       setReady(true);
       const onGesture = () => { void v.play().catch(() => {}); cleanup(); };
       window.addEventListener("pointerdown", onGesture, { once: true, passive: true });
@@ -233,6 +244,16 @@ export function IntroSequence() {
               a codec the browser dislikes can never hold the curtain down; the
               poster (and worst case the wordmark) carries the moment instead. */}
           <div className="pointer-events-none absolute inset-0 grid place-items-center">
+            {fallback ? (
+              /* Animated WebP — same cube, same framing, same invert-for-light
+                 treatment. Used only when play() was refused. */
+              <img
+                src="/video/intro-cube-anim.webp"
+                alt=""
+                className="h-auto w-[min(50vw,40vh,400px)] select-none"
+                style={{ filter: dark ? undefined : "invert(1)" }}
+              />
+            ) : (
             <video
               ref={videoRef}
               autoPlay
@@ -262,6 +283,7 @@ export function IntroSequence() {
               <source src="/video/intro-cube.mp4" type="video/mp4" />
               <source src="/video/intro-cube.webm" type="video/webm" />
             </video>
+            )}
           </div>
 
           {/* Capability keywords. DESKTOP: they ORBIT the cube on a tilted 3D

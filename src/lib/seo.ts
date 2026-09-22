@@ -23,8 +23,11 @@ export const SITE_DESCRIPTION =
 export const CONTACT_EMAIL = "contact@cubixso.com";
 
 // Real, verified social profiles (used for Organization sameAs).
+// Both checked live: /company/cubixso/ 301-redirects to /company/cubixso.ai, so
+// the canonical target is used directly — sameAs is an entity-identity signal
+// and a redirect makes Google resolve it indirectly, or not at all.
 export const SAME_AS = [
-  "https://www.linkedin.com/company/cubixso/",
+  "https://www.linkedin.com/company/cubixso.ai",
   "https://www.instagram.com/cubixso.ai/",
 ];
 
