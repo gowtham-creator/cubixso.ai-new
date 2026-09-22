@@ -80,6 +80,13 @@ const MAIN_PRODUCTS: Product[] = [
     tag: "JUDICIARY",
     body: "Distributed RAG over legal PDFs for real-time retrieval.",
     comingSoon: true,
+    // Product screen built in the site's own language (cobalt on void, Inter +
+    // JetBrains Mono + Instrument Serif, Liquid Glass panels) so the card does
+    // not fall back to a bare text mark like it did before. The judgments shown
+    // are real landmark public-domain cases — Puttaswamy, Maneka Gandhi,
+    // Kesavananda Bharati — rather than invented citations, which would look
+    // authoritative while being fabricated.
+    image: "/products/law-suit-gpt.jpg",
   },
 ];
 

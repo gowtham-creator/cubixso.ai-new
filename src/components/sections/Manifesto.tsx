@@ -31,6 +31,7 @@ const HEADLINE_LINES = [
 ] as const;
 
 const STATS = [
+  { stat: "10+", label: "Startups & enterprises" },
   { stat: "2+", label: "Enterprise clients" },
   { stat: "15+", label: "Accelerators & partners" },
   { stat: "2+1", label: "Cities · IN · UAE · US opening" },
@@ -91,7 +92,10 @@ export function Manifesto() {
           <Reveal direction="up" delay={0.3} amount={0.4}>
             <motion.dl
               style={{ transform: gridParallax }}
-              className="mt-16 grid grid-cols-1 gap-px bg-(--color-line) sm:grid-cols-3"
+              // Four stats: 2x2 on tablet, one row on desktop. At sm:grid-cols-3
+              // the fourth cell sat alone on its own row with a full-width rule
+              // above it, which read as a mistake rather than a stat.
+              className="mt-16 grid grid-cols-1 gap-px bg-(--color-line) sm:grid-cols-2 lg:grid-cols-4"
             >
               {STATS.map((row) => (
                 <div key={row.label} className="bg-(--color-bg)/40 p-8">

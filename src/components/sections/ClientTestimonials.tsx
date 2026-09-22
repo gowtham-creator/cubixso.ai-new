@@ -48,18 +48,23 @@ export function ClientTestimonials({
   return (
     <section
       id="client-testimonials"
-      className={`relative z-10 py-[clamp(72px,10vh,136px)] ${className ?? ""}`}
+      className={`relative z-10 py-[clamp(44px,6vh,88px)] ${className ?? ""}`}
     >
-      <div className="mx-auto flex w-full max-w-[var(--col-w)] flex-col items-center gap-4 px-[var(--pad-x)] text-center sm:gap-6">
-        <h2 className="font-display max-w-[720px] text-[length:var(--text-display-sm)] leading-[1.1] tracking-[-0.025em] text-balance text-(--color-fg)">
+      <div className="mx-auto flex w-full max-w-[var(--col-w)] flex-col items-center gap-3 px-[var(--pad-x)] text-center sm:gap-4">
+        {/* --text-display-sm does NOT exist (the scale is 2xl/xl/lg/md), so the
+            font-size declaration was invalid and the heading fell back to the
+            inherited 16px — rendering SMALLER than its own 18px description.
+            md matches Testimonial.tsx's pull-quote and stays proportionate to
+            the cards; lg (92px here) would tower over them. */}
+        <h2 className="font-display max-w-[720px] text-[length:var(--text-display-md)] leading-[1.05] tracking-[-0.03em] text-balance text-(--color-fg)">
           {title}
         </h2>
-        <p className="max-w-[600px] text-(--color-muted) sm:text-lg">
+        <p className="max-w-[560px] text-(--color-muted) sm:text-lg">
           {description}
         </p>
       </div>
 
-      <div className="relative mt-[clamp(32px,5vh,64px)] flex w-full flex-col items-center overflow-hidden">
+      <div className="relative mt-[clamp(24px,3.5vh,44px)] flex w-full flex-col items-center overflow-hidden">
         {marquee ? (
           // One track holding the set TWICE, translated by exactly half its
           // width (plus half a gap) so the loop is seamless. The source block
