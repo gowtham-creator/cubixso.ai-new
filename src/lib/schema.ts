@@ -33,15 +33,34 @@ export function organizationSchema() {
       "@type": "Place",
       name: "T-Hub, Hyderabad, India",
     },
+    legalName: "Cubixso Solutions Private Limited",
+    // Statutory identifiers, so Google can tie this site to the same entity the
+    // directories (MCA, Tracxn, FalconEbiz) already list. Without them the
+    // company resolves as an unrelated entity from its own registry records.
+    identifier: [
+      { "@type": "PropertyValue", name: "CIN", value: "U63999TS2024PTC187911" },
+      { "@type": "PropertyValue", name: "GSTIN", value: "36AAMCC0213G1Z2" },
+    ],
+    foundingDate: "2024-07-26",
+    // `address` is the REGISTERED office — the address on the MCA and GST
+    // records, and the one every directory cross-references. It previously read
+    // T-Hub, which is an operating office, so the structured data disagreed with
+    // the registry and weakened entity matching. Working locations belong in
+    // `location` below, not here.
     address: {
       "@type": "PostalAddress",
       streetAddress:
-        "T-Hub Phase 2, Inorbit Mall Road, Madhapur",
+        "Plot No. 712 & 713, Flat No. 504, Matrusri Nagar, Serilingampally",
       addressLocality: "Hyderabad",
       addressRegion: "Telangana",
-      postalCode: "500081",
+      postalCode: "500049",
       addressCountry: "IN",
     },
+    location: OFFICES.map((o) => ({
+      "@type": "Place",
+      name: o.name,
+      address: { "@type": "PostalAddress", streetAddress: o.address },
+    })),
     contactPoint: {
       "@type": "ContactPoint",
       email: CONTACT_EMAIL,

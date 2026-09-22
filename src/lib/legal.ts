@@ -28,9 +28,19 @@ export const LEGAL_ENTITY = {
     { label: "CIN", value: "U63999TS2024PTC187911" },
     { label: "GSTIN", value: "36AAMCC0213G1Z2" },
     { label: "DPIIT Recognition", value: "DIPP183547" },
+    // The registered office is a statutory fact on the MCA and GST records —
+    // it is NOT the working address. This row previously showed WeWork/T-Hub,
+    // which is where the team sits, so the page contradicted the company's own
+    // filings (and every directory that cites them). Registered office and
+    // operating offices are now separate rows, each labelled for what it is.
     {
       label: "Registered office",
-      value: "WeWork, RMZ Spire · T-Hub Phase 2, Raidurgam, Hyderabad, Telangana, India",
+      value:
+        "Plot No. 712 & 713, Flat No. 504, Matrusri Nagar, Serilingampally, Hyderabad, Rangareddy District, Telangana – 500049",
+    },
+    {
+      label: "Offices",
+      value: "T-Hub Phase 2, Madhapur · WeWork RMZ Spire, HITEC City, Hyderabad",
     },
     { label: "Also at", value: "Meydan Free Zone, Dubai, UAE" },
   ],

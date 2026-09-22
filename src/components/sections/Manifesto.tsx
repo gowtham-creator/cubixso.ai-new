@@ -31,7 +31,10 @@ const HEADLINE_LINES = [
 ] as const;
 
 const STATS = [
-  { stat: "10+", label: "Startups & enterprises" },
+  // "10+ Startups & enterprises" next to "2+ Enterprise clients" read as a
+  // contradiction. "Companies worked with" is the superset, so the two numbers
+  // now nest cleanly: 10+ companies overall, of which 2+ are enterprise clients.
+  { stat: "10+", label: "Companies worked with" },
   { stat: "2+", label: "Enterprise clients" },
   { stat: "15+", label: "Accelerators & partners" },
   { stat: "2+1", label: "Cities · IN · UAE · US opening" },

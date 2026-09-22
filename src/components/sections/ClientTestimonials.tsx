@@ -23,6 +23,66 @@ export const CLIENT_TESTIMONIALS: TestimonialCardProps[] = [
       "Cubixso turned a fifteen-year-old underwriting ruleset into a deployable DMN system in six weeks. 40 percent of decisions run on it now.",
     note: "Logic Gen · Engagement clients: PenFed · USAA",
   },
+  {
+    author: {
+      name: "Smarendra Modukuri",
+      handle: "Founder · AumicFlow AI",
+    },
+    text:
+      "We needed a script engine that understood not just Hindi and Tamil but the dialects our writers actually work in. Cubixso built Aumic Flow across eleven Indian languages, and what came back read as culturally grounded, not translated.",
+    note: "Aumic Flow AI · 8× content throughput",
+  },
+  {
+    author: {
+      name: "Pranav Jain",
+      handle: "Founder, Luxrio Designs · Product Owner, Nox AI",
+    },
+    text:
+      "We wanted an agent that could hold a real phone conversation, not read a script. Cubixso built Nox AI's calling layer so it listens, handles being interrupted, and recovers the way a person does.",
+    note: "Nox AI · Agentic voice platform",
+  },
+  {
+    author: {
+      name: "Navata Transport",
+      handle: "Logistics · India",
+    },
+    text:
+      "Our operations ran on a Java system built over a decade ago. It worked, but nobody could change it safely. Cubixso moved us onto a modern web application without pausing a single day of dispatch.",
+    note: "Legacy modernisation · Java → web platform",
+  },
+  {
+    author: {
+      name: "Ramakrishna Katakam",
+      handle: "Founder · Nutri Greenz Farm",
+    },
+    text:
+      "Traceability is the entire promise of Nutrigreenz — if a customer can't see which farm their oil came from, we're just another label. Cubixso built the platform so every product carries its origin all the way through to checkout.",
+    note: "Nutrigreenz · Farm-to-table commerce",
+  },
+  {
+    author: {
+      name: "Mohan Subramanian",
+      handle: "Founder · Resumize",
+    },
+    text:
+      "Students don't need another resume template, they need to get past the ATS. Cubixso built Resumize to generate resumes that parse cleanly and still read like a person wrote them.",
+    note: "Resumize · ATS-optimised generation",
+  },
+  {
+    author: {
+      name: "Harminder Singh",
+      // "Senior Advocate" is a formal designation conferred under the Advocates
+      // Act, not a seniority adjective. Until that designation is confirmed,
+      // "Advocate" is the accurate title — overstating it on a practising
+      // lawyer's public testimonial is the kind of error that gets noticed.
+      // Court name corrected too: the court at Chandigarh is the Punjab &
+      // Haryana High Court; there is no separate "Punjab High Court".
+      handle: "Advocate · Punjab & Haryana High Court",
+    },
+    text:
+      "Research that used to mean days in the archive now takes an afternoon. Law Suit GPT searches across forty thousand judgments and returns the passage, not just the case.",
+    note: "Law Suit GPT · Sub-2s retrieval at scale",
+  },
 ];
 
 interface ClientTestimonialsProps {
