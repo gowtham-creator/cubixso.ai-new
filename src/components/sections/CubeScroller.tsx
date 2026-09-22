@@ -98,6 +98,18 @@ function ScrubCube({
   );
 }
 
+// Fires once, on the first frame actually rendered after the model and
+// environment have resolved — the moment there is a real cube on screen.
+function OnFirstFrame({ onReady }: { onReady: () => void }) {
+  const done = useRef(false);
+  useFrame(() => {
+    if (done.current) return;
+    done.current = true;
+    onReady();
+  });
+  return null;
+}
+
 export function CubeScroller() {
   const ref = useRef<HTMLElement>(null);
   const { resolved } = useTheme();
@@ -114,6 +126,84 @@ export function CubeScroller() {
   // and must not re-render React on each one.
   const dragRef = useRef<Drag>({ x: 0, y: 0, vx: AUTO_SPIN, dragging: false });
   const stageRef = useRef<HTMLDivElement>(null);
+
+
+  // Device-adaptive quality. Both default to high / WebGL-present on the server
+  // and first client paint (see @/lib/perf), so desktop renders pixel-identical
+  // and there is no hydration mismatch — degradation kicks in only after mount.
+  const tier = useDeviceTier();
+  const [webgl, setWebgl] = useState(true);
+  useEffect(() => setWebgl(hasWebGL()), []);
+
+  // High tier keeps the approved adaptive DPR; low tier clamps to 1.
+  const dpr: 1 | [number, number] = tier === "low" ? 1 : [1, 2];
+
+  // Pause the render loop when the section is off-screen.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setActive(e.isIntersecting), { threshold: 0.01 });
+    io.observe(el);
+    // 250% (was 100%): the GLB + Draco decode + material compile is not instant,
+    // and mounting only one viewport ahead meant the canvas was still warming up
+    // when the section arrived — the "cube takes time to show up" report. Two
+    // and a half viewports of lead time covers the download at typical scroll
+    // speeds while still keeping the WebGL context released for most of the page.
+    const ioNear = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { rootMargin: "250% 0px" });
+    ioNear.observe(el);
+    return () => { io.disconnect(); ioNear.disconnect(); };
+  }, []);
+
+  // WHEN THE CANVAS EXISTS — the actual cause of "takes time to show up".
+  //
+  // It used to be gated purely on `near`, so it unmounted whenever you scrolled
+  // 2.5 viewports away and rebuilt from nothing on the way back: a new WebGL
+  // context, the Draco-decoded model re-uploaded, standard-material and
+  // environment-map shaders recompiled, the environment cubemap re-rendered, and
+  // every Bloom pass compiled again. Half a second to well over a second, paid on
+  // every return — the cube visibly arriving late.
+  //
+  // High tier (desktop): build it ONCE, early, and keep it. It warms up in idle
+  // time as soon as the page is revealed, so it is compiled long before anyone
+  // scrolls to it, and afterwards it only ever pauses its frameloop. Desktop has
+  // no live-context cap, so holding it costs nothing that matters.
+  //
+  // Low tier (phones): keep the near-gated mount. iOS evicts the oldest WebGL
+  // context when it runs out, so a phone genuinely cannot afford to hold this one
+  // for the whole session.
+  const [warm, setWarm] = useState(false);
+  useEffect(() => {
+    if (tier === "low") return;
+    let idle: number | undefined;
+    let timer: number | undefined;
+    const schedule = () => {
+      const ric = (window as Window & {
+        requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+      }).requestIdleCallback;
+      if (ric) idle = ric(() => setWarm(true), { timeout: 2500 });
+      else timer = window.setTimeout(() => setWarm(true), 1200);
+    };
+    // Don't compete with the intro curtain for the main thread: wait for it to
+    // lift. It only plays once per session, so on later visits start at once.
+    let seen = false;
+    try { seen = sessionStorage.getItem("cubixso.seen") === "1"; } catch { /* private mode */ }
+    if (seen) schedule();
+    else window.addEventListener("cubixso:revealed", schedule, { once: true });
+    return () => {
+      window.removeEventListener("cubixso:revealed", schedule);
+      if (idle !== undefined) (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(idle);
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [tier]);
+
+  // Once mounted on a high-tier device it stays mounted.
+  const [latched, setLatched] = useState(false);
+  useEffect(() => { if (near || warm) setLatched(true); }, [near, warm]);
+  const showCanvas = webgl && (tier === "low" ? near : latched);
+
+  // Fade the stage in on its first real frame rather than letting the cube pop.
+  const [ready, setReady] = useState(false);
+  useEffect(() => { if (!showCanvas) setReady(false); }, [showCanvas]);
 
   // Drag to rotate, matching the contact-page globe. Pointer (not mouse) events
   // so it works on touch, and setPointerCapture so the gesture survives the
@@ -175,33 +265,7 @@ export function CubeScroller() {
 
     el.addEventListener("pointerdown", onPointerDown);
     return () => el.removeEventListener("pointerdown", onPointerDown);
-  }, [near]);
-
-  // Device-adaptive quality. Both default to high / WebGL-present on the server
-  // and first client paint (see @/lib/perf), so desktop renders pixel-identical
-  // and there is no hydration mismatch — degradation kicks in only after mount.
-  const tier = useDeviceTier();
-  const [webgl, setWebgl] = useState(true);
-  useEffect(() => setWebgl(hasWebGL()), []);
-
-  // High tier keeps the approved adaptive DPR; low tier clamps to 1.
-  const dpr: 1 | [number, number] = tier === "low" ? 1 : [1, 2];
-
-  // Pause the render loop when the section is off-screen.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(([e]) => setActive(e.isIntersecting), { threshold: 0.01 });
-    io.observe(el);
-    // 250% (was 100%): the GLB + Draco decode + material compile is not instant,
-    // and mounting only one viewport ahead meant the canvas was still warming up
-    // when the section arrived — the "cube takes time to show up" report. Two
-    // and a half viewports of lead time covers the download at typical scroll
-    // speeds while still keeping the WebGL context released for most of the page.
-    const ioNear = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { rootMargin: "250% 0px" });
-    ioNear.observe(el);
-    return () => { io.disconnect(); ioNear.disconnect(); };
-  }, []);
+  }, [showCanvas]);
 
   return (
     // One screen, no scroll track. This was 320vh of sticky scrub (then 220, then
@@ -216,14 +280,14 @@ export function CubeScroller() {
           [ DIMENSIONAL ]
         </div>
 
-        {webgl && near && (
+        {showCanvas && (
         <div
           ref={stageRef}
           // Was pointer-events-none. The cube is now grabbable, so the stage has
           // to receive pointers — see the drag effect above for why touch-action
           // is pan-y rather than none.
-          className="absolute inset-0 cursor-grab"
-          style={{ touchAction: "pan-y" }}
+          className="absolute inset-0 cursor-grab transition-opacity duration-700 ease-out"
+          style={{ touchAction: "pan-y", opacity: ready ? 1 : 0 }}
         >
           <Canvas
             orthographic
@@ -245,6 +309,7 @@ export function CubeScroller() {
               {/* Pre-compile materials + env map while the intro curtain still
                   covers the page, so the first scrolled frame never stutters. */}
               <Preload all />
+              <OnFirstFrame onReady={() => setReady(true)} />
             </Suspense>
             <EffectComposer>
               <Bloom intensity={dark ? 1.1 : 0.4} luminanceThreshold={dark ? 0.12 : 0.5} luminanceSmoothing={0.9} mipmapBlur />

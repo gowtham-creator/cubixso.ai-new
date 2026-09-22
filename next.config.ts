@@ -33,6 +33,13 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: ONE_YEAR_IMMUTABLE }],
       },
       {
+        // Globe textures. Self-hosted on purpose: the Aceternity component
+        // fetched them from unpkg.com at mount time — 1.8 MB from a third-party
+        // CDN, on the critical path of the globe appearing.
+        source: "/textures/:path*",
+        headers: [{ key: "Cache-Control", value: ONE_YEAR_IMMUTABLE }],
+      },
+      {
         // top-level media: intro.mp4/.webm, void-loop.*, posters, og.png, fonts
         source: "/:file(.*\\.(?:mp4|webm|glb|hdr|jpg|jpeg|png|avif|woff2))",
         headers: [{ key: "Cache-Control", value: ONE_YEAR_IMMUTABLE }],
