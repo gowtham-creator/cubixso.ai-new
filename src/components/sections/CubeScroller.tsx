@@ -269,7 +269,11 @@ export function CubeScroller() {
             camera={{ position: [3.4, 3.4, 3.4], zoom: 105, near: 0.1, far: 100 }}
             gl={{ antialias: true, alpha: true }}
             dpr={dpr}
-            frameloop={active ? "always" : "never"}
+            // "demand", not "never", while off-screen: the desktop warm-up mounts
+            // this canvas before anyone scrolls to it, and with "never" it drew
+            // no frame at all — so no shader was compiled and the warm-up did
+            // nothing. "demand" renders once when the scene resolves, then idles.
+            frameloop={active ? "always" : "demand"}
             onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
           >
             <ambientLight intensity={dark ? 0.3 : 0.6} />

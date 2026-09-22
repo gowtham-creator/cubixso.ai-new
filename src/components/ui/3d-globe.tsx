@@ -55,6 +55,8 @@ export interface Globe3DConfig {
   realtimeSun?: boolean;
   /** City-lights texture shown on the night side (realtimeSun only) */
   nightTextureUrl?: string;
+  /** Roughness map: smooth oceans, rough land — gives real sun-glint (realtimeSun only) */
+  roughnessMapUrl?: string;
   /** Brightness of the night-side city lights */
   nightLightsIntensity?: number;
   /** Marker default size */
@@ -82,6 +84,8 @@ interface Globe3DProps {
   onMarkerClick?: (marker: GlobeMarker) => void;
   /** Callback when a marker is hovered */
   onMarkerHover?: (marker: GlobeMarker | null) => void;
+  /** "low" on phones/tablets: lighter geometry and a lower pixel ratio. */
+  quality?: "high" | "low";
 }
 
 // ============================================================================
@@ -109,11 +113,13 @@ export const GLOBE_TEXTURES = {
     textureUrl: DEFAULT_EARTH_TEXTURE,
     bumpMapUrl: DEFAULT_BUMP_TEXTURE,
     nightTextureUrl: "/textures/earth-night-4096.webp",
+    roughnessMapUrl: "/textures/earth-rough-2048.webp",
   },
   low: {
     textureUrl: "/textures/earth-2048.webp",
     bumpMapUrl: "/textures/earth-bump-1024.webp",
     nightTextureUrl: "/textures/earth-night-2048.webp",
+    roughnessMapUrl: "/textures/earth-rough-1024.webp",
   },
 } as const;
 
@@ -221,11 +227,25 @@ function Marker({
   // churn. Scratch vectors are reused, and state is only touched when the
   // visibility actually flips (a pin crossing the horizon), which is a handful
   // of times per rotation rather than sixty per second.
-  const scratch = useMemo(() => ({ w: new THREE.Vector3(), c: new THREE.Vector3() }), []);
+  const scratch = useMemo(
+    () => ({ w: new THREE.Vector3(), c: new THREE.Vector3(), p: new THREE.Vector3(), q: new THREE.Vector3() }),
+    [],
+  );
   const visibleRef = useRef(true);
+  // Labels sit to the right of their dot, which runs off a narrow phone pane for
+  // pins on the right-hand side of the disc. Flip them to the left there. Like
+  // visibility, state only changes when a pin crosses the threshold.
+  const [flip, setFlip] = useState(false);
+  const flipRef = useRef(false);
   useFrame(() => {
     if (!imageGroupRef.current) return;
-    imageGroupRef.current.getWorldPosition(scratch.w).normalize();
+    imageGroupRef.current.getWorldPosition(scratch.p);
+    const nextFlip = scratch.q.copy(scratch.p).project(camera).x > 0.2;
+    if (nextFlip !== flipRef.current) {
+      flipRef.current = nextFlip;
+      setFlip(nextFlip);
+    }
+    scratch.w.copy(scratch.p).normalize();
     scratch.c.copy(camera.position).normalize();
     // Positive dot = facing the camera; the 0.1 margin hides pins right on the
     // limb, where they would otherwise flicker as they cross the horizon.
@@ -268,7 +288,7 @@ function Marker({
       <mesh position={lineCenter} quaternion={lineQuaternion}>
         <cylinderGeometry args={[0.003, 0.003, lineHeight, 8]} />
         <meshBasicMaterial
-          color={hovered ? "#ffffff" : "#94a3b8"}
+          color={hovered ? "#ffffff" : "#cfe0ff"}
           transparent
           opacity={hovered ? 0.9 : 0.6}
         />
@@ -277,7 +297,7 @@ function Marker({
       {/* Pin point at the surface */}
       <mesh position={surfacePosition} quaternion={lineQuaternion}>
         <coneGeometry args={[0.015, 0.04, 8]} />
-        <meshBasicMaterial color={hovered ? "#f97316" : "#ef4444"} />
+        <meshBasicMaterial color={hovered ? "#ffffff" : "#4A7BFF"} />
       </mesh>
 
       {/* Marker head + location label.
@@ -297,7 +317,10 @@ function Marker({
           }}
         >
           <div
-            className="group flex cursor-pointer items-center gap-2 whitespace-nowrap"
+            className={cn(
+              "group flex cursor-pointer items-center gap-2 whitespace-nowrap",
+              flip && "flex-row-reverse",
+            )}
             onMouseEnter={handlePointerEnter}
             onMouseLeave={handlePointerLeave}
             onClick={handleClick}
@@ -344,8 +367,14 @@ function Marker({
 // Rotating Globe with Markers (all rotate together)
 // ============================================================================
 
+type SunUniform = { value: THREE.Vector3 };
+
 interface RotatingGlobeProps {
   config: Required<Globe3DConfig>;
+  /** Sun direction in VIEW space, written here each frame, read by shaders. */
+  sunUniform: SunUniform;
+  /** Geometry detail — lower on phones. */
+  segments: number;
   markers: GlobeMarker[];
   onMarkerClick?: (marker: GlobeMarker) => void;
   onMarkerHover?: (marker: GlobeMarker | null) => void;
@@ -353,6 +382,8 @@ interface RotatingGlobeProps {
 
 function RotatingGlobe({
   config,
+  sunUniform,
+  segments,
   markers,
   onMarkerClick,
   onMarkerHover,
@@ -364,10 +395,10 @@ function RotatingGlobe({
   // Load Earth textures (city lights too when lit by the real sun)
   const textures = useTexture(
     config.realtimeSun
-      ? [config.textureUrl, config.bumpMapUrl, config.nightTextureUrl]
+      ? [config.textureUrl, config.bumpMapUrl, config.nightTextureUrl, config.roughnessMapUrl]
       : [config.textureUrl, config.bumpMapUrl],
   );
-  const [earthTexture, bumpTexture, nightTexture] = textures as THREE.Texture[];
+  const [earthTexture, bumpTexture, nightTexture, roughTexture] = textures as THREE.Texture[];
 
   // Configure textures
   useMemo(() => {
@@ -394,21 +425,46 @@ function RotatingGlobe({
   // City lights ride the emissive channel and are masked to the night side in
   // the shader, with a soft ~15° twilight band so they fade in at dusk rather
   // than switching on along a hard line.
-  const sunUniform = useMemo(() => ({ value: new THREE.Vector3(0, 0, 1) }), []);
   const onBeforeCompile = useCallback(
     (shader: THREE.WebGLProgramParametersWithUniforms) => {
       shader.uniforms.uSunView = sunUniform;
+      shader.uniforms.uRimColor = { value: new THREE.Color("#8fc4ff") };
       shader.fragmentShader = shader.fragmentShader
-        .replace("#include <common>", "#include <common>\nuniform vec3 uSunView;")
+        .replace(
+          "#include <common>",
+          "#include <common>\nuniform vec3 uSunView;\nuniform vec3 uRimColor;",
+        )
         .replace(
           "#include <emissivemap_fragment>",
-          `#include <emissivemap_fragment>
+          `#ifdef USE_EMISSIVEMAP
+            // The Black Marble map carries dim terrain as well as city lights;
+            // boosted as-is it washed the whole night side blue. A power curve
+            // crushes that low-level terrain while keeping the lights bright.
+            vec3 cityLights = texture2D(emissiveMap, vEmissiveMapUv).rgb;
+            totalEmissiveRadiance *= pow(cityLights, vec3(2.4)) * 2.4;
+          #endif
           {
-            // view-space normal (bump-perturbed) against view-space sun direction
+            // view-space (bump-perturbed) normal against view-space sun direction
             float sunFacing = dot(normalize(normal), normalize(uSunView));
+            // 1 in full night, 0 in daylight, ~15 degrees of twilight between
             float nightSide = 1.0 - smoothstep(-0.2, 0.1, sunFacing);
             totalEmissiveRadiance *= nightSide;
           }`,
+        )
+        .replace(
+          "#include <opaque_fragment>",
+          `{
+            // Atmospheric haze over the planet itself, rising toward the limb —
+            // the soft blue edge real Earth photos have. Without it the halo
+            // floats beside a hard-edged ball. Strong on the lit limb, faint on
+            // the night limb, so it follows the real sun too.
+            vec3 V = normalize(vViewPosition);
+            float ndv = clamp(dot(normalize(normal), V), 0.0, 1.0);
+            float rim = pow(1.0 - ndv, 3.0);
+            float lit = smoothstep(-0.3, 0.35, dot(normalize(normal), normalize(uSunView)));
+            outgoingLight += uRimColor * rim * (0.06 + 0.42 * lit);
+          }
+          #include <opaque_fragment>`,
         );
     },
     [sunUniform],
@@ -437,8 +493,8 @@ function RotatingGlobe({
 
   // Create geometries
   const geometry = useMemo(() => {
-    return new THREE.SphereGeometry(config.radius, 64, 64);
-  }, [config.radius]);
+    return new THREE.SphereGeometry(config.radius, segments, segments);
+  }, [config.radius, segments]);
 
   const wireframeGeometry = useMemo(() => {
     return new THREE.SphereGeometry(config.radius * 1.002, 32, 16);
@@ -457,11 +513,17 @@ function RotatingGlobe({
       {/* Main globe mesh with Earth texture */}
       <mesh geometry={geometry}>
         {config.realtimeSun ? (
-          <meshStandardMaterial
+          // Physical rather than Standard only for specularIntensity: with the
+          // ocean roughness map, the sun's reflection off the sea at full
+          // dielectric strength read as a second sun. No clearcoat/sheen/
+          // transmission are enabled, so it compiles to the same cost.
+          <meshPhysicalMaterial
             map={earthTexture}
             bumpMap={bumpTexture}
             bumpScale={config.bumpScale * 0.05}
-            roughness={0.75}
+            roughness={1}
+            roughnessMap={roughTexture}
+            specularIntensity={0.45}
             metalness={0.0}
             emissiveMap={nightTexture}
             emissive="#ffffff"
@@ -480,7 +542,7 @@ function RotatingGlobe({
       </mesh>
 
       {config.realtimeSun && (
-        <directionalLight ref={sunRef} intensity={2.6} color="#fff6e8" />
+        <directionalLight ref={sunRef} intensity={3.2} color="#fff6e8" />
       )}
 
       {/* Wireframe overlay */}
@@ -514,39 +576,49 @@ function RotatingGlobe({
 // Atmosphere Component (stays static - doesn't rotate)
 // ============================================================================
 
+// Shell radius relative to the planet. Real atmosphere is a thin skin; the
+// first pass used 1.15, which read as a thick stroke around the ball.
+const ATMO_SCALE = 1.075;
+// |n·v| on the back face of the shell where a view ray just grazes the planet:
+// sqrt(1 - (1/ATMO_SCALE)^2). It runs 0 at the shell's outer silhouette up to
+// this value at the planet's edge.
+const ATMO_LIMB = Math.sqrt(1 - 1 / (ATMO_SCALE * ATMO_SCALE));
+
 interface AtmosphereProps {
   radius: number;
   color: string;
   intensity: number;
   blur: number;
+  sunUniform: SunUniform;
+  realtimeSun: boolean;
 }
 
-// Shell radius relative to the planet. The glow lives in the band between the
-// planet's limb and this shell's silhouette.
-const ATMO_SCALE = 1.15;
-// |n·v| on the back face of the shell, measured where a view ray just grazes the
-// planet: sqrt(1 - (1/ATMO_SCALE)^2). It runs 0 at the shell's outer silhouette
-// up to this value at the planet's edge.
-const ATMO_LIMB = Math.sqrt(1 - 1 / (ATMO_SCALE * ATMO_SCALE));
-
-function Atmosphere({ radius, color, intensity, blur }: AtmosphereProps) {
+function Atmosphere({ radius, color, intensity, blur, sunUniform, realtimeSun }: AtmosphereProps) {
   // blur -> falloff exponent: higher blur = softer, wider halo.
-  const falloff = Math.max(0.6, 4 - blur);
+  const falloff = Math.max(0.8, 4 - blur);
 
-  // Upstream wrote alpha = fresnel * intensity with NORMAL blending. On a
-  // back-facing shell that fresnel term peaks at the shell's OUTER edge, so the
-  // brightest part was the rim furthest from the planet — a hard ring, not an
-  // atmosphere — and at the demo's intensity of 20 the alpha clamped to 1
-  // across the whole band: the solid blue circle. This version is brightest at
-  // the planet's edge and fades to zero at the shell silhouette, and blends
-  // ADDITIVELY so it reads as emitted light rather than a painted stroke.
+  // History, because both earlier versions were wrong in instructive ways:
+  //   • upstream: alpha = fresnel * intensity, normal blending. On a back-facing
+  //     shell that fresnel peaks at the OUTER edge, so the brightest part was the
+  //     rim furthest from the planet; at the demo's intensity of 20 the alpha
+  //     clamped to 1 across the whole band — a solid blue ring.
+  //   • my first rewrite: additive blending with alpha fixed at 1. Additive can
+  //     only brighten, and on a transparent canvas the faded part still wrote
+  //     alpha 1 — invisible on the black theme, a hard black band on the light one.
+  // Now: normal blending with real alpha falloff (brightest and palest at the
+  // planet's edge, fully transparent at the shell), so it reads as air on both
+  // themes; and it is lit by the real sun — bright along the day limb, faint
+  // along the night limb.
   const atmosphereMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       uniforms: {
-        atmosphereColor: { value: new THREE.Color(color) },
+        innerColor: { value: new THREE.Color("#d6ebff") },
+        outerColor: { value: new THREE.Color(color) },
         intensity: { value: intensity },
         falloff: { value: falloff },
         limb: { value: ATMO_LIMB },
+        uSunView: sunUniform,
+        useSun: { value: realtimeSun ? 1 : 0 },
       },
       vertexShader: `
         varying vec3 vNormal;
@@ -558,25 +630,32 @@ function Atmosphere({ radius, color, intensity, blur }: AtmosphereProps) {
         }
       `,
       fragmentShader: `
-        uniform vec3 atmosphereColor;
+        uniform vec3 innerColor;
+        uniform vec3 outerColor;
         uniform float intensity;
         uniform float falloff;
         uniform float limb;
+        uniform vec3 uSunView;
+        uniform float useSun;
         varying vec3 vNormal;
         varying vec3 vPosition;
         void main() {
-          float t = abs(dot(normalize(vNormal), normalize(-vPosition)));
-          // 0 at the shell's outer silhouette -> 1 at the planet's edge.
-          float g = pow(smoothstep(0.0, limb, t), falloff);
-          gl_FragColor = vec4(atmosphereColor * g * intensity, 1.0);
+          vec3 n = normalize(vNormal);
+          float t = abs(dot(n, normalize(-vPosition)));
+          float g = smoothstep(0.0, limb, t);          // 0 outer edge -> 1 planet edge
+          float a = pow(g, falloff);
+          float sunLit = 0.18 + 0.82 * smoothstep(-0.4, 0.45, dot(n, normalize(uSunView)));
+          a *= mix(1.0, sunLit, useSun);
+          vec3 col = mix(outerColor, innerColor, pow(g, 2.0));
+          gl_FragColor = vec4(col, clamp(a * intensity, 0.0, 1.0));
         }
       `,
       side: THREE.BackSide,
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     });
-  }, [color, intensity, falloff]);
+  }, [color, intensity, falloff, sunUniform, realtimeSun]);
 
   return (
     <mesh scale={[ATMO_SCALE, ATMO_SCALE, ATMO_SCALE]}>
@@ -593,18 +672,37 @@ function Atmosphere({ radius, color, intensity, blur }: AtmosphereProps) {
 interface SceneProps {
   markers: GlobeMarker[];
   config: Required<Globe3DConfig>;
+  segments: number;
   onMarkerClick?: (marker: GlobeMarker) => void;
   onMarkerHover?: (marker: GlobeMarker | null) => void;
 }
 
-function Scene({ markers, config, onMarkerClick, onMarkerHover }: SceneProps) {
-  const { camera, gl } = useThree();
+function Scene({ markers, config, segments, onMarkerClick, onMarkerHover }: SceneProps) {
+  const { camera, gl, size } = useThree();
+  const sunUniform = useMemo<SunUniform>(() => ({ value: new THREE.Vector3(0, 0, 1) }), []);
 
-  // Set initial camera position (pulled back to accommodate markers)
+  // FIT TO THE PANE. The camera's field of view is vertical, so a fixed distance
+  // sizes the globe to the pane's HEIGHT. On a portrait phone pane (≈310 wide by
+  // 437 tall) that drew a globe wider than the pane, clipped on both sides. When
+  // the pane is narrower than it is tall, pull the camera back until the globe,
+  // halo included, fits the width — and scale the zoom limits with it, or
+  // OrbitControls would clamp the fitted distance straight back to maxDistance.
+  const base = config.cameraDistance || config.radius * 3.5;
+  const fit = useMemo(() => {
+    const aspect = size.width / Math.max(1, size.height);
+    if (aspect >= 1) return 1;
+    const R = config.radius * ATMO_SCALE;
+    const tanV = Math.tan(Math.asin(Math.min(0.999, R / base))); // apparent radius at `base`
+    const d = R / Math.sin(Math.atan(tanV * aspect));
+    return d / base;
+  }, [size.width, size.height, config.radius, base]);
+
   React.useEffect(() => {
-    camera.position.set(0, 0, config.cameraDistance || config.radius * 3.5);
+    // Keep whatever angle the user has orbited to; only change the distance.
+    if (camera.position.lengthSq() < 1e-6) camera.position.set(0, 0, 1);
+    camera.position.setLength(base * fit);
     camera.lookAt(0, 0, 0);
-  }, [camera, config.radius, config.cameraDistance]);
+  }, [camera, base, fit]);
 
   // OrbitControls sets touch-action:none on the canvas, which on a phone means
   // a full-width globe swallows every vertical swipe and traps the visitor
@@ -644,6 +742,8 @@ function Scene({ markers, config, onMarkerClick, onMarkerHover }: SceneProps) {
       {/* Rotating Globe with Markers */}
       <RotatingGlobe
         config={config}
+        sunUniform={sunUniform}
+        segments={segments}
         markers={markers}
         onMarkerClick={onMarkerClick}
         onMarkerHover={onMarkerHover}
@@ -656,6 +756,8 @@ function Scene({ markers, config, onMarkerClick, onMarkerHover }: SceneProps) {
           color={config.atmosphereColor}
           intensity={config.atmosphereIntensity}
           blur={config.atmosphereBlur}
+          sunUniform={sunUniform}
+          realtimeSun={config.realtimeSun}
         />
       )}
 
@@ -664,8 +766,8 @@ function Scene({ markers, config, onMarkerClick, onMarkerHover }: SceneProps) {
         makeDefault
         enablePan={config.enablePan}
         enableZoom={config.enableZoom}
-        minDistance={config.minDistance}
-        maxDistance={config.maxDistance}
+        minDistance={config.minDistance * fit}
+        maxDistance={config.maxDistance * fit}
         rotateSpeed={0.4}
         autoRotate={config.autoRotateSpeed > 0}
         autoRotateSpeed={config.autoRotateSpeed}
@@ -721,6 +823,7 @@ const defaultConfig: Required<Globe3DConfig> = {
   cameraDistance: 0, // 0 = radius x 3.5, the upstream framing
   realtimeSun: false,
   nightTextureUrl: "/textures/earth-night-4096.webp",
+  roughnessMapUrl: "/textures/earth-rough-2048.webp",
   nightLightsIntensity: 1.6,
   markerSize: 0.06,
   showWireframe: false,
@@ -736,6 +839,7 @@ export function Globe3D({
   className,
   onMarkerClick,
   onMarkerHover,
+  quality = "high",
 }: Globe3DProps) {
   const mergedConfig = useMemo(
     () => ({ ...defaultConfig, ...config }),
@@ -743,15 +847,46 @@ export function Globe3D({
   );
   const [ready, setReady] = useState(false);
 
+  // RENDER LOOP. Upstream rendered at full frame rate for as long as the canvas
+  // existed — including while scrolled far off-screen. Once the globe was being
+  // warmed up early, that meant it drew 60 frames a second in the background
+  // the whole time the visitor was on the hero, competing with the hero cube:
+  // constant GPU load, and the lag on phones.
+  //
+  // Off-screen it is now "demand": React Three Fiber renders only when
+  // invalidated, which includes the commit where the textures resolve. So a
+  // warm-up mount still renders ONCE — compiling the shaders and uploading the
+  // textures, which is the whole point of warming it — and then goes idle.
+  // "never" would have skipped that first frame entirely. On screen it runs
+  // "always" so auto-rotation and the live sun animate.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  React.useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") { setInView(true); return; }
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), {
+      rootMargin: "10% 0px",
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const low = quality === "low";
+  // Phones: 1.5x is visibly sharp and costs ~44% fewer pixels than 2x; 48
+  // segments is indistinguishable at phone size and roughly halves the vertices.
+  const dpr: [number, number] = low ? [1, 1.5] : [1, 2];
+  const segments = low ? 48 : 64;
+
   return (
-    <div className={cn("relative h-[500px] w-full", className)}>
+    <div ref={wrapRef} className={cn("relative h-[500px] w-full", className)}>
       <Canvas
         gl={{
           antialias: true,
           alpha: true,
           powerPreference: "high-performance",
         }}
-        dpr={[1, 2]}
+        dpr={dpr}
+        frameloop={inView ? "always" : "demand"}
         camera={{
           fov: 45,
           near: 0.1,
@@ -769,6 +904,7 @@ export function Globe3D({
           <Scene
             markers={markers}
             config={mergedConfig}
+            segments={segments}
             onMarkerClick={onMarkerClick}
             onMarkerHover={onMarkerHover}
           />

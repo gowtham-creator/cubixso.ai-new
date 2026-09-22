@@ -55,16 +55,17 @@ const GLOBE_BASE: Globe3DConfig = {
   realtimeSun: true,
   showAtmosphere: true,
   atmosphereColor: "#4A7BFF", // brand cobalt-glow
-  // A soft limb glow. The demo's intensity of 20 saturated the old shader into a
-  // solid blue ring around the planet.
-  atmosphereIntensity: 0.85,
-  atmosphereBlur: 2.5,
+  // A thin, sunlit limb glow (see Atmosphere in 3d-globe.tsx). The demo's
+  // intensity of 20 saturated the original shader into a solid blue ring.
+  atmosphereIntensity: 1.0,
+  atmosphereBlur: 2,
   bumpScale: 4,
   autoRotateSpeed: 0.4,
   enableZoom: true,
   // Framing: the upstream camera sat at radius x 3.5 = 7, drawing the globe at
-  // ~62% of the frame height. 6.2 draws it at ~84% with the halo still inside.
-  cameraDistance: 6.2,
+  // ~62% of the frame height. 5.7 draws it at ~91%, halo just inside. On
+  // portrait panes the globe pulls back further to fit the width (see Scene).
+  cameraDistance: 5.7,
   // 3.6 is as close as it can come before sliding in among the pins (which stand
   // to radius x 1.18). 8 caps the zoom-out at ~64% of the frame height, so it can
   // never shrink to a small ball lost in the pane.
@@ -79,6 +80,7 @@ const TEX_HIGH = {
   textureUrl: "/textures/earth-4096.webp",
   bumpMapUrl: "/textures/earth-bump-2048.webp",
   nightTextureUrl: "/textures/earth-night-4096.webp",
+  roughnessMapUrl: "/textures/earth-rough-2048.webp",
 };
 // Phones: a 4096 map with mipmaps is ~43 MB of GPU memory, which on iOS raises
 // the odds of the WebGL context being evicted.
@@ -86,6 +88,7 @@ const TEX_LOW = {
   textureUrl: "/textures/earth-2048.webp",
   bumpMapUrl: "/textures/earth-bump-1024.webp",
   nightTextureUrl: "/textures/earth-night-2048.webp",
+  roughnessMapUrl: "/textures/earth-rough-1024.webp",
 };
 const GLOBE_CONFIG_HIGH: Globe3DConfig = { ...GLOBE_BASE, ...TEX_HIGH };
 const GLOBE_CONFIG_LOW: Globe3DConfig = { ...GLOBE_BASE, ...TEX_LOW };
@@ -136,8 +139,11 @@ export function Global() {
   useEffect(() => {
     const el = paneRef.current;
     if (!el || typeof IntersectionObserver === "undefined") { setMapNear(true); return; }
+    // 200% (was 100%): on phones this gate IS the mount, and one viewport of
+    // lead time was less than a quick flick, so the globe was often still
+    // building when it arrived. Still released when scrolled well away.
     const io = new IntersectionObserver(([e]) => setMapNear(e.isIntersecting),
-      { rootMargin: "100% 0px" });
+      { rootMargin: "200% 0px" });
     io.observe(el);
     return () => io.disconnect();
   }, []);
@@ -203,6 +209,7 @@ export function Global() {
                   <Globe3D
                     markers={GLOBE_MARKERS}
                     config={globeConfig}
+                    quality={tier === "low" ? "low" : "high"}
                     className={GLOBE_FRAME}
                   />
                 ) : (
