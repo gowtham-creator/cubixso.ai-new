@@ -437,11 +437,17 @@ function RotatingGlobe({
         .replace(
           "#include <emissivemap_fragment>",
           `#ifdef USE_EMISSIVEMAP
-            // The Black Marble map carries dim terrain as well as city lights;
-            // boosted as-is it washed the whole night side blue. A power curve
-            // crushes that low-level terrain while keeping the lights bright.
+            // The night map bakes cyan terrain in with the city lights, and the
+            // two OVERLAP in brightness, so no brightness curve separates them
+            // (a steep one crushed the lights; a threshold erased them). Sampled
+            // pixel values settle it: terrain and ocean carry almost no red —
+            // Sahara ~(12,56,81), ocean ~(0,15,34) — while every city light does,
+            // London ~(106,94,94), Delhi ~(124,116,114). So key on the red
+            // channel, then tint the result sodium-amber like real city lights.
             vec3 cityLights = texture2D(emissiveMap, vEmissiveMapUv).rgb;
-            totalEmissiveRadiance *= pow(cityLights, vec3(2.4)) * 2.4;
+            float lum = cityLights.r;
+            float isLight = smoothstep(0.012, 0.06, lum);
+            totalEmissiveRadiance *= vec3(1.0, 0.8, 0.52) * lum * isLight * 7.0;
           #endif
           {
             // view-space (bump-perturbed) normal against view-space sun direction
@@ -449,6 +455,10 @@ function RotatingGlobe({
             // 1 in full night, 0 in daylight, ~15 degrees of twilight between
             float nightSide = 1.0 - smoothstep(-0.2, 0.1, sunFacing);
             totalEmissiveRadiance *= nightSide;
+            // Faint cool "moonlight" on the night side so coastlines and
+            // countries stay readable — with only the 7% ambient they vanished
+            // and the dark hemisphere read as a black void.
+            totalEmissiveRadiance += diffuseColor.rgb * vec3(0.55, 0.68, 1.0) * 0.11 * nightSide;
           }`,
         )
         .replace(

@@ -304,7 +304,35 @@ The governing rule: **no 3D in the shared bundle.** Every WebGL component is `ne
 - Bloom and the env cubemap are **desktop-only** — they are the expensive parts.
 - `dpr` capped at 1.5 on mobile, 2 on desktop.
 - `cdn()` wraps every heavy asset path so models and clips can be rehosted with one env var.
-- **The intro cube is a pre-rendered video, not a live scene.** A 112 KB clip decodes on the GPU's video path and starts in two frames; the WebGL version had to fetch a GLB, compile shaders and light a scene before the first frame.
+- **The intro cube is a pre-rendered video, not a live scene.** A 112 KB clip decodes on the GPU's video path and starts in two frames; the WebGL version had to fetch a GLB, compile shaders and light a scene before the first frame. If iOS refuses autoplay (Low Power / Low Data Mode), it swaps to an animated WebP, which no autoplay policy applies to.
+
+### Canvas lifecycle — `useWarmMount` (`src/lib/useWarmMount.ts`)
+
+Mounting a WebGL canvas costs a context, texture uploads and shader compiles — half a second to well over a second. Every 3D section decides *when to exist* through this hook:
+
+| Tier | Behaviour | Why |
+|---|---|---|
+| **Desktop** (`high`) | Builds once in idle time right after the intro lifts, then **stays mounted**. | No practical live-context cap, so rebuilding on every return just re-pays the cost as visible pop-in. |
+| **Phones / tablets** (`low`) | Mounts only while near the viewport; released when far away. | iOS evicts the **oldest** context under pressure, leaving it frozen on its last frame. |
+
+Warm-ups are staggered (`stagger` ms) so two canvases never compile in the same idle slot. While off-screen a canvas runs `frameloop="demand"` — **not** `"never"` (see Gotchas) — so a warm-up still renders once to compile, then idles.
+
+### The globe (`src/components/ui/3d-globe.tsx`, used by `Global.tsx`)
+
+Based on the Aceternity 3D globe, reworked:
+
+- **Live day/night.** One directional light sits at the real **sub-solar point**, computed from UTC (`subsolarPoint()`: declination from ecliptic longitude, longitude from right ascension minus Greenwich sidereal time). It is a child of the globe group, so daylight is anchored to geography — dragging never moves the terminator — and it is re-derived every 5 s, so the day/night line sweeps west in real time.
+- **Night side.** City lights on the emissive channel, masked to the dark hemisphere with a ~15° twilight band. The lights map bakes cyan terrain in with the lights at *overlapping brightness*; they are separated by the **red channel** (terrain has almost none) and tinted sodium-amber. Faint cool "moonlight" keeps countries readable.
+- **Atmosphere.** A thin back-face shell (1.075× radius), normal blending with real alpha falloff — palest at the limb, transparent at the edge, brighter along the sunlit limb — plus a limb haze over the surface. Works on both themes.
+- **Ocean glint.** A roughness map (water 0.30, land 1.0) puts the sun's reflection exactly under the sub-solar point; `specularIntensity` 0.45 keeps it from reading as a second sun.
+- **Fit.** The camera FOV is vertical, so on portrait panes the camera pulls back to fit the *width*, scaling the zoom limits with it. Zoom is clamped (3.6 → 8) so the globe can neither slide among the pins nor shrink to a dot.
+- **Textures** are self-hosted WebP in `public/textures`, tiered: 4096 maps on desktop, 2048 on phones (a 4096 map with mipmaps is ~43 MB of GPU memory). `Global.tsx` prefetches them after the intro — the globe module sits behind `next/dynamic`, so a preload inside it would only fire on mount.
+
+Visual values in the shaders were chosen by rendering them side by side (phone dark, phone light, desktop) with R3F's ACES tone mapping — not by eye in the editor. Change them the same way.
+
+### The forge cube (`CubeScroller.tsx`)
+
+Auto-spins and can be grabbed and thrown, like the contact-page globe. It used to be scroll-scrubbed across a 320vh sticky track with rotation quantized to 94 steps; that caused the stepped motion, a blank canvas until a click forced a frame, and the dead space below the section.
 
 ## Iconography
 
@@ -348,7 +376,9 @@ Content is typed data in `src/lib`, not CMS-driven. Edit the data, not the compo
 | `seo.ts` | Domain, titles, descriptions, keywords, sitemap routes |
 | `schema.ts` | Organization and WebSite JSON‑LD |
 
-Infrastructure: `gsap.ts` (Lenis↔ScrollTrigger bridge), `perf.ts` (device tiering), `cdn.ts`, `antispam.ts`, `feedback.ts` (audio bus), `cn.ts`.
+Infrastructure: `gsap.ts` (Lenis↔ScrollTrigger bridge), `perf.ts` (device tiering), `useWarmMount.ts` (WebGL mount lifecycle), `cdn.ts`, `antispam.ts`, `feedback.ts` (audio bus), `cn.ts`.
+
+**Client testimonials** live in `src/components/sections/ClientTestimonials.tsx` (`CLIENT_TESTIMONIALS`). Real, approved quotes from named clients only — the upstream 21st.dev block ships invented people, and those must never be published. Drafts awaiting approval belong in `.planning/`, outside `src/`, so they cannot ship by accident.
 
 ## Forms and anti-spam
 
@@ -370,7 +400,7 @@ Metadata API throughout, with `metadataBase` from `SITE_URL`. Per-route canonica
 
 1. No WebGL, heavy video or map library in the shared bundle — `next/dynamic` with `ssr: false`.
 2. Anything in the root-layout chain is on **every** route. Audit before adding.
-3. Below-the-fold visuals lazy-load; decorative canvases pause off-screen via `IntersectionObserver`.
+3. Below-the-fold visuals lazy-load; every canvas pauses off-screen via `IntersectionObserver` (`frameloop="demand"`), and mounts through `useWarmMount`.
 4. Assets go through `cdn()`.
 5. Theme resolves before first paint (no FOUC).
 
@@ -387,6 +417,14 @@ Each of these cost real debugging time. Read before touching the relevant area.
 - **GSAP pins measure at creation.** If lazy content mounts afterwards the spacer is stale, so pins are re-measured on `cubixso:revealed` and `load`.
 - **Don't bridge framer-motion and ScrollTrigger with a synthetic `resize`.** ScrollTrigger also refreshes on resize, so it loops and makes pins judder.
 - **Percentage-height images/elements inside a map or canvas wrapper** can inherit the pane's size. Pin explicit dimensions on anything that animates (`animate-ping` on a `h-full` element will scale the entire pane).
+- **`frameloop="never"` draws no frame at all** — not even the first. A canvas warmed up off-screen in that mode compiles nothing, so the warm-up is silently useless. Use `"demand"`: it renders once when the scene resolves, then idles.
+- **A preload inside a `next/dynamic` module fires only on mount** — exactly when it was meant to beat. Prefetch from the page instead.
+- **drei `<Html>` defaults to a z-index range of ~16.7 million**, floating labels over the fixed navbar. Always pass `zIndexRange`.
+- **Additive blending on a transparent canvas can't brighten a light page.** Anything it draws still writes alpha — invisible on the dark theme, a hard black band on the light one. Use normal blending with real alpha falloff.
+- **OrbitControls sets `touch-action: none`**, so a full-width canvas traps phone users mid-page. Reset it to `pan-y` after the controls connect.
+- **A fixed camera distance with a vertical FOV** sizes the scene to the pane's *height* — portrait panes clip it on both sides. Fit to the smaller dimension.
+- **Don't request a new asset URL on the proxied `app.` host before its deploy finishes.** Cloudflare caches the 404. When checking a fresh deploy, cache-bust with a query string, or version the filename.
+- **iOS blocks inline video autoplay outright in Low Power / Low Data Mode** — no muted/playsInline combination beats it. Have a non-video fallback.
 
 ## Deployment
 
