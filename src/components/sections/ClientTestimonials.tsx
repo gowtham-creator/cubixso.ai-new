@@ -11,6 +11,9 @@
 // they are clients OF THE SAVANTS ENGAGEMENT that Logic Gen was delivered into,
 // not Cubixso's own clients. Keep that wording if this copy is ever reworked.
 
+"use client";
+
+import { useEffect, useRef } from "react";
 import { TestimonialCard, type TestimonialCardProps } from "@/components/ui/testimonial-card";
 
 export const CLIENT_TESTIMONIALS: TestimonialCardProps[] = [
@@ -98,17 +101,47 @@ export function ClientTestimonials({
   testimonials = CLIENT_TESTIMONIALS,
   className,
 }: ClientTestimonialsProps) {
-  if (testimonials.length === 0) return null;
-
   // A marquee only reads as a marquee with enough cards to overflow the
   // viewport. Below that, render a static centred row instead of looping one
   // card past itself, which looks broken rather than abundant.
   const marquee = testimonials.length >= 3;
 
+  // A CSS marquee keeps animating while off-screen, so the compositor keeps
+  // pushing a ~4,500px-wide track around for the whole session. That is a real
+  // battery cost on a phone for something nobody is looking at. Pause it unless
+  // the section is actually near the viewport.
+  const sectionRef = useRef<HTMLElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const host = sectionRef.current;
+    const track = trackRef.current;
+    if (!host || !track || typeof IntersectionObserver === "undefined") return;
+    // Start paused; the observer fires immediately on observe() and turns it on
+    // if the section is already in view.
+    track.style.animationPlayState = "paused";
+    const io = new IntersectionObserver(
+      ([e]) => { track.style.animationPlayState = e.isIntersecting ? "running" : "paused"; },
+      { rootMargin: "25% 0px" },
+    );
+    io.observe(host);
+    return () => io.disconnect();
+  }, [marquee]);
+
+  // Bail AFTER the hooks. This used to sit above them, which breaks the Rules of
+  // Hooks the moment the list is empty — the hooks would be skipped on that
+  // render and React would throw on the next one.
+  if (testimonials.length === 0) return null;
+
   return (
     <section
+      ref={sectionRef}
       id="client-testimonials"
-      className={`relative z-10 py-12 sm:py-20 ${className ?? ""}`}
+      // Top padding is deliberately smaller than the bottom. The section above
+      // is CubeScroller, whose sticky panel scrolls away with empty space below
+      // the centred cube — so any top padding here stacks onto that and reads as
+      // one large void. Measured: sections are flush at 0px, the whole gap was
+      // the panel tail plus this padding.
+      className={`relative z-10 pb-12 pt-6 sm:pb-20 sm:pt-10 ${className ?? ""}`}
     >
       {/* Type scale and spacing follow the 21st.dev block rather than the site's
           display scale. An earlier pass used --text-display-sm, which does not
@@ -132,7 +165,7 @@ export function ClientTestimonials({
           // which scrolls the whole track off screen and snaps — visible as a
           // blank stutter once per cycle.
           <div className="marquee-viewport group flex w-full overflow-hidden p-2">
-            <div className="marquee-track flex shrink-0 group-hover:[animation-play-state:paused]">
+            <div ref={trackRef} className="marquee-track flex shrink-0 group-hover:[animation-play-state:paused]">
               {[0, 1].map((copy) =>
                 testimonials.map((t, i) => (
                   <TestimonialCard

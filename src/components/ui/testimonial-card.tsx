@@ -58,7 +58,11 @@ export function TestimonialCard({
         "bg-gradient-to-b from-(--color-surface)/70 to-(--color-surface)/15",
         "p-4 text-start sm:p-6",
         "hover:from-(--color-surface)/90 hover:to-(--color-surface)/25",
-        "w-[320px] max-w-[320px] shrink-0",
+        // 320px is the source block's width and is right on desktop, but on a
+        // 360px phone it leaves almost no breathing room at the viewport edge.
+        // max-w-[86vw] keeps the card inside the screen on small devices without
+        // touching the desktop size.
+        "w-[280px] max-w-[86vw] shrink-0 sm:w-[320px] sm:max-w-[320px]",
         "transition-colors duration-300",
         className,
       )}

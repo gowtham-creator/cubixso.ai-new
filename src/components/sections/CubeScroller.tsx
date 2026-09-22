@@ -182,12 +182,13 @@ export function CubeScroller() {
   }, []);
 
   return (
-    // 220vh (was 320vh). The sticky panel pins for track-height minus one
-    // viewport, so 320vh meant 2.2 viewports of scrolling spent on one rotation
-    // — and because the cube sits centred in the panel, the lower half of every
-    // one of those screens is empty. That dead space below the cube is the "so
-    // much gap" report. 220vh keeps a full turn with 1.2 viewports of scrub.
-    <section ref={ref} id="forge" aria-label="Built dimensional" className="relative z-10 h-[220vh]">
+    // 180vh, down from 320vh via 220vh. The sticky panel pins for track height
+    // minus one viewport, so the original spent 2.2 viewports of scrolling on a
+    // single rotation, and with the cube centred the lower half of each of those
+    // screens was empty — that dead run is what read as "so much gap" between
+    // this section and the testimonials. 180vh still gives a full 360° turn
+    // across 0.8 of a viewport of scrub, which is plenty at this rotation speed.
+    <section ref={ref} id="forge" aria-label="Built dimensional" className="relative z-10 h-[180vh]">
       <div className="sticky top-0 flex h-svh flex-col items-center justify-center overflow-hidden">
         <div className="absolute left-[var(--pad-x)] top-[clamp(80px,14vh,140px)] mono text-[11px] tracking-[0.3em] text-(--color-muted)">
           [ DIMENSIONAL ]

@@ -234,7 +234,12 @@ export function HeroGlassCube({
     );
     const ioNear = new IntersectionObserver(
       ([entry]) => setNear(entry.isIntersecting),
-      { rootMargin: "50% 0px" },
+      // 200% (was 50%). Remounting costs a fresh WebGL context plus a shader
+      // compile — roughly a second — and at 50% that bill came due exactly as
+      // the hero re-entered view, so scrolling back to the top showed an empty
+      // slot and then a pop-in. Two viewports of lead time means the canvas is
+      // already warm before the hero is anywhere near the screen.
+      { rootMargin: "200% 0px" },
     );
     io.observe(el);
     ioNear.observe(el);
@@ -255,7 +260,13 @@ export function HeroGlassCube({
       <div className={boxClassName ?? "aspect-square w-[min(80vw,680px)]"}>
         {!webgl || lost ? (
           <StaticCubeFallback dark={dark} />
-        ) : !near ? null : (
+        // Unmounting is a MOBILE concession, not a universal one. iOS Safari
+        // caps live WebGL contexts and evicts the oldest, which is what froze
+        // this cube; desktop has no such cap, so paying a context + shader
+        // rebuild there bought nothing and cost a visible pop-in on every
+        // scroll back to the top. High-tier devices now keep the canvas mounted
+        // for the life of the page and simply pause its frameloop.
+        ) : low && !near ? null : (
         <CanvasBoundary fallback={<StaticCubeFallback dark={dark} />}>
         <Canvas
           key={gen}
