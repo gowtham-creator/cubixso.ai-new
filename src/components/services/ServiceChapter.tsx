@@ -35,7 +35,7 @@ function ProofCard({ p }: { p: Proof }) {
   // cobalt wash, the screenshot eases in closer, and linked work shows where
   // it will take you. Transform/opacity/colour only.
   const inner = (
-    <div className="relative flex items-center gap-4 overflow-hidden rounded-2xl border border-(--color-line) bg-(--color-bg) p-3 pr-5 transition-[border-color,box-shadow,transform,background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-0.5 group-hover:border-(--color-accent-2) group-hover:bg-[color-mix(in_oklab,var(--color-accent-2)_7%,var(--color-bg))] group-hover:shadow-[0_0_0_1px_var(--color-accent-2),0_12px_40px_-16px_var(--color-accent-2)] group-focus-visible:border-(--color-accent-2)">
+    <div className="relative flex items-center gap-4 overflow-hidden rounded-2xl border border-(--color-line) bg-(--color-bg) p-3 pr-5 transition-[border-color,box-shadow,transform,background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-0.5 group-hover:border-(--color-accent-2) group-hover:bg-[color-mix(in_oklab,var(--color-accent-2)_7%,var(--color-bg))] group-hover:shadow-[0_0_0_1px_var(--color-accent-2),0_12px_40px_-16px_var(--color-accent-2)] group-focus-visible:border-(--color-accent-2) group-active:border-(--color-accent-2) group-active:bg-[color-mix(in_oklab,var(--color-accent-2)_7%,var(--color-bg))]">
       {p.image ? (
         <span className="block h-[66px] w-[112px] shrink-0 overflow-hidden rounded-xl border border-(--color-line) transition-colors duration-300 group-hover:border-(--color-accent-2)">
           <Image

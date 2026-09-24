@@ -28,8 +28,10 @@ export function Magnetic({
   const xSpring = useSpring(x, { damping, stiffness });
   const ySpring = useSpring(y, { damping, stiffness });
 
-  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!ref.current) return;
+  // Mouse only. On touch, a tap fires one synthetic move and no leave, which
+  // left the button pulled off-centre until the next tap elsewhere.
+  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse" || !ref.current) return;
     const r = ref.current.getBoundingClientRect();
     const cx = r.left + r.width / 2;
     const cy = r.top + r.height / 2;
@@ -44,8 +46,9 @@ export function Magnetic({
   return (
     <motion.div
       ref={ref}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
+      onPointerMove={onMove}
+      onPointerLeave={onLeave}
+      onPointerCancel={onLeave}
       style={{ x: xSpring, y: ySpring, display: "inline-block" }}
       className={className}
     >

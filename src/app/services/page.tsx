@@ -32,7 +32,7 @@ function CtaButton({ children }: { children: React.ReactNode }) {
   return (
     <Link
       href="/contact"
-      className="tap-target inline-flex items-center justify-center gap-2 rounded-full bg-(--color-accent) px-6 py-3.5 text-[15px] font-semibold text-[oklch(0.99_0.005_265)] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5"
+      className="tap-target inline-flex items-center justify-center gap-2 rounded-full bg-(--color-accent) px-6 py-3.5 text-[15px] font-semibold text-[oklch(0.99_0.005_265)] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-[0.98]"
     >
       {children}
       <span aria-hidden>→</span>

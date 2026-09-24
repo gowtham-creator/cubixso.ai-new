@@ -47,7 +47,7 @@ export function Catalogue() {
                       onClick={(e) => jump(e, s.id)}
                       onMouseEnter={() => setActiveId(s.id)}
                       onFocus={() => setActiveId(s.id)}
-                      className="group grid grid-cols-[2.5rem_1fr_auto] items-baseline gap-x-3 py-4 sm:py-5"
+                      className="group grid grid-cols-[2.5rem_1fr_auto] items-baseline gap-x-3 py-4 transition-colors active:bg-(--color-surface) sm:py-5"
                     >
                       <span className={`mono text-[13px] transition-colors ${on ? "text-(--svc-ink)" : "text-(--color-muted-2)"}`}>{s.num}</span>
                       <span

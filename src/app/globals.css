@@ -561,9 +561,12 @@ html {
 .prose-link, .footer-link {
   transition: color 0.25s var(--ease-smooth);
 }
-.prose-link:hover, .footer-link:hover {
-  color: var(--color-powder);
+/* Gated to hover-capable pointers, like Tailwind v4's hover: variant, so a
+   tap on a phone never leaves a link stuck in its hover colour. */
+@media (hover: hover) {
+  .prose-link:hover, .footer-link:hover { color: var(--color-powder); }
 }
+.prose-link:active, .footer-link:active { color: var(--color-powder); }
 
 /* ─── /services diagrams ───────────────────────────────────────────────────
    Compositor-only motion (opacity, transform, stroke-dashoffset). A node's

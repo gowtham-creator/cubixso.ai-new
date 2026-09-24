@@ -93,9 +93,9 @@ function LinkColumn({ title, links }: { title: string; links: { href: string; la
         >
           <span
             aria-hidden
-            className="absolute inset-0 rounded-md bg-(--color-accent) translate-y-full transition-transform duration-300 ease-out group-hover/nav:translate-y-0"
+            className="absolute inset-0 rounded-md bg-(--color-accent) translate-y-full transition-transform duration-300 ease-out group-hover/nav:translate-y-0 group-active/nav:translate-y-0"
           />
-          <span className="relative z-10 transition-colors duration-300 group-hover/nav:text-white">
+          <span className="relative z-10 transition-colors duration-300 group-hover/nav:text-white group-active/nav:text-white">
             {l.label}
           </span>
         </Link>
