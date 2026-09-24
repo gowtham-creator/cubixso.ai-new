@@ -1,9 +1,9 @@
-// Services field guide — the content behind /services.
+// Services catalogue: the content behind /services.
 //
-// Edit the words here, not in the components. Two rules hold for everything in
-// this file (see PRODUCT.md, "Claim only what's shipped"):
-//   • Proof only names work that exists, with an honest status. Entries with no
-//     shipped example simply have no `proof`; do not invent one.
+// Edit the words here, not in the components. Rules (PRODUCT.md, "Claim only
+// what's shipped"):
+//   • `proof` names only real work, with an honest status. A service with no
+//     shipped example has no proof; do not invent one.
 //   • No numbers unless they are real and already published on the site.
 // House style: no em dashes; plain, specific, unhyped.
 
@@ -17,93 +17,74 @@ export interface Proof {
   href?: string;
 }
 
-export type DiagramKind = "harness" | "loop" | "story";
+export type DiagramKind = "loop" | "harness" | "voice" | "flow" | "mcp" | "evals" | "router";
 
-export interface Practice {
+export type Visual =
+  | { kind: "image"; src: string; alt: string }
+  | { kind: "diagram"; diagram: DiagramKind };
+
+export interface Service {
   id: string;
-  code: string;
+  num: string;
   name: string;
-  summary: string;
+  /** One line, shown in the catalogue. */
+  short: string;
+  /** The opening paragraph of the service's chapter. */
+  lead: string;
   build: string[];
   failures: string[];
+  useCases: string[];
   deliver: string[];
+  stack: string[];
+  visual: Visual;
   proof?: Proof[];
-  diagram?: DiagramKind;
   /** A plain statement of where our work stops, when it matters. */
   boundary?: string;
 }
 
-export interface Track {
+export interface ServiceGroup {
   id: string;
-  letter: "A" | "B";
   name: string;
-  audience: string;
-  intro: string;
-  cta: { label: string; href: string };
-  practices: Practice[];
+  line: string;
+  services: Service[];
 }
 
-/* ── What changed ─────────────────────────────────────────────────────── */
-
-export const SHIFTS: { shift: string; changed: string; meaning: string }[] = [
+export const SERVICE_GROUPS: ServiceGroup[] = [
   {
-    shift: "Harness engineering",
-    changed:
-      "The model became one component. The harness around it (tools, context, memory, permissions) now decides whether an agent is reliable.",
-    meaning: "Judge a partner on harness design, not on which model they name.",
-  },
-  {
-    shift: "Agentic loops",
-    changed:
-      "Agents stopped answering once and started working in loops: plan, act, check, repeat, for minutes or hours.",
-    meaning: "Budgets, stop conditions and human checkpoints are now requirements, not extras.",
-  },
-  {
-    shift: "Evals",
-    changed:
-      "Eval suites replaced demos. Every prompt, model or tool change is regression-tested before it ships.",
-    meaning: "Ask to see the eval set before you ask to see the demo.",
-  },
-  {
-    shift: "Model Context Protocol",
-    changed:
-      "MCP gave agents one standard way to reach tools and data, instead of a custom integration per agent.",
-    meaning: "Your systems become reusable servers, with access you can scope and audit.",
-  },
-  {
-    shift: "Context engineering",
-    changed:
-      "Retrieval, memory and compaction, not prompt wording, became the main lever on answer quality.",
-    meaning: "Quality is an engineering property: measurable, and fixable when it slips.",
-  },
-  {
-    shift: "Video generation",
-    changed:
-      "Text-to-video and image-to-video models got good at single shots. Holding a character and a style across a whole story is still the hard part.",
-    meaning: "The pipeline around the models matters more than any one model.",
-  },
-];
-
-/* ── Tracks ───────────────────────────────────────────────────────────── */
-
-export const TRACKS: Track[] = [
-  {
-    id: "enterprise",
-    letter: "A",
-    name: "Enterprise systems",
-    audience: "For CTOs, engineering leaders and data teams.",
-    intro:
-      "Agents and knowledge systems that run inside your business, against your data, under your controls. Built to be operated, audited and upgraded, not just demonstrated.",
-    cta: { label: "Book a scoping call", href: "/contact" },
-    practices: [
+    id: "agents",
+    name: "Build agents",
+    line: "Systems that act, not just answer.",
+    services: [
       {
-        id: "harness",
-        code: "A.01",
-        name: "Agent harness engineering",
-        summary:
-          "The model is one component. The harness around it (tools, context, memory, permissions and recovery) is what makes an agent dependable in production.",
+        id: "agentic-systems",
+        num: "01",
+        name: "Agentic systems and loops",
+        short: "Agents that plan, act and check their own work across many steps.",
+        lead: "Agents that work through a task the way a careful person would: plan, act, look at the result, check it against the goal, and go again. Built with the brakes as well as the engine, so budgets, stop conditions and a person in the loop come as standard.",
         build: [
-          "A tool layer of typed tools and MCP servers the agent can call",
+          "Plan, act and verify loops with an explicit success check",
+          "Multi-agent teams with clear roles and hand-offs",
+          "Step and cost budgets on every task",
+          "Human approval before any irreversible action",
+        ],
+        failures: [
+          "Loops that never converge and burn budget",
+          "Work marked done without being checked",
+          "Runaway cost across sub-agents",
+        ],
+        useCases: ["Research and analysis", "Back-office operations", "Case and claims handling", "Software and data tasks"],
+        deliver: ["The agent system, in your repositories", "A loop controller with budgets and stop rules", "A full trace of every step"],
+        stack: ["Tool calling", "MCP", "Durable workflows", "Tracing"],
+        visual: { kind: "diagram", diagram: "loop" },
+      },
+      {
+        id: "harness-engineering",
+        num: "02",
+        name: "Agent harness engineering",
+        short: "The tools, context, memory and guardrails that make an agent dependable.",
+        lead: "The model is one component. The harness around it decides whether an agent can be trusted in production: which tools it can call, what context it sees, what it remembers, what it is allowed to do, and how it recovers when a step fails.",
+        build: [
+          "A tool layer of typed tools and MCP servers",
           "Context assembly: retrieval, memory and compaction for long tasks",
           "A permission model: sandboxed execution, scoped credentials, approval gates",
           "Recovery: retries, checkpoints and runs that resume after a failure",
@@ -112,48 +93,34 @@ export const TRACKS: Track[] = [
           "Agents acting on stale or missing context",
           "Tools with more access than the task needs",
           "Long runs that fail silently halfway through",
-          "A prompt fix for one task that quietly breaks another",
+          "A prompt fix for one task that breaks another",
         ],
-        deliver: [
-          "Harness source code in your repositories",
-          "Tool and permission specifications",
-          "An eval suite covering the agent's real jobs",
-          "A runbook for operating it",
-        ],
-        proof: [
-          {
-            name: "Logic Gen",
-            note: "Agentic pipeline that turns legacy policy documents into executable DMN, FICO and Python rules.",
-            status: "In production",
-            image: "/products/logic-gen.jpg",
-            href: "https://logic-gen-website.vercel.app",
-          },
-        ],
-        diagram: "harness",
+        useCases: ["Taking an agent prototype to production", "Adding agents to existing systems safely", "Replacing brittle prompt chains"],
+        deliver: ["Harness source code", "Tool and permission specifications", "An eval suite for the agent's real jobs", "An operating runbook"],
+        stack: ["Typed tools", "MCP", "Sandboxed execution", "Checkpointing"],
+        visual: { kind: "diagram", diagram: "harness" },
       },
       {
-        id: "loops",
-        code: "A.02",
-        name: "Agentic loops",
-        summary:
-          "Useful agent work happens across dozens of steps: plan, act, observe, verify, repeat. A loop needs brakes as well as an engine.",
+        id: "voice-agents",
+        num: "03",
+        name: "Voice AI and calling agents",
+        short: "Phone and voice agents that listen, respond and act in real time.",
+        lead: "Voice agents that hold a real conversation. They listen, cope with being interrupted, understand what the caller wants, act on your systems during the call, and hand over to a person when they should, in the caller's language, including Arabic.",
         build: [
-          "Plan, act and verify loops with an explicit success check",
-          "Step and cost budgets for every task",
-          "Human checkpoints before any irreversible action",
-          "Parallel sub-agents for work that splits cleanly",
+          "Inbound and outbound calling agents",
+          "Real-time speech recognition and natural voices",
+          "Actions during the call: bookings, lookups, updates",
+          "Warm hand-off to a person, with the full context",
         ],
         failures: [
-          "Loops that never converge and burn budget",
-          "Agents that mark work done without checking it",
-          "Irreversible actions taken without review",
-          "Runaway fan-out across sub-agents",
+          "Agents that talk over the caller",
+          "Context lost when a call is transferred",
+          "Actions taken on a misheard request",
         ],
-        deliver: [
-          "A loop controller with budgets and stop conditions",
-          "An approval step, as an interface or an API",
-          "A trace of every step, kept for review",
-        ],
+        useCases: ["Customer support lines", "Appointment scheduling", "Lead qualification", "Payment reminders"],
+        deliver: ["A voice agent connected to your telephony", "Transcripts and outcomes for every call", "Escalation rules"],
+        stack: ["Speech-to-text", "Text-to-speech", "Telephony", "Tool calling"],
+        visual: { kind: "diagram", diagram: "voice" },
         proof: [
           {
             name: "Nox AI",
@@ -162,55 +129,36 @@ export const TRACKS: Track[] = [
             image: "/products/nox-ai.png",
           },
         ],
-        diagram: "loop",
       },
+    ],
+  },
+  {
+    id: "knowledge",
+    name: "Build on your knowledge",
+    line: "Your documents and data, made usable.",
+    services: [
       {
-        id: "evals",
-        code: "A.03",
-        name: "Evals and observability",
-        summary:
-          "If it isn't measured, it isn't finished. Every agent and every prompt ships with an eval suite that runs on each change, and every production step is traced.",
-        build: [
-          "Golden datasets drawn from your real cases",
-          "Graders: exact checks, rubric-scored model judges, human review queues",
-          "Regression gates in CI before any prompt or model change ships",
-          "Production tracing of every step, tool call and token cost",
-        ],
-        failures: [
-          "A demo that passes and a production system that doesn't",
-          "Model upgrades that change behaviour overnight",
-          "Model judges that drift away from human judgement",
-          "Costs nobody sees until the invoice arrives",
-        ],
-        deliver: [
-          "Eval suite and datasets, versioned with the code",
-          "CI gate configuration",
-          "Dashboards for quality, latency and cost",
-        ],
-      },
-      {
-        id: "context",
-        code: "A.04",
-        name: "Context engineering and RAG",
-        summary:
-          "Answer quality depends on what the model sees. We engineer ingestion, retrieval, ranking and memory so the right evidence arrives, with a citation for every claim.",
+        id: "rag-knowledge",
+        num: "04",
+        name: "RAG and knowledge systems",
+        short: "Answers from your own documents and data, with a source for every claim.",
+        lead: "Assistants that answer from your documents and data, not the open internet, and show exactly where each answer came from. We engineer the whole path: ingestion, retrieval, ranking, memory and access control.",
         build: [
           "Ingestion for PDFs, scans, tables and internal systems",
           "Hybrid retrieval: keyword and vector search, then reranking",
           "Citations that point to the exact passage",
-          "Private deployment, where the corpus never leaves your network",
+          "Private deployment, where the data never leaves your network",
         ],
         failures: [
           "Confident answers with no source",
           "Chunking that separates a fact from its context",
           "Indexes that go stale after documents change",
-          "Sensitive data surfacing for the wrong user or team",
+          "Sensitive data surfacing for the wrong person",
         ],
-        deliver: [
-          "Ingestion pipeline and index",
-          "Retrieval evals against a labelled question set",
-          "Access rules mapped from your identity system",
-        ],
+        useCases: ["Legal and policy research", "Internal knowledge assistants", "Customer support answers", "Due diligence"],
+        deliver: ["Ingestion pipeline and index", "Retrieval evals against a labelled question set", "Access rules mapped from your identity system"],
+        stack: ["Hybrid search", "Reranking", "Vector stores", "Citations"],
+        visual: { kind: "image", src: "/products/law-suit-gpt.jpg", alt: "Law Suit GPT retrieving cited passages from Indian Supreme Court judgments" },
         proof: [
           {
             name: "Law Suit GPT",
@@ -221,75 +169,95 @@ export const TRACKS: Track[] = [
         ],
       },
       {
-        id: "mcp",
-        code: "A.05",
-        name: "MCP and tool integration",
-        summary:
-          "The Model Context Protocol gives agents one standard way to reach tools and data. We turn your internal systems into MCP servers, with least-privilege access and a record of every call.",
+        id: "document-intelligence",
+        num: "05",
+        name: "Document intelligence and decision automation",
+        short: "Policies and documents turned into executable rules and structured data.",
+        lead: "Most business rules live in documents: policies, contracts, manuals. We extract them into executable logic and structured data, with every rule traceable to the sentence it came from, so decisions can be automated and audited.",
         build: [
-          "MCP servers for internal APIs, databases and SaaS tools",
-          "Authentication mapped to your existing identities and roles",
-          "Read-only by default, with writes behind approval",
-          "An audit log of every call an agent makes",
+          "Rule extraction from policy documents",
+          "Output as DMN, FICO or Python",
+          "Parsing for forms, tables and scanned documents",
+          "Traceability from every rule back to its source",
         ],
         failures: [
-          "The same integration rebuilt for every new agent",
-          "Service accounts holding admin rights",
-          "No record of what an agent did, or why",
+          "Rules that drift away from the source policy",
+          "Ambiguous clauses silently guessed",
+          "Extraction nobody can audit",
         ],
-        deliver: ["MCP servers with tests", "A permission matrix", "An audit log pipeline"],
-      },
-      {
-        id: "llmops",
-        code: "A.06",
-        name: "LLMOps",
-        summary:
-          "Running models in production is its own discipline: routing each task to the right model, versioning prompts, controlling cost and upgrading without regressions.",
-        build: [
-          "Model routing by task, cost and latency",
-          "Prompt and model versioning, with rollback",
-          "Cost controls: budgets, caching and batching",
-          "Self-hosted open-weight models where data cannot leave",
-        ],
-        failures: [
-          "The largest model paid for on every task, however small",
-          "Upgrades that change outputs overnight",
-          "Latency spikes with no fallback",
-        ],
-        deliver: [
-          "Gateway and routing configuration",
-          "A versioned prompt registry",
-          "Cost and latency monitoring",
+        useCases: ["Insurance underwriting", "Lending and credit policy", "Compliance checks", "Claims rules"],
+        deliver: ["An extraction pipeline", "Executable rule sets", "A source-linked audit trail"],
+        stack: ["DMN", "Drools", "Python", "Document parsing"],
+        visual: { kind: "image", src: "/products/logic-gen.jpg", alt: "Logic Gen converting policy documents into executable rules" },
+        proof: [
+          {
+            name: "Logic Gen",
+            note: "Turned a fifteen-year-old underwriting ruleset into a deployable DMN system in six weeks.",
+            status: "In production",
+            image: "/products/logic-gen.jpg",
+            href: "https://logic-gen-website.vercel.app",
+          },
         ],
       },
     ],
   },
   {
-    id: "product",
-    letter: "B",
-    name: "Products and creative",
-    audience: "For founders, product leaders and creative teams.",
-    intro:
-      "AI products your customers use, the automation behind them, and pipelines that bring generative video into real storytelling.",
-    cta: { label: "Start a project", href: "/contact" },
-    practices: [
+    id: "products",
+    name: "Build products and stories",
+    line: "Things your customers use and watch.",
+    services: [
       {
-        id: "products",
-        code: "B.01",
-        name: "AI products and full-scale apps",
-        summary:
-          "From idea to shipped product: web and mobile apps with AI at the core, plus the admin, analytics and billing that let them run as a business.",
+        id: "ai-storytelling",
+        num: "06",
+        name: "AI storytelling and film pipelines",
+        short: "Script-to-screen pipelines that hold a generated story together.",
+        lead: "Generative video has made a single shot easy. A story is still hard: one character, one style and one script held together across every shot. We build the pipelines and pre-production tools that make that possible.",
+        build: [
+          "Script and story engines across Indian languages and dialects",
+          "Storyboards and shot lists generated from the script",
+          "Character and style references reused in every shot",
+          "Generation that routes each shot to the best-suited video model",
+          "Review loops where a director approves, rejects or regenerates each shot",
+        ],
+        failures: [
+          "A character whose face changes between shots",
+          "A style that drifts across a sequence",
+          "Scripts that lose cultural nuance in translation",
+          "Clips nobody can trace back to their inputs",
+        ],
+        useCases: ["Regional-language content", "Brand films and ad pre-production", "Episodic storyboarding", "Pitch visualisation"],
+        deliver: ["The pipeline and tools, in your environment", "A character and style reference library", "Shot-level provenance for every clip"],
+        stack: ["Text-to-video", "Image-to-video", "Multilingual models", "Reference libraries"],
+        boundary:
+          "Where we stop: we build the pipeline and the pre-production. The final cut, sound and grade are produced by your studio or our production partners.",
+        visual: { kind: "image", src: "/products/aumic-flow.jpg", alt: "Aumic Flow, a story and script engine for Indian languages" },
+        proof: [
+          {
+            name: "Aumic Flow AI",
+            note: "The story and script engine behind a regional studio's multilingual content pipeline.",
+            status: "Case study",
+            image: "/products/aumic-flow.jpg",
+            href: "https://aumicflow-website.vercel.app",
+          },
+        ],
+      },
+      {
+        id: "ai-products",
+        num: "07",
+        name: "Full-scale AI products",
+        short: "Web and mobile products with AI at the core, from prototype to launch.",
+        lead: "From idea to shipped product: web and mobile apps with AI built into the core, plus the admin, analytics and billing that let them run as a business. Designed, built and handed over so your team can own it.",
         build: [
           "Product design and prototypes on your real data",
           "Web and mobile apps with AI built in, not bolted on",
           "Admin, analytics and billing",
           "A codebase your own team can take over",
         ],
-        failures: [
-          "AI features that demo well and nobody uses",
-          "Prototypes that collapse under real users",
-        ],
+        failures: ["AI features that demo well and nobody uses", "Prototypes that collapse under real users"],
+        useCases: ["SaaS platforms", "Education", "Careers and recruitment", "Commerce"],
         deliver: ["The shipped product and its source code", "A design system", "Launch checklist and runbooks"],
+        stack: ["Next.js", "React", "Python", "Native mobile"],
+        visual: { kind: "image", src: "/products/nxt-school.jpg", alt: "NXT School, an AI-first school operating system" },
         proof: [
           {
             name: "NXT School ERP",
@@ -308,11 +276,11 @@ export const TRACKS: Track[] = [
         ],
       },
       {
-        id: "workflows",
-        code: "B.02",
+        id: "workflow-automation",
+        num: "08",
         name: "Workflow automation and modernisation",
-        summary:
-          "Automate the multi-step work that runs your operations: agents where judgement is needed, plain deterministic code where it isn't, and legacy systems brought onto modern ground.",
+        short: "Multi-step operations automated, and legacy systems brought up to date.",
+        lead: "Automate the multi-step work that runs your operations: agents where judgement is needed, plain deterministic code where it isn't. And bring legacy systems onto modern ground without stopping the business while it happens.",
         build: [
           "Process mapping to decide what should, and shouldn't, be automated",
           "Orchestrated workflows across your existing systems",
@@ -324,7 +292,10 @@ export const TRACKS: Track[] = [
           "Brittle scripts that break on the first unusual input",
           "Migrations that stop the business while they run",
         ],
-        deliver: ["Running workflows with monitoring", "An exception-handling playbook"],
+        useCases: ["Logistics and dispatch", "Finance operations", "Document-heavy back offices", "Legacy system migration"],
+        deliver: ["Running workflows with monitoring", "An exception-handling playbook", "Migration plan and cut-over support"],
+        stack: ["Orchestration", "Document intake", "APIs", "Event queues"],
+        visual: { kind: "diagram", diagram: "flow" },
         proof: [
           {
             name: "Navata Transport",
@@ -333,44 +304,118 @@ export const TRACKS: Track[] = [
           },
         ],
       },
+    ],
+  },
+  {
+    id: "production",
+    name: "Run it in production",
+    line: "What keeps AI working after launch.",
+    services: [
       {
-        id: "storytelling",
-        code: "B.03",
-        name: "AI storytelling and film pipelines",
-        summary:
-          "Generative video has made a single shot easy. A story is still hard: one character, one style and one script held together across every shot. We build the pipelines and pre-production tools that do that.",
+        id: "mcp-integration",
+        num: "09",
+        name: "MCP and tool integration",
+        short: "Your systems exposed to agents safely, through the Model Context Protocol.",
+        lead: "The Model Context Protocol gives agents one standard way to reach tools and data. We turn your internal systems into MCP servers, with least-privilege access and a record of every call, so each new agent reuses the same governed connections.",
         build: [
-          "Script and story engines that work across Indian languages and dialects",
-          "Storyboards and shot lists generated from the script",
-          "Character and style references reused in every shot",
-          "Generation pipelines that route each shot to the best-suited video model",
-          "Review loops where a director approves, rejects or regenerates each shot",
+          "MCP servers for internal APIs, databases and SaaS tools",
+          "Authentication mapped to your existing identities and roles",
+          "Read-only by default, with writes behind approval",
+          "An audit log of every call an agent makes",
         ],
         failures: [
-          "A character whose face changes between shots",
-          "A style that drifts across a sequence",
-          "Scripts that lose cultural nuance in translation",
-          "Clips nobody can trace back to their prompt and inputs",
+          "The same integration rebuilt for every new agent",
+          "Service accounts holding admin rights",
+          "No record of what an agent did, or why",
         ],
-        deliver: [
-          "The pipeline and its tools, in your environment",
-          "A character and style reference library",
-          "Shot-level provenance for every generated clip",
+        useCases: ["Connecting agents to CRM and ERP", "Internal APIs as agent tools", "Governed data access"],
+        deliver: ["MCP servers with tests", "A permission matrix", "An audit log pipeline"],
+        stack: ["MCP", "OAuth and SSO", "Audit logging"],
+        visual: { kind: "diagram", diagram: "mcp" },
+      },
+      {
+        id: "evals-observability",
+        num: "10",
+        name: "Evals and observability",
+        short: "Every change tested before it ships, every production step traced.",
+        lead: "If it isn't measured, it isn't finished. Every agent and every prompt ships with an eval suite that runs on each change, and every step in production is traced, so quality, latency and cost are visible before they become problems.",
+        build: [
+          "Golden datasets drawn from your real cases",
+          "Graders: exact checks, rubric-scored model judges, human review",
+          "Regression gates in CI before any prompt or model change ships",
+          "Tracing of every step, tool call and token cost",
         ],
-        boundary:
-          "Where we stop: we build the pipeline and the pre-production. The final cut, sound and grade are produced by your studio or our production partners.",
-        proof: [
-          {
-            name: "Aumic Flow AI",
-            note: "Story and script engine behind a regional studio's multilingual content pipeline.",
-            status: "Case study",
-            image: "/products/aumic-flow.jpg",
-            href: "https://aumicflow-website.vercel.app",
-          },
+        failures: [
+          "A demo that passes and a production system that doesn't",
+          "Model upgrades that change behaviour overnight",
+          "Costs nobody sees until the invoice arrives",
         ],
-        diagram: "story",
+        useCases: ["Before a model upgrade", "Regulated workflows", "Any agent in production"],
+        deliver: ["An eval suite and datasets, versioned with the code", "CI gate configuration", "Dashboards for quality, latency and cost"],
+        stack: ["Golden datasets", "Model judges", "CI gates", "Tracing"],
+        visual: { kind: "diagram", diagram: "evals" },
+      },
+      {
+        id: "llmops",
+        num: "11",
+        name: "LLMOps and model deployment",
+        short: "The right model for each task, versioned, monitored and cost-controlled.",
+        lead: "Running models in production is its own discipline: routing each task to the right model, versioning prompts, controlling cost and upgrading without regressions. Including open-weight models hosted where your data has to stay.",
+        build: [
+          "Model routing by task, cost and latency",
+          "Prompt and model versioning, with rollback",
+          "Cost controls: budgets, caching and batching",
+          "Self-hosted open-weight models where data cannot leave",
+        ],
+        failures: [
+          "The largest model paid for on every task, however small",
+          "Upgrades that change outputs overnight",
+          "Latency spikes with no fallback",
+        ],
+        useCases: ["Reducing model spend", "Private and on-premise AI", "Products that use several models"],
+        deliver: ["Gateway and routing configuration", "A versioned prompt registry", "Cost and latency monitoring"],
+        stack: ["Model gateway", "Prompt registry", "Caching", "Open-weight models"],
+        visual: { kind: "diagram", diagram: "router" },
       },
     ],
+  },
+];
+
+export const ALL_SERVICES: Service[] = SERVICE_GROUPS.flatMap((g) => g.services);
+export const groupOf = (id: string) => SERVICE_GROUPS.find((g) => g.services.some((s) => s.id === id))!;
+
+/* ── What changed in 2026 ─────────────────────────────────────────────── */
+
+export const SHIFTS: { shift: string; changed: string; meaning: string }[] = [
+  {
+    shift: "Harness engineering",
+    changed: "The model became one component. The harness around it now decides whether an agent is reliable.",
+    meaning: "Judge a partner on harness design, not on which model they name.",
+  },
+  {
+    shift: "Agentic loops",
+    changed: "Agents stopped answering once and started working in loops, for minutes or hours.",
+    meaning: "Budgets, stop conditions and human checkpoints are requirements now.",
+  },
+  {
+    shift: "Evals",
+    changed: "Eval suites replaced demos. Every change is regression-tested before it ships.",
+    meaning: "Ask to see the eval set before you ask to see the demo.",
+  },
+  {
+    shift: "Model Context Protocol",
+    changed: "MCP gave agents one standard way to reach tools and data.",
+    meaning: "Your systems become reusable servers, with access you can scope and audit.",
+  },
+  {
+    shift: "Context engineering",
+    changed: "Retrieval, memory and compaction became the main lever on answer quality.",
+    meaning: "Quality is an engineering property: measurable, and fixable when it slips.",
+  },
+  {
+    shift: "Video generation",
+    changed: "Video models got good at single shots. Holding a story together is still the hard part.",
+    meaning: "The pipeline around the models matters more than any one model.",
   },
 ];
 
@@ -404,15 +449,11 @@ export const ENGAGEMENT: { step: string; name: string; body: string }[] = [
 export const STACK: { area: string; detail: string }[] = [
   {
     area: "Models",
-    detail:
-      "Frontier APIs, including OpenAI, Anthropic and Google, and open-weight models self-hosted when data must stay in your network.",
+    detail: "Frontier APIs, including OpenAI, Anthropic and Google, and open-weight models self-hosted when data must stay in your network.",
   },
   { area: "Agents and tools", detail: "MCP servers, typed tool calling, durable workflows with checkpoints." },
   { area: "Retrieval", detail: "Hybrid keyword and vector search, reranking, passage-level citations." },
-  {
-    area: "Evals and operations",
-    detail: "Golden datasets, rubric-scored judges checked against people, CI regression gates, tracing.",
-  },
+  { area: "Evals and operations", detail: "Golden datasets, rubric-scored judges checked against people, CI regression gates, tracing." },
   { area: "Applications", detail: "Next.js and React on the web, Python services, native mobile apps." },
   { area: "Deployment", detail: "Your cloud, a private VPC, or on-premise." },
 ];
