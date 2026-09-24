@@ -12,7 +12,7 @@ const OUTPUT = ["Success criteria and eval set", "A working slice on your data",
 function Tick({ delay }: { delay: number }) {
   return (
     <span className="relative grid h-4 w-4 shrink-0 place-items-center rounded-[5px] border border-(--color-line-2)">
-      <svg viewBox="0 0 12 12" className="eng-tick h-2.5 w-2.5 text-(--color-accent-2)" style={{ animationDelay: `${delay}s` }} aria-hidden>
+      <svg viewBox="0 0 12 12" className="eng-tick h-2.5 w-2.5 text-(--svc-ink)" style={{ animationDelay: `${delay}s` }} aria-hidden>
         <path d="M2 6.5 5 9l5-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </span>
@@ -58,7 +58,7 @@ function HardenScene() {
           {t}
           <span className="relative mono text-[10px]">
             <span className="text-(--color-muted)">···</span>
-            <span className="eng-tick absolute inset-0 grid place-items-center rounded bg-[color-mix(in_oklab,var(--color-accent-2)_18%,var(--color-bg))] px-1 text-(--color-accent-2)" style={{ animationDelay: `${0.4 + i * 0.7}s` }}>
+            <span className="eng-tick absolute inset-0 grid place-items-center rounded bg-[color-mix(in_oklab,var(--color-accent-2)_18%,var(--color-bg))] px-1 text-(--svc-ink)" style={{ animationDelay: `${0.4 + i * 0.7}s` }}>
               pass
             </span>
           </span>
@@ -107,7 +107,7 @@ export function EngagementPipeline() {
         const stage = { animationDelay: `${1.5 + i * 3}s` };
         return (
           <li key={e.step} className="relative pl-[84px] sm:pl-0">
-            <span className="absolute left-0 top-0 z-10 grid h-[60px] w-[60px] place-items-center rounded-full border border-(--color-line-2) bg-(--color-bg) mono text-[15px] text-(--color-accent-2) sm:relative">
+            <span className="absolute left-0 top-0 z-10 grid h-[60px] w-[60px] place-items-center rounded-full border border-(--color-line-2) bg-(--color-bg) mono text-[15px] text-(--svc-ink) sm:relative">
               <span aria-hidden className="eng-stage absolute -inset-px rounded-full border border-(--color-accent-2) shadow-[0_0_24px_-2px_var(--color-accent-2)]" style={stage} />
               {e.step}
             </span>
@@ -121,7 +121,7 @@ export function EngagementPipeline() {
               </div>
             </div>
             <p className="mt-3 flex items-center gap-2 text-[13px] font-semibold text-(--color-fg)">
-              <span aria-hidden className="text-(--color-accent-2)">→</span>
+              <span aria-hidden className="text-(--svc-ink)">→</span>
               {OUTPUT[i]}
             </p>
           </li>

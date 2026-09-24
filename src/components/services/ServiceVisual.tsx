@@ -72,7 +72,7 @@ function Arrow({ down = false, delay = 0 }: { down?: boolean; delay?: number }) 
           style={{ animationDelay: `${delay}s` }}
         />
       </span>
-      <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 text-(--color-accent-2) ${down ? "-mt-1 rotate-90" : "-ml-1.5"}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 text-(--svc-ink) ${down ? "-mt-1 rotate-90" : "-ml-1.5"}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M9 6l6 6-6 6" />
       </svg>
     </span>
@@ -107,7 +107,7 @@ function Loop() {
       <Node pulse={3}><T>Verify</T><S>Test against the goal</S></Node>
       <div className="text-center">
         <p className="text-[11px] text-(--color-muted)">until</p>
-        <p className="text-[13px] font-semibold text-(--color-accent-2)">success check</p>
+        <p className="text-[13px] font-semibold text-(--svc-ink)">success check</p>
         <p className="text-[11px] text-(--color-muted)">or budget</p>
       </div>
       <Node pulse={1}><T>Act</T><S>Call a tool</S></Node>

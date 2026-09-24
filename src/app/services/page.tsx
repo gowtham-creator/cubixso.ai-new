@@ -45,7 +45,7 @@ export default function ServicesPage() {
   const words = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
 
   return (
-    <main>
+    <main className="svc-theme">
       {/* ── Opener ─────────────────────────────────────────────────────── */}
       <header className={`${wrap} pt-[clamp(140px,20vh,220px)] pb-[clamp(40px,6vh,80px)]`}>
         <div className={col}>
@@ -114,7 +114,7 @@ export default function ServicesPage() {
           <ol className="mt-12 grid gap-px overflow-hidden rounded-3xl border border-(--color-line) bg-(--color-line) sm:grid-cols-2 lg:grid-cols-3">
             {SHIFTS.map((s, i) => (
               <li key={s.shift} className="bg-(--color-bg) p-7 sm:p-8">
-                <p className="mono text-[12px] text-(--color-accent-2)">{String(i + 1).padStart(2, "0")} · {s.shift}</p>
+                <p className="mono text-[12px] text-(--svc-ink)">{String(i + 1).padStart(2, "0")} · {s.shift}</p>
                 <p className="mt-5 text-[18px] leading-snug text-(--color-fg)">{s.changed}</p>
                 <p className="mt-4 text-[14px] leading-relaxed text-(--color-fg-2)">{s.meaning}</p>
               </li>

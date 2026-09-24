@@ -655,3 +655,10 @@ html {
    compositing only the one or two frames in view while the page scrolls. */
 [data-live="false"] *, [data-live="false"] *::before, [data-live="false"] *::after { animation-play-state: paused !important; }
 [data-live="false"] .svc-smil { display: none; }
+
+/* /services runs on the exact brand cobalt (the wordmark's full stop) for
+   every fill, glow, border and key. Blue TEXT uses --svc-ink: on the dark
+   canvas #1B4FFF is only 3.6:1, so text takes a lighter cobalt tint (AA);
+   on the light canvas the cobalt itself reads at 5.4:1. */
+.svc-theme { --color-accent: #1B4FFF; --color-accent-2: #1B4FFF; --svc-ink: #6B8CFF; }
+html[data-theme="light"] .svc-theme { --svc-ink: #1B4FFF; }

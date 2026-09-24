@@ -10,8 +10,8 @@ import { ServiceVisual } from "@/components/services/ServiceVisual";
 import { Reveal } from "@/components/scroll/Reveal";
 
 const STATUS_TONE: Record<Proof["status"], string> = {
-  "In production": "text-(--color-accent-2)",
-  Live: "text-(--color-accent-2)",
+  "In production": "text-(--svc-ink)",
+  Live: "text-(--svc-ink)",
   Delivered: "text-(--color-fg-2)",
   "Case study": "text-(--color-fg-2)",
   // In-build work is named as such, never dressed up as shipped.
@@ -23,7 +23,7 @@ const STATUS_TONE: Record<Proof["status"], string> = {
 // at a glance rather than hunting for small grey labels.
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <h4 className="flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.01em] text-(--color-accent-2)">
+    <h4 className="flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.01em] text-(--svc-ink)">
       <span aria-hidden className="h-2 w-2 rounded-[3px] bg-(--color-accent-2) shadow-[0_0_10px_var(--color-accent-2)]" />
       {children}
     </h4>
@@ -48,7 +48,7 @@ function ProofCard({ p }: { p: Proof }) {
           />
         </span>
       ) : (
-        <span aria-hidden className="grid h-[66px] w-[112px] shrink-0 place-items-center rounded-xl border border-(--color-line) text-[22px] font-semibold text-(--color-line-2) transition-colors duration-300 group-hover:border-(--color-accent-2) group-hover:text-(--color-accent-2)">
+        <span aria-hidden className="grid h-[66px] w-[112px] shrink-0 place-items-center rounded-xl border border-(--color-line) text-[22px] font-semibold text-(--color-line-2) transition-colors duration-300 group-hover:border-(--color-accent-2) group-hover:text-(--svc-ink)">
           {p.name.charAt(0)}
         </span>
       )}
@@ -60,7 +60,7 @@ function ProofCard({ p }: { p: Proof }) {
         <p className="mt-1 text-[13px] leading-snug text-(--color-fg-2)">{p.note}</p>
       </div>
       {p.href ? (
-        <span aria-hidden className="ml-auto shrink-0 -translate-x-1 text-[16px] text-(--color-accent-2) opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
+        <span aria-hidden className="ml-auto shrink-0 -translate-x-1 text-[16px] text-(--svc-ink) opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
           ↗
         </span>
       ) : null}
@@ -87,7 +87,7 @@ export function ServiceChapter({ service: s, groupName, flip }: { service: Servi
 
         <div className="lg:col-span-6">
           <Reveal direction="up" as="div">
-            <p className="text-[13px] text-(--color-accent-2)">
+            <p className="text-[13px] text-(--svc-ink)">
               <span className="mono">{s.num}</span> · {groupName}
             </p>
             <h3
@@ -104,7 +104,7 @@ export function ServiceChapter({ service: s, groupName, flip }: { service: Servi
             <ol className="mt-3">
               {s.build.map((b, i) => (
                 <li key={b} className="grid grid-cols-[2.25rem_1fr] items-baseline border-b border-(--color-line) py-3.5 last:border-b-0">
-                  <span className="mono text-[12px] text-(--color-accent-2)">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="mono text-[12px] text-(--svc-ink)">{String(i + 1).padStart(2, "0")}</span>
                   <span className="text-[16px] leading-snug text-(--color-fg)">{b}</span>
                 </li>
               ))}

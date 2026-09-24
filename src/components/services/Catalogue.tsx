@@ -49,7 +49,7 @@ export function Catalogue() {
                       onFocus={() => setActiveId(s.id)}
                       className="group grid grid-cols-[2.5rem_1fr_auto] items-baseline gap-x-3 py-4 sm:py-5"
                     >
-                      <span className={`mono text-[13px] transition-colors ${on ? "text-(--color-accent-2)" : "text-(--color-muted-2)"}`}>{s.num}</span>
+                      <span className={`mono text-[13px] transition-colors ${on ? "text-(--svc-ink)" : "text-(--color-muted-2)"}`}>{s.num}</span>
                       <span
                         className={`font-display text-[clamp(20px,2vw,28px)] leading-tight tracking-[-0.02em] transition-colors duration-300 ${
                           on ? "text-(--color-fg)" : "text-(--color-fg-2) lg:text-(--color-muted)"
@@ -60,7 +60,7 @@ export function Catalogue() {
                       <span
                         aria-hidden
                         className={`text-[18px] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                          on ? "translate-x-0 text-(--color-accent-2) opacity-100" : "-translate-x-2 opacity-0"
+                          on ? "translate-x-0 text-(--svc-ink) opacity-100" : "-translate-x-2 opacity-0"
                         } max-lg:translate-x-0 max-lg:opacity-60`}
                       >
                         ↓
@@ -89,7 +89,7 @@ export function Catalogue() {
             >
               <ServiceVisual visual={active.visual} compact />
               <div className="mt-6">
-                <p className="text-[13px] text-(--color-accent-2)">
+                <p className="text-[13px] text-(--svc-ink)">
                   <span className="mono">{active.num}</span> · {groupOf(active.id).name}
                 </p>
                 <p className="mt-2 font-display text-[28px] leading-tight tracking-[-0.02em] text-(--color-fg)">{active.name}</p>
