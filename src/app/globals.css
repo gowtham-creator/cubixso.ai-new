@@ -614,3 +614,39 @@ html {
   /* SMIL motion ignores CSS animation rules; hide the moving dots instead. */
   .svc-smil { display: none; }
 }
+
+/* ─── /services: engagement pipeline ────────────────────────────────────────
+   One 12s cycle: the light crosses the track in 12s and each step's node and
+   scene light for its quarter. Scene details (ticks, bars, files) loop on 6s. */
+.eng-flow-x { animation: eng-flow-x 12s linear infinite; }
+.eng-flow-y { animation: eng-flow-y 12s linear infinite; }
+@keyframes eng-flow-x { from { transform: translateX(0); } to { transform: translateX(114%); } }
+@keyframes eng-flow-y { from { transform: translateY(0); } to { transform: translateY(114%); } }
+.eng-stage { opacity: 0; animation: eng-stage 12s ease-in-out infinite; }
+@keyframes eng-stage {
+  0%        { opacity: 0; }
+  4%, 22%   { opacity: 1; }
+  30%, 100% { opacity: 0; }
+}
+.eng-tick { opacity: 0; animation: eng-tick 6s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+@keyframes eng-tick {
+  0%        { opacity: 0; transform: scale(0.6); }
+  6%, 84%   { opacity: 1; transform: scale(1); }
+  94%, 100% { opacity: 0; transform: scale(1); }
+}
+.eng-in { opacity: 0; animation: eng-in 6s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+@keyframes eng-in {
+  0%        { opacity: 0; transform: translateY(-8px); }
+  8%, 84%   { opacity: 1; transform: translateY(0); }
+  94%, 100% { opacity: 0; transform: translateY(0); }
+}
+.eng-grow { transform-origin: left; transform: scaleX(0); animation: eng-grow 6s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+@keyframes eng-grow {
+  0%        { transform: scaleX(0); }
+  30%, 84%  { transform: scaleX(1); }
+  96%, 100% { transform: scaleX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eng-flow-x, .eng-flow-y, .eng-stage { animation: none !important; opacity: 0 !important; }
+  .eng-tick, .eng-in, .eng-grow { animation: none !important; opacity: 1 !important; transform: none !important; }
+}

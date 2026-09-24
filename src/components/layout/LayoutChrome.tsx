@@ -6,10 +6,12 @@
 // can always navigate away (the floating glass nav pill sits cleanly over the
 // newsletter's video hero).
 
+import { useRef } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
+import { markSoftNavigation } from "@/lib/useWarmMount";
 
 // The mascot is a WebGL scene rendered on EVERY route, so a static import put
 // three/fiber/drei into the shared bundle site-wide — parsed and executed before
@@ -26,6 +28,14 @@ const BARE_ROUTES = new Set(["/coming-soon"]);
 export function LayoutChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const bare = BARE_ROUTES.has(pathname);
+
+  // Any pathname change after the first render is a client-side navigation;
+  // heavy WebGL warm-ups then wait for the new page to settle (useWarmMount).
+  // Marked during render, not in an effect: the new page's effects run before
+  // this component's, so an effect would flag it one navigation too late. The
+  // call only sets a module flag, so repeating it is harmless.
+  const firstPath = useRef(pathname);
+  if (pathname !== firstPath.current) markSoftNavigation();
 
   if (bare) {
     return (

@@ -175,7 +175,7 @@ export function ServiceChapter({ service: s, groupName, flip }: { service: Servi
 
           <Link
             href="/contact"
-            className="tap-target mt-10 inline-flex items-center gap-2 text-[15px] font-semibold text-(--color-accent-2) transition-[gap] duration-300 hover:gap-3"
+            className="tap-target mt-8 inline-flex min-h-11 items-center gap-2 py-2.5 text-[15px] font-semibold text-(--color-accent-2) transition-[gap] duration-300 hover:gap-3"
           >
             {/* Fixed label: lower-casing the service name mangled acronyms
                 ("mCP", "rAG", "lLMOps"). The name is kept for screen readers. */}

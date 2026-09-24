@@ -4,8 +4,9 @@ import { FinalCTA } from "@/components/sections/FinalCTA";
 import { ChapterLabel } from "@/components/shared/ChapterLabel";
 import { Reveal } from "@/components/scroll/Reveal";
 import { Catalogue } from "@/components/services/Catalogue";
+import { EngagementPipeline } from "@/components/services/EngagementPipeline";
 import { ServiceChapter } from "@/components/services/ServiceChapter";
-import { ALL_SERVICES, ENGAGEMENT, SERVICE_GROUPS, SHIFTS, STACK, STANDARDS } from "@/lib/services";
+import { ALL_SERVICES, SERVICE_GROUPS, SHIFTS, STACK, STANDARDS } from "@/lib/services";
 
 // /services — the service catalogue.
 //
@@ -102,11 +103,11 @@ export default function ServicesPage() {
       {/* ── Why now ────────────────────────────────────────────────────── */}
       <section aria-labelledby="shifts-title" className={`${wrap} pt-[clamp(72px,10vw,140px)]`}>
         <div className={col}>
-          <div className="grid gap-6 lg:grid-cols-12">
-            <h2 id="shifts-title" className="font-display text-[length:var(--text-display-md)] leading-[1.02] tracking-[-0.035em] text-balance text-(--color-fg) lg:col-span-5">
+          <div>
+            <h2 id="shifts-title" className="font-display text-[length:var(--text-display-md)] leading-[1.02] tracking-[-0.035em] text-balance text-(--color-fg)">
               Built for how AI works in 2026
             </h2>
-            <p className="max-w-[56ch] text-[17px] leading-relaxed text-(--color-fg-2) lg:col-span-6 lg:col-start-7">
+            <p className="mt-5 max-w-[60ch] text-[17px] leading-relaxed text-(--color-fg-2)">
               Six shifts changed what a good AI build looks like. Each one is already inside the services above.
             </p>
           </div>
@@ -125,27 +126,15 @@ export default function ServicesPage() {
       {/* ── How we work ────────────────────────────────────────────────── */}
       <section aria-labelledby="engagement-title" className={`${wrap} pt-[clamp(72px,10vw,140px)]`}>
         <div className={col}>
-          <div className="grid gap-6 lg:grid-cols-12">
-            <h2 id="engagement-title" className="font-display text-[length:var(--text-display-md)] leading-[1.02] tracking-[-0.035em] text-balance text-(--color-fg) lg:col-span-5">
+          <div>
+            <h2 id="engagement-title" className="font-display text-[length:var(--text-display-md)] leading-[1.02] tracking-[-0.035em] text-balance text-(--color-fg)">
               How an engagement runs
             </h2>
-            <p className="max-w-[56ch] text-[17px] leading-relaxed text-(--color-fg-2) lg:col-span-6 lg:col-start-7">
+            <p className="mt-5 max-w-[60ch] text-[17px] leading-relaxed text-(--color-fg-2)">
               Honest scoping, real timelines. We hand you a system, not a notebook.
             </p>
           </div>
-          <ol className="relative mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-            {/* The through-line that joins the four steps on wide screens. */}
-            <span aria-hidden className="absolute left-0 right-0 top-[30px] hidden h-px bg-(--color-line-2) lg:block" />
-            {ENGAGEMENT.map((e) => (
-              <li key={e.step} className="relative">
-                <span className="relative z-10 grid h-[60px] w-[60px] place-items-center rounded-full border border-(--color-line-2) bg-(--color-bg) mono text-[15px] text-(--color-accent-2)">
-                  {e.step}
-                </span>
-                <h3 className="mt-6 font-display text-[24px] tracking-[-0.02em] text-(--color-fg)">{e.name}</h3>
-                <p className="mt-2 max-w-[34ch] text-[15px] leading-relaxed text-(--color-fg-2)">{e.body}</p>
-              </li>
-            ))}
-          </ol>
+          <EngagementPipeline />
         </div>
       </section>
 

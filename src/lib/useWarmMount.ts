@@ -28,6 +28,16 @@ type IdleWindow = Window & {
   cancelIdleCallback?: (id: number) => void;
 };
 
+// Set once the app has made its first client-side (header) navigation. The warm
+// build compiles a whole WebGL scene in one main-thread block (600ms+ on a
+// mid-range CPU); on a hard load the intro curtain hides it, but after a header
+// click it landed right as the new page appeared and read as navigation lag.
+// After a soft navigation the warm-up waits until the page has settled; the
+// near-gate still mounts it first if the reader scrolls toward it sooner.
+let softNavigated = false;
+const SOFT_NAV_SETTLE_MS = 4000;
+export function markSoftNavigation() { softNavigated = true; }
+
 /** Run `fn` in idle time once the intro curtain has lifted (or at once if it already has). */
 export function afterReveal(fn: () => void, stagger = 0): () => void {
   const w = window as IdleWindow;
@@ -55,7 +65,7 @@ export function useWarmMount(near: boolean, tier: DeviceTier, stagger = 0): bool
   const [warm, setWarm] = useState(false);
   useEffect(() => {
     if (tier === "low") return;
-    return afterReveal(() => setWarm(true), stagger);
+    return afterReveal(() => setWarm(true), stagger + (softNavigated ? SOFT_NAV_SETTLE_MS : 0));
   }, [tier, stagger]);
 
   // Once mounted on a high-tier device it stays mounted.
