@@ -5,11 +5,43 @@
 // field, colours are THEME-AWARE (white wireframe + cobalt land dots on dark,
 // charcoal on light), it PAUSES off-screen and under prefers-reduced-motion,
 // and wheel-zoom is removed so hovering it never hijacks page scroll. Drag to
-// rotate. Land geometry streams from Natural Earth (client-side).
+// rotate. Land data is precomputed and served from public/data.
 
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { useTheme } from "@/components/providers/ThemeProvider";
+
+// Land outline + halftone dots, precomputed from Natural Earth 110m into
+// public/data (same 1.28° grid the component used to build at runtime). Building
+// them in the browser ran ~20k point-in-polygon tests in one synchronous block,
+// which froze the /contact opener, badly on phones; it also fetched from GitHub
+// on every visit. Now it is two static files, loaded once per session.
+type LandData = { outline: d3.GeoPermissibleObjects; dots: Float32Array; vec: Float32Array };
+let landCache: LandData | null = null;
+let landPromise: Promise<LandData> | null = null;
+
+function loadLand(): Promise<LandData> {
+  if (!landPromise) {
+    const get = (u: string) => fetch(u).then((r) => { if (!r.ok) throw new Error(u); return r.json(); });
+    landPromise = Promise.all([get("/data/land-110m.json"), get("/data/land-dots.json")])
+      .then(([outline, flat]: [d3.GeoPermissibleObjects, number[]]) => {
+        const dots = Float32Array.from(flat);
+        const n = dots.length / 2;
+        const vec = new Float32Array(n * 3);
+        const RAD = Math.PI / 180;
+        for (let i = 0; i < n; i++) {
+          const l = dots[i * 2] * RAD, p = dots[i * 2 + 1] * RAD;
+          vec[i * 3] = Math.cos(p) * Math.cos(l);
+          vec[i * 3 + 1] = Math.cos(p) * Math.sin(l);
+          vec[i * 3 + 2] = Math.sin(p);
+        }
+        landCache = { outline, dots, vec };
+        return landCache;
+      })
+      .catch((e) => { landPromise = null; throw e; });
+  }
+  return landPromise;
+}
 
 interface RotatingEarthProps {
   width?: number;
@@ -62,7 +94,7 @@ export default function RotatingEarth({ width = 460, height = 460, className = "
       containerWidth = box;
       containerHeight = box;
       radius = box / 2.5;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, box < 480 ? 1.5 : 2);
       canvas.width = containerWidth * dpr;
       canvas.height = containerHeight * dpr;
       canvas.style.width = `${containerWidth}px`;
@@ -72,47 +104,11 @@ export default function RotatingEarth({ width = 460, height = 460, className = "
     };
     resize();
 
-    const pointInPolygon = (point: [number, number], polygon: number[][]): boolean => {
-      const [x, y] = point;
-      let inside = false;
-      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const [xi, yi] = polygon[i];
-        const [xj, yj] = polygon[j];
-        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
-      }
-      return inside;
-    };
-    const pointInFeature = (point: [number, number], feature: any): boolean => {
-      const g = feature.geometry;
-      if (g.type === "Polygon") {
-        if (!pointInPolygon(point, g.coordinates[0])) return false;
-        for (let i = 1; i < g.coordinates.length; i++) if (pointInPolygon(point, g.coordinates[i])) return false;
-        return true;
-      }
-      if (g.type === "MultiPolygon") {
-        for (const poly of g.coordinates) {
-          if (pointInPolygon(point, poly[0])) {
-            let inHole = false;
-            for (let i = 1; i < poly.length; i++) if (pointInPolygon(point, poly[i])) { inHole = true; break; }
-            if (!inHole) return true;
-          }
-        }
-        return false;
-      }
-      return false;
-    };
-    const generateDotsInPolygon = (feature: any, dotSpacing = 16) => {
-      const dots: [number, number][] = [];
-      const [[minLng, minLat], [maxLng, maxLat]] = d3.geoBounds(feature);
-      const step = dotSpacing * 0.08;
-      for (let lng = minLng; lng <= maxLng; lng += step)
-        for (let lat = minLat; lat <= maxLat; lat += step)
-          if (pointInFeature([lng, lat], feature)) dots.push([lng, lat]);
-      return dots;
-    };
-
-    const allDots: { lng: number; lat: number }[] = [];
-    let landFeatures: any;
+    // Land data is precomputed and cached for the session (see loadLand).
+    let land: LandData | null = landCache;
+    let cancelled = false;
+    const graticule = d3.geoGraticule()();
+    const RAD = Math.PI / 180;
 
     const render = () => {
       context.clearRect(0, 0, containerWidth, containerHeight);
@@ -128,64 +124,66 @@ export default function RotatingEarth({ width = 460, height = 460, className = "
       context.stroke();
       context.globalAlpha = 1;
 
-      if (landFeatures) {
-        const graticule = d3.geoGraticule();
+      if (land) {
         context.beginPath();
-        path(graticule());
+        path(graticule);
         context.strokeStyle = grat;
         context.lineWidth = 1 * sf;
         context.stroke();
 
         context.beginPath();
-        landFeatures.features.forEach((f: any) => path(f));
+        path(land.outline);
         context.strokeStyle = ink;
         context.globalAlpha = 0.5;
         context.lineWidth = 1 * sf;
         context.stroke();
         context.globalAlpha = 1;
 
+        // All visible dots in ONE path and one fill (it was a beginPath/fill per
+        // dot, ~13k canvas calls a frame). Far-side dots are culled with a dot
+        // product against the view centre; they used to be drawn through the
+        // globe on top of the near side.
+        const cl = -rotation[0] * RAD, cp = -rotation[1] * RAD;
+        const cx = Math.cos(cp) * Math.cos(cl), cy = Math.cos(cp) * Math.sin(cl), cz = Math.sin(cp);
+        const r = 1.2 * sf;
+        const { dots, vec } = land;
+        context.beginPath();
+        for (let i = 0, n = dots.length / 2; i < n; i++) {
+          if (vec[i * 3] * cx + vec[i * 3 + 1] * cy + vec[i * 3 + 2] * cz <= 0.02) continue;
+          const pt = projection([dots[i * 2], dots[i * 2 + 1]]);
+          if (!pt) continue;
+          context.moveTo(pt[0] + r, pt[1]);
+          context.arc(pt[0], pt[1], r, 0, 2 * Math.PI);
+        }
         context.fillStyle = dotColor;
-        allDots.forEach((dot) => {
-          const p = projection([dot.lng, dot.lat]);
-          if (p && p[0] >= 0 && p[0] <= containerWidth && p[1] >= 0 && p[1] <= containerHeight) {
-            context.beginPath();
-            context.arc(p[0], p[1], 1.2 * sf, 0, 2 * Math.PI);
-            context.fill();
-          }
-        });
+        context.fill();
       }
     };
 
     const rotation: [number, number] = [0, -12];
     projection.rotate(rotation);
 
-    // Paint the sphere + graticule immediately so the globe is visible on the
-    // first frame — never a blank canvas that pops in only after the async land
-    // fetch resolves (the glitch on the /contact opener). Land dots fill in when
-    // loadWorldData() finishes and calls render() again.
+    // Paint the sphere immediately so the globe is visible on the first frame;
+    // land fills in when the (cached) data resolves.
     render();
 
-    const loadWorldData = async () => {
-      try {
-        const res = await fetch(
-          "https://raw.githubusercontent.com/martynafford/natural-earth-geojson/refs/heads/master/110m/physical/ne_110m_land.json",
-        );
-        if (!res.ok) throw new Error("land data");
-        landFeatures = await res.json();
-        landFeatures.features.forEach((f: any) => {
-          generateDotsInPolygon(f, 16).forEach(([lng, lat]) => allDots.push({ lng, lat }));
-        });
-        render();
-      } catch {
-        setError("Failed to load globe data");
-      }
+    const loadWorldData = () => {
+      if (land) return;
+      loadLand()
+        .then((d) => { if (cancelled) return; land = d; render(); })
+        .catch(() => { if (!cancelled) setError("Failed to load globe data"); });
     };
 
     // auto-rotate (paused when off-screen / reduced-motion); drag to spin
     let autoRotate = !reduced;
     let onScreen = true;
-    const speed = 0.32;
-    const rotationTimer = d3.timer(() => {
+    // Auto-rotation is slow enough that 30fps looks identical to 60 and halves
+    // the redraw cost; dragging still repaints on every pointer move.
+    const speed = 0.64;
+    let lastFrame = 0;
+    const rotationTimer = d3.timer((elapsed) => {
+      if (elapsed - lastFrame < 32) return;
+      lastFrame = elapsed;
       if (autoRotate && onScreen) {
         rotation[0] += speed;
         projection.rotate(rotation);
@@ -236,6 +234,7 @@ export default function RotatingEarth({ width = 460, height = 460, className = "
     loadWorldData();
 
     return () => {
+      cancelled = true;
       rotationTimer.stop();
       io?.disconnect();
       ro?.disconnect();
