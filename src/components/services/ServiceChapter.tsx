@@ -18,24 +18,37 @@ const STATUS_TONE: Record<Proof["status"], string> = {
   "In build": "text-(--color-muted)",
 };
 
+// Section heads inside a chapter. Highlighted in cobalt with a glowing key, so
+// a reader scanning a long chapter can find "What we build" or "Where it runs"
+// at a glance rather than hunting for small grey labels.
 function Label({ children }: { children: React.ReactNode }) {
-  return <h4 className="text-[13px] font-semibold text-(--color-muted)">{children}</h4>;
+  return (
+    <h4 className="flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.01em] text-(--color-accent-2)">
+      <span aria-hidden className="h-2 w-2 rounded-[3px] bg-(--color-accent-2) shadow-[0_0_10px_var(--color-accent-2)]" />
+      {children}
+    </h4>
+  );
 }
 
 function ProofCard({ p }: { p: Proof }) {
+  // Hover (and keyboard focus) lifts the card: cobalt edge and glow, a faint
+  // cobalt wash, the screenshot eases in closer, and linked work shows where
+  // it will take you. Transform/opacity/colour only.
   const inner = (
-    <div className="flex items-center gap-4 rounded-2xl border border-(--color-line) p-3 pr-5 transition-colors group-hover:border-(--color-line-2)">
+    <div className="relative flex items-center gap-4 overflow-hidden rounded-2xl border border-(--color-line) bg-(--color-bg) p-3 pr-5 transition-[border-color,box-shadow,transform,background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-0.5 group-hover:border-(--color-accent-2) group-hover:bg-[color-mix(in_oklab,var(--color-accent-2)_7%,var(--color-bg))] group-hover:shadow-[0_0_0_1px_var(--color-accent-2),0_12px_40px_-16px_var(--color-accent-2)] group-focus-visible:border-(--color-accent-2)">
       {p.image ? (
-        <Image
-          src={p.image}
-          alt=""
-          width={112}
-          height={66}
-          sizes="112px"
-          className="h-[66px] w-[112px] shrink-0 rounded-xl border border-(--color-line) object-cover object-left-top"
-        />
+        <span className="block h-[66px] w-[112px] shrink-0 overflow-hidden rounded-xl border border-(--color-line) transition-colors duration-300 group-hover:border-(--color-accent-2)">
+          <Image
+            src={p.image}
+            alt=""
+            width={112}
+            height={66}
+            sizes="112px"
+            className="h-full w-full object-cover object-left-top transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
+          />
+        </span>
       ) : (
-        <span aria-hidden className="grid h-[66px] w-[112px] shrink-0 place-items-center rounded-xl border border-(--color-line) text-[22px] font-semibold text-(--color-line-2)">
+        <span aria-hidden className="grid h-[66px] w-[112px] shrink-0 place-items-center rounded-xl border border-(--color-line) text-[22px] font-semibold text-(--color-line-2) transition-colors duration-300 group-hover:border-(--color-accent-2) group-hover:text-(--color-accent-2)">
           {p.name.charAt(0)}
         </span>
       )}
@@ -46,10 +59,15 @@ function ProofCard({ p }: { p: Proof }) {
         </p>
         <p className="mt-1 text-[13px] leading-snug text-(--color-fg-2)">{p.note}</p>
       </div>
+      {p.href ? (
+        <span aria-hidden className="ml-auto shrink-0 -translate-x-1 text-[16px] text-(--color-accent-2) opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
+          ↗
+        </span>
+      ) : null}
     </div>
   );
   return p.href ? (
-    <a href={p.href} target="_blank" rel="noopener noreferrer" className="group block">
+    <a href={p.href} target="_blank" rel="noopener noreferrer" aria-label={`${p.name} (opens in a new tab)`} className="group block rounded-2xl outline-none">
       {inner}
     </a>
   ) : (
