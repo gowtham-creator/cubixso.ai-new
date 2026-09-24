@@ -58,11 +58,33 @@ const S = ({ children }: { children: React.ReactNode }) => (
   <p className="mt-0.5 text-[12px] leading-snug text-(--color-fg-2)">{children}</p>
 );
 
-function Arrow({ down = false }: { down?: boolean }) {
+/** A live arrow: a track with a light pulse running along it into the head.
+    `delay` staggers pulses so a pipeline reads as work moving through it. */
+function Arrow({ down = false, delay = 0 }: { down?: boolean; delay?: number }) {
   return (
-    <svg aria-hidden viewBox="0 0 24 24" className={`h-4 w-4 shrink-0 text-(--color-muted-2) ${down ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 12h15M13 6l6 6-6 6" />
-    </svg>
+    <span aria-hidden className={`flex shrink-0 items-center ${down ? "h-8 w-4 flex-col" : "h-4 w-10"}`}>
+      <span className={`relative overflow-hidden rounded-full bg-(--color-line-2) ${down ? "w-px flex-1" : "h-px flex-1"}`}>
+        <span
+          className={`absolute left-0 top-0 rounded-full bg-(--color-accent-2) shadow-[0_0_10px_var(--color-accent-2)] ${
+            down ? "svc-travel-y h-3 w-px" : "svc-travel h-px w-4"
+          }`}
+          style={{ animationDelay: `${delay}s` }}
+        />
+      </span>
+      <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 text-(--color-accent-2) ${down ? "-mt-1 rotate-90" : "-ml-1.5"}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 6l6 6-6 6" />
+      </svg>
+    </span>
+  );
+}
+
+/** Vertical on phones, horizontal from sm. */
+function Step({ delay = 0 }: { delay?: number }) {
+  return (
+    <span className="flex justify-center">
+      <span className="sm:hidden"><Arrow down delay={delay} /></span>
+      <span className="hidden sm:flex"><Arrow delay={delay} /></span>
+    </span>
   );
 }
 
@@ -73,6 +95,10 @@ function Loop() {
     <div className="relative mx-auto grid w-full max-w-[460px] grid-cols-3 items-center gap-3">
       <svg aria-hidden viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-[12%] h-[76%] w-[76%]">
         <ellipse cx="50" cy="50" rx="46" ry="44" fill="none" stroke="var(--color-accent-2)" strokeOpacity="0.45" strokeWidth="1" strokeDasharray="3 5" vectorEffect="non-scaling-stroke" className="svc-dash" />
+        {/* One lap per 4s, clockwise from Plan: in step with the node pulses. */}
+        <circle r="1.8" fill="var(--color-accent-2)" className="svc-smil">
+          <animateMotion dur="4s" repeatCount="indefinite" path="M50,6 A46,44 0 0,1 50,94 A46,44 0 0,1 50,6" />
+        </circle>
       </svg>
       <span />
       <Node pulse={0}><T>Plan</T><S>Break the goal down</S></Node>
@@ -139,11 +165,11 @@ function Flow() {
     <div className="mx-auto w-full max-w-[540px]">
       <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
         <Node pulse={0} className="sm:flex-1"><T>Intake</T><S>Forms, email, scans</S></Node>
-        <span className="flex justify-center"><span className="sm:hidden"><Arrow down /></span><span className="hidden sm:block"><Arrow /></span></span>
+        <Step delay={0.0} />
         <Node pulse={1} className="sm:flex-1"><T>Classify</T><S>What is it?</S></Node>
-        <span className="flex justify-center"><span className="sm:hidden"><Arrow down /></span><span className="hidden sm:block"><Arrow /></span></span>
+        <Step delay={0.45} />
         <Node accent className="sm:flex-1"><T>Decide</T><S>Agent, or plain rules</S></Node>
-        <span className="flex justify-center"><span className="sm:hidden"><Arrow down /></span><span className="hidden sm:block"><Arrow /></span></span>
+        <Step delay={0.9} />
         <Node pulse={2} className="sm:flex-1"><T>Update</T><S>Your systems</S></Node>
       </div>
       <div className="mt-3 flex items-center gap-2 sm:ml-[52%]">
@@ -162,7 +188,12 @@ function Mcp() {
         {servers.map((_, i) => {
           const a = (i / servers.length) * Math.PI * 2 - Math.PI / 2;
           return (
-            <line key={i} x1="50" y1="50" x2={50 + Math.cos(a) * 38} y2={50 + Math.sin(a) * 38} stroke="var(--color-accent-2)" strokeOpacity="0.5" strokeWidth="0.5" strokeDasharray="1.5 2.5" className="svc-dash" style={{ animationDelay: `${i * 0.2}s` }} />
+            <g key={i}>
+              <line x1="50" y1="50" x2={50 + Math.cos(a) * 38} y2={50 + Math.sin(a) * 38} stroke="var(--color-accent-2)" strokeOpacity="0.5" strokeWidth="0.5" strokeDasharray="1.5 2.5" className="svc-dash" style={{ animationDelay: `${i * 0.2}s` }} />
+              <circle r="1.1" fill="var(--color-accent-2)" className="svc-smil">
+                <animateMotion dur="2.4s" begin={`${i * 0.4}s`} repeatCount="indefinite" path={`M50,50 L${50 + Math.cos(a) * 30},${50 + Math.sin(a) * 30}`} />
+              </circle>
+            </g>
           );
         })}
       </svg>
@@ -189,7 +220,7 @@ function Evals() {
   return (
     <div className="mx-auto grid w-full max-w-[520px] items-center gap-3 sm:grid-cols-[1fr_auto_1.2fr_auto_1fr]">
       <Node><T>Change</T><S>Prompt, model or tool</S></Node>
-      <span className="flex justify-center"><span className="sm:hidden"><Arrow down /></span><span className="hidden sm:block"><Arrow /></span></span>
+      <Step delay={0.0} />
       <Node>
         <T>Eval suite</T>
         <ul className="mt-2 space-y-1.5">
@@ -201,7 +232,7 @@ function Evals() {
           ))}
         </ul>
       </Node>
-      <span className="flex justify-center"><span className="sm:hidden"><Arrow down /></span><span className="hidden sm:block"><Arrow /></span></span>
+      <Step delay={0.45} />
       <div className="grid gap-2">
         <Node accent><T>Ship</T><S>All checks pass</S></Node>
         <Node dashed><T>Blocked</T><S>Regression found</S></Node>
@@ -218,9 +249,9 @@ function Router() {
           <div key={r} className="rounded-xl border border-(--color-line) px-3 py-1.5 text-[12px] text-(--color-fg-2)">{r}</div>
         ))}
       </div>
-      <span className="flex justify-center"><span className="sm:hidden"><Arrow down /></span><span className="hidden sm:block"><Arrow /></span></span>
+      <Step delay={0.9} />
       <Node accent className="text-center"><T>Router</T><S>cost · latency · task</S></Node>
-      <span className="flex justify-center"><span className="sm:hidden"><Arrow down /></span><span className="hidden sm:block"><Arrow /></span></span>
+      <Step delay={0.0} />
       <div className="grid gap-2">
         <Node pulse={0}><T>Small, fast</T><S>Routine tasks</S></Node>
         <Node pulse={1}><T>Large, reasoning</T><S>Hard problems</S></Node>
@@ -251,7 +282,13 @@ export function ServiceVisual({ visual, priority = false, compact = false }: { v
     >
       {/* Light lives in the void (README principle 3): a cobalt glow and a faint
           dot grid behind the content, never a fill on a surface. */}
-      <div aria-hidden className="absolute inset-0 -z-10 [background:radial-gradient(90%_70%_at_18%_0%,color-mix(in_oklab,var(--color-accent)_24%,transparent),transparent_62%)]" />
+      {/* Three soft light pools drifting on long, out-of-phase loops, so the
+          frame breathes without ever repeating visibly. Transform-only motion. */}
+      <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden">
+        <span className="svc-drift-a absolute -left-[22%] -top-[35%] h-[85%] w-[75%] rounded-full [background:radial-gradient(closest-side,color-mix(in_oklab,var(--color-accent)_38%,transparent),transparent)]" />
+        <span className="svc-drift-b absolute -right-[28%] top-[18%] h-[80%] w-[70%] rounded-full [background:radial-gradient(closest-side,color-mix(in_oklab,var(--color-accent-2)_26%,transparent),transparent)]" />
+        <span className="svc-drift-c absolute -bottom-[40%] left-[12%] h-[75%] w-[75%] rounded-full [background:radial-gradient(closest-side,color-mix(in_oklab,var(--color-powder)_20%,transparent),transparent)]" />
+      </div>
       <div aria-hidden className="absolute inset-0 -z-10 opacity-40 [background-image:radial-gradient(var(--color-line-2)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(80%_80%_at_50%_40%,#000,transparent)]" />
 
       {visual.kind === "image" ? (

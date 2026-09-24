@@ -123,7 +123,11 @@ html[data-theme="light"] {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    overflow-x: hidden;
+    /* clip, NOT hidden: overflow-x:hidden turns <body> into a scroll container,
+       so every position:sticky on the site attached to a box that never scrolls
+       (the document scrolls on <html>) and silently never stuck. clip trims the
+       same stray horizontal overflow without creating a scroll container. */
+    overflow-x: clip;
     min-height: 100%;
     /* Explicit palette wins over any shadcn defaults */
   }
@@ -323,9 +327,14 @@ html[data-theme="light"] .text-aurora {
   --color-border:        var(--border);
   --color-destructive:        var(--destructive);
   --color-accent-foreground:        var(--accent-foreground);
-  --color-accent:        var(--accent);
+  /* --color-accent and --color-muted are deliberately NOT mapped here. shadcn's
+     defaults (var(--accent), var(--muted)) resolved to near-white oklch(0.97)
+     and, declared after the site's @theme, silently replaced the cobalt accent
+     and the muted-text grey across the whole site in dark mode — white CTA
+     buttons with white text, "muted" labels rendered near-white. The two shadcn
+     primitives that wanted them (ui/button, ui/map) now read var(--accent) /
+     var(--muted) directly. */
   --color-muted-foreground:        var(--muted-foreground);
-  --color-muted:        var(--muted);
   --color-secondary-foreground:        var(--secondary-foreground);
   --color-secondary:        var(--secondary);
   --color-primary-foreground:        var(--primary-foreground);
@@ -587,4 +596,21 @@ html {
   .svc-pulse { animation: none !important; opacity: 0 !important; }
   .svc-pulse-dot, .svc-dash { animation: none !important; }
   .svc-bar { animation: none !important; transform: scaleY(0.55) !important; }
+}
+
+/* ─── /services: live arrows, orbiting dots, drifting light ─────────────── */
+.svc-travel   { animation: svc-travel 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+.svc-travel-y { animation: svc-travel-y 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+@keyframes svc-travel   { from { transform: translateX(-120%); } to { transform: translateX(260%); } }
+@keyframes svc-travel-y { from { transform: translateY(-120%); } to { transform: translateY(300%); } }
+.svc-drift-a { animation: svc-drift-a 16s ease-in-out infinite alternate; will-change: transform; }
+.svc-drift-b { animation: svc-drift-b 21s ease-in-out infinite alternate; will-change: transform; }
+.svc-drift-c { animation: svc-drift-c 26s ease-in-out infinite alternate; will-change: transform; }
+@keyframes svc-drift-a { from { transform: translate3d(0,0,0) scale(1); }    to { transform: translate3d(18%,14%,0) scale(1.15); } }
+@keyframes svc-drift-b { from { transform: translate3d(0,0,0) scale(1.1); }  to { transform: translate3d(-16%,-10%,0) scale(0.95); } }
+@keyframes svc-drift-c { from { transform: translate3d(0,0,0) scale(0.95); } to { transform: translate3d(12%,-18%,0) scale(1.1); } }
+@media (prefers-reduced-motion: reduce) {
+  .svc-travel, .svc-travel-y, .svc-drift-a, .svc-drift-b, .svc-drift-c { animation: none !important; }
+  /* SMIL motion ignores CSS animation rules; hide the moving dots instead. */
+  .svc-smil { display: none; }
 }
