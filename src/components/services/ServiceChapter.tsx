@@ -4,7 +4,7 @@
 // from the Reveal wrapper on the heading.
 
 import Image from "next/image";
-import Link from "next/link";
+import { ButtonWithIcon } from "@/components/ui/button-with-icon";
 import type { Proof, Service } from "@/lib/services";
 import { ServiceVisual } from "@/components/services/ServiceVisual";
 import { Reveal } from "@/components/scroll/Reveal";
@@ -173,15 +173,11 @@ export function ServiceChapter({ service: s, groupName, flip }: { service: Servi
             </div>
           ) : null}
 
-          <Link
-            href="/contact"
-            className="tap-target mt-8 inline-flex min-h-11 items-center gap-2 py-2.5 text-[15px] font-semibold text-(--color-accent-2) transition-[gap] duration-300 hover:gap-3"
-          >
+          <ButtonWithIcon href="/contact" className="mt-10">
             {/* Fixed label: lower-casing the service name mangled acronyms
                 ("mCP", "rAG", "lLMOps"). The name is kept for screen readers. */}
             Discuss this service<span className="sr-only">: {s.name}</span>
-            <span aria-hidden>→</span>
-          </Link>
+          </ButtonWithIcon>
         </div>
       </div>
     </section>
