@@ -11,6 +11,7 @@
 // the client catalogue can render it.
 
 import Image from "next/image";
+import { LiveFrame } from "@/components/services/LiveFrame";
 import type { DiagramKind, Visual } from "@/lib/services";
 
 /* ── shared pieces ─────────────────────────────────────────────────────── */
@@ -31,7 +32,7 @@ function Node({
 }) {
   return (
     <div
-      className={`relative rounded-2xl border bg-(--color-bg)/75 px-3.5 py-2.5 backdrop-blur-sm ${
+      className={`relative rounded-2xl border bg-(--color-bg)/90 px-3.5 py-2.5 ${
         accent
           ? "border-(--color-accent-2) shadow-[0_0_0_1px_var(--color-accent-2),0_0_36px_-10px_var(--color-accent-2)]"
           : dashed
@@ -275,7 +276,7 @@ const DIAGRAMS: Record<DiagramKind, () => React.JSX.Element> = {
 
 export function ServiceVisual({ visual, priority = false, compact = false }: { visual: Visual; priority?: boolean; compact?: boolean }) {
   return (
-    <div
+    <LiveFrame
       className={`relative isolate overflow-hidden rounded-[28px] border border-(--color-line) bg-(--color-bg-soft) ${
         compact ? "min-h-[300px]" : "min-h-[340px] lg:min-h-[480px]"
       }`}
@@ -319,6 +320,6 @@ export function ServiceVisual({ visual, priority = false, compact = false }: { v
           })()}
         </div>
       )}
-    </div>
+    </LiveFrame>
   );
 }

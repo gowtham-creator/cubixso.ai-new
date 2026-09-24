@@ -603,9 +603,9 @@ html {
 .svc-travel-y { animation: svc-travel-y 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
 @keyframes svc-travel   { from { transform: translateX(-120%); } to { transform: translateX(260%); } }
 @keyframes svc-travel-y { from { transform: translateY(-120%); } to { transform: translateY(300%); } }
-.svc-drift-a { animation: svc-drift-a 16s ease-in-out infinite alternate; will-change: transform; }
-.svc-drift-b { animation: svc-drift-b 21s ease-in-out infinite alternate; will-change: transform; }
-.svc-drift-c { animation: svc-drift-c 26s ease-in-out infinite alternate; will-change: transform; }
+.svc-drift-a { animation: svc-drift-a 16s ease-in-out infinite alternate; }
+.svc-drift-b { animation: svc-drift-b 21s ease-in-out infinite alternate; }
+.svc-drift-c { animation: svc-drift-c 26s ease-in-out infinite alternate; }
 @keyframes svc-drift-a { from { transform: translate3d(0,0,0) scale(1); }    to { transform: translate3d(18%,14%,0) scale(1.15); } }
 @keyframes svc-drift-b { from { transform: translate3d(0,0,0) scale(1.1); }  to { transform: translate3d(-16%,-10%,0) scale(0.95); } }
 @keyframes svc-drift-c { from { transform: translate3d(0,0,0) scale(0.95); } to { transform: translate3d(12%,-18%,0) scale(1.1); } }
@@ -650,3 +650,8 @@ html {
   .eng-flow-x, .eng-flow-y, .eng-stage { animation: none !important; opacity: 0 !important; }
   .eng-tick, .eng-in, .eng-grow { animation: none !important; opacity: 1 !important; transform: none !important; }
 }
+
+/* Off-screen service diagrams pause (LiveFrame sets data-live). Keeps the GPU
+   compositing only the one or two frames in view while the page scrolls. */
+[data-live="false"] *, [data-live="false"] *::before, [data-live="false"] *::after { animation-play-state: paused !important; }
+[data-live="false"] .svc-smil { display: none; }
