@@ -4,6 +4,7 @@
 
 import { Hero }        from "@/components/sections/Hero";
 import { Manifesto }   from "@/components/sections/Manifesto";
+import { HeroQuote }   from "@/components/sections/HeroQuote";
 import { InfoBand }    from "@/components/sections/InfoBand";
 import { KineticStack } from "@/components/sections/KineticStack";
 import { Services }    from "@/components/sections/Services";
@@ -22,6 +23,7 @@ export default function Home() {
   return (
     <main>
       <Hero />          {/* 01 · FUTURE                  */}
+      <HeroQuote />     {/* pull quote — Steve Jobs      */}
       <Manifesto />     {/* 02 · INTELLIGENCE            */}
       <BackedBy />      {/* TRUSTED INFRASTRUCTURE — partner logos, surfaced
                             early (just under the hero/intro) per request      */}
