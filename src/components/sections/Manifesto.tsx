@@ -48,7 +48,7 @@ export function Manifesto() {
   return (
     <section
       id="manifesto"
-      className="relative z-10 px-[var(--pad-x)] py-[clamp(96px,16vh,200px)]"
+      className="relative z-10 px-[var(--pad-x)] pt-[clamp(40px,7vh,88px)] pb-[clamp(96px,16vh,200px)]"
     >
       {/* Void GUTTER: the panel is inset ~16–20px so the cobalt cube light
           lives behind its edges, never painting the section edge-to-edge. */}

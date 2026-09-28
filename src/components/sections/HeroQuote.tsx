@@ -6,7 +6,7 @@ import { Testimonial2 } from "@/components/ui/testimonial-2";
 
 export function HeroQuote() {
   return (
-    <section aria-label="Quote" className="relative z-10 px-[var(--pad-x)] py-[clamp(72px,12vw,160px)]">
+    <section aria-label="Quote" className="relative z-10 px-[var(--pad-x)] pt-[clamp(48px,7vw,104px)] pb-[clamp(8px,2vw,32px)]">
       <div className="mx-auto flex w-full max-w-[var(--col-w)] justify-center">
         <Reveal direction="up" className="w-full max-w-[860px]">
           <Testimonial2
