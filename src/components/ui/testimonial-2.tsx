@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 export type Testimonial2Props = {
   /** Full display name of the person quoted. */
   authorName: string;
-  /** Short tagline, title, or description of the person. */
-  authorTagline: string;
+  /** Short tagline, title, or description of the person (text or a logo). */
+  authorTagline: React.ReactNode;
   /** Optional link to the person's profile or the quote's source. */
   url?: string;
   /** The quotation. */
