@@ -4,6 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { cn } from "@/lib/utils";
+import { FrameCap } from "@/components/scene/FrameCap";
 
 // ============================================================================
 // Types
@@ -896,7 +897,7 @@ export function Globe3D({
           powerPreference: "high-performance",
         }}
         dpr={dpr}
-        frameloop={inView ? "always" : "demand"}
+        frameloop="demand"
         camera={{
           fov: 45,
           near: 0.1,
@@ -910,6 +911,7 @@ export function Globe3D({
           transition: "opacity 0.7s ease-out",
         }}
       >
+        <FrameCap fps={low ? 30 : 60} active={inView} />
         <Suspense fallback={<LoadingFallback />}>
           <Scene
             markers={markers}

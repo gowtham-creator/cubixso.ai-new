@@ -19,6 +19,7 @@ import * as THREE from "three";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { cdn } from "@/lib/cdn";
 import { useDeviceTier, hasWebGL } from "@/lib/perf";
+import { FrameCap } from "@/components/scene/FrameCap";
 
 const MODEL_URL = cdn("/models/cubixso-cube.glb");
 const DRACO_URL = cdn("/draco/");
@@ -163,11 +164,15 @@ export function SplineMascot() {
       aria-hidden
     >
       <Canvas
-        dpr={lowTier ? 1 : [1, 2]}
+        dpr={[1, 1.5]}
         gl={{ alpha: true, antialias: true }}
         camera={{ position: [0, 0, 4.4], fov: 38 }}
         style={{ background: "transparent" }}
+        frameloop="demand"
       >
+        {/* On every page for the whole visit: 30fps is indistinguishable for a
+            slow ambient spin and a quarter of a 120Hz display's work. */}
+        <FrameCap fps={30} />
         <ambientLight intensity={0.6} />
         <directionalLight position={[3, 4, 5]} intensity={1.4} color="#ffffff" />
         <LogoCube hover={hover} dark={resolved === "dark"} />

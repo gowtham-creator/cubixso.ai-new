@@ -36,6 +36,7 @@ export function CursorFollower() {
 
     const onMove = (e: PointerEvent) => {
       target.current = { x: e.clientX, y: e.clientY };
+      kick();
     };
     const onOver = (e: Event) => {
       const t = e.target as HTMLElement | null;
@@ -47,8 +48,8 @@ export function CursorFollower() {
     };
     const onLeave = () => setHidden(true);
     const onEnter = () => setHidden(false);
-    const onDown = () => { downRef.current = true; };
-    const onUp = () => { downRef.current = false; };
+    const onDown = () => { downRef.current = true; kick(); };
+    const onUp = () => { downRef.current = false; kick(); };
 
     window.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("pointerover", onOver, { passive: true });
@@ -57,8 +58,18 @@ export function CursorFollower() {
     window.addEventListener("pointerdown", onDown, { passive: true });
     window.addEventListener("pointerup", onUp, { passive: true });
 
+    // The loop sleeps once the ring has caught up with the pointer and wakes on
+    // the next move/press. It used to run every frame for the whole visit,
+    // even with the mouse still.
     let raf = 0;
+    let running = false;
     let prev = performance.now();
+    function kick() {
+      if (running) return;
+      running = true;
+      prev = performance.now();
+      raf = requestAnimationFrame(tick);
+    }
     const tick = (now: number) => {
       // dot glued to the pointer for precision; ring trails with eased lag.
       // Frame-rate-independent smoothing: convert a per-frame ease into a
@@ -76,9 +87,11 @@ export function CursorFollower() {
       if (ringRef.current) {
         ringRef.current.style.transform = `translate3d(${ring.current.x}px, ${ring.current.y}px, 0) translate(-50%, -50%) scale(${press})`;
       }
+      const settled = Math.abs(target.current.x - ring.current.x) < 0.1 && Math.abs(target.current.y - ring.current.y) < 0.1;
+      if (settled) { running = false; return; }
       raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
+    kick();
 
     return () => {
       cancelAnimationFrame(raf);

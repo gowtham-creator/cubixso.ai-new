@@ -26,6 +26,7 @@ import * as THREE from "three";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { useDeviceTier, hasWebGL } from "@/lib/perf";
 import { CanvasBoundary } from "@/components/util/CanvasBoundary";
+import { FrameCap } from "@/components/scene/FrameCap";
 
 const ACCENT = "#1B4FFF";       // electric cobalt — the Y
 const ACCENT_GLOW = "#4A7BFF";  // lighter cobalt — emissive / glow
@@ -210,7 +211,11 @@ export function HeroGlassCube({
   // the screen's resolution, so it read soft and aliased next to the crisp
   // desktop cube ("the hero isn't the same as on desktop"). 1.5x is still far
   // cheaper than native 3x but removes the visible softness.
-  const dpr: [number, number] = low ? [1, 1.5] : [1, 2];
+  // Capped at 1.5 on every tier. This canvas is viewport-sized with a bloom +
+  // chromatic-aberration composer, so 2x on a Retina/4K laptop meant filling
+  // ~3.9M pixels several times a frame; 1.5x cuts that by ~44% and the
+  // bloom-softened glass looks the same.
+  const dpr: [number, number] = [1, 1.5];
 
   // Keeping the canvas mounted forever is what freezes the cube on iOS. Safari
   // caps live WebGL contexts and evicts the OLDEST one when a new canvas asks
@@ -273,13 +278,14 @@ export function HeroGlassCube({
           camera={{ position: [0, 2.4, 5.8], fov: 28, near: 0.1, far: 100 }}
           gl={{ antialias: true, alpha: true }}
           dpr={dpr}
-          frameloop={active ? "always" : "never"}
+          frameloop={active ? "demand" : "never"}
           onCreated={({ camera, gl }) => {
             camera.lookAt(0, 0, 0);
             gl.domElement.addEventListener("webglcontextlost", (e) => { e.preventDefault(); setLost(true); }, { once: true });
           }}
           style={{ position: "absolute", inset: 0 }}
         >
+          <FrameCap fps={low ? 30 : 60} active={active} />
           <ambientLight intensity={dark ? 0.35 : 0.7} />
           <directionalLight position={[4, 6, 3]} intensity={dark ? 0.7 : 1.1} color="#eaf0ff" />
           <pointLight position={[-3, 1, 2]} intensity={dark ? 10 : 4} color={ACCENT_GLOW} distance={16} />

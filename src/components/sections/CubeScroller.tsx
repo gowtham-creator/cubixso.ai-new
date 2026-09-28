@@ -26,6 +26,7 @@ import { useTheme } from "@/components/providers/ThemeProvider";
 import { cdn } from "@/lib/cdn";
 import { useDeviceTier, hasWebGL } from "@/lib/perf";
 import { useWarmMount } from "@/lib/useWarmMount";
+import { FrameCap } from "@/components/scene/FrameCap";
 
 const MODEL = cdn("/models/cubixso-cube.glb");
 const DRACO = cdn("/draco/");
@@ -137,7 +138,7 @@ export function CubeScroller() {
   useEffect(() => setWebgl(hasWebGL()), []);
 
   // High tier keeps the approved adaptive DPR; low tier clamps to 1.
-  const dpr: 1 | [number, number] = tier === "low" ? 1 : [1, 2];
+  const dpr: 1 | [number, number] = tier === "low" ? 1 : [1, 1.5];
 
   // Pause the render loop when the section is off-screen.
   useEffect(() => {
@@ -273,9 +274,11 @@ export function CubeScroller() {
             // this canvas before anyone scrolls to it, and with "never" it drew
             // no frame at all — so no shader was compiled and the warm-up did
             // nothing. "demand" renders once when the scene resolves, then idles.
-            frameloop={active ? "always" : "demand"}
+            frameloop="demand"
             onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
           >
+            {/* 60fps while on screen (30 on phones); idle otherwise. */}
+            <FrameCap fps={tier === "low" ? 30 : 60} active={active} />
             <ambientLight intensity={dark ? 0.3 : 0.6} />
             <directionalLight position={[4, 6, 3]} intensity={0.8} color="#cdd9ff" />
             <pointLight position={[-3, 2, -2]} intensity={dark ? 14 : 5} color="#5f8bff" distance={18} />
