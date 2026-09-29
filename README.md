@@ -52,7 +52,7 @@ Next.js 16 (App Router) · React 19 · Tailwind CSS v4 · TypeScript · Deployed
 | `app.cubixso.com` | **This repository** — the full site. Canonical domain. | here |
 | `cubixso.com` / `www.cubixso.com` | Launch splash page only | **separate project** (`cubixso-ai-loading`, a small Vite app) |
 
-The apex forwards to `www` at the registrar, and `www` serves the splash, whose Launch button opens `app.cubixso.com`. `SITE_URL` in `src/lib/seo.ts` is the single source of truth for canonicals, sitemap and JSON‑LD — change the domain there and everything follows.
+The apex forwards to `www` at the registrar, and `www` serves the splash, whose Launch button opens `app.cubixso.com`. The GitHub repo's About panel lists both domains; only `app.` serves this codebase. `SITE_URL` in `src/lib/seo.ts` is the single source of truth for canonicals, sitemap and JSON‑LD — change the domain there and everything follows.
 
 ## Quick start
 
@@ -86,7 +86,8 @@ None are required for `npm run dev` — every integration degrades gracefully wh
 | Route | Notes |
 |---|---|
 | `/` | The spine. Eleven chapters in one scroll; every other page mirrors a section for SEO and deep links. |
-| `/services` `/products` `/industries` `/case-studies` | Capability and proof pages |
+| `/services` | The service catalogue: every service up front with a live preview, then one chapter per service (diagram or product screen, what we build, use cases, deliverables, failure modes, stack, proof). Copy in `src/lib/services.ts`. |
+| `/products` `/industries` `/case-studies` | Capability and proof pages |
 | `/about` `/leadership` `/collaborators` `/locations` | Company |
 | `/contact` `/newsletter` | Conversion. `/newsletter` is chrome-light with its own hero. |
 | `/legal` `/terms` `/privacy` | Legal centre, registered-entity details, retained counsel |
@@ -302,7 +303,8 @@ The governing rule: **no 3D in the shared bundle.** Every WebGL component is `ne
 
 - `hasWebGL()` / `detectTier()` (`src/lib/perf.ts`) gate quality; `CanvasBoundary` catches context failures so a dead GPU never white-screens a page.
 - Bloom and the env cubemap are **desktop-only** — they are the expensive parts.
-- `dpr` capped at 1.5 on mobile, 2 on desktop.
+- `dpr` capped at 1.5 for the hero cube, scroll cube and footer mascot on every tier (they are viewport-sized or always on); the globe keeps 2 on desktop, 1.5 on phones.
+- **Frame rate is capped.** Ambient scenes run `frameloop="demand"` driven by `<FrameCap fps>` (`src/components/scene/FrameCap.tsx`): 60fps on desktop, 30 on low tier and for the mascot, nothing while off-screen. R3F's `"always"` renders at display refresh, 120 or 144 times a second on modern laptops, and was the main reason fans spun up on the homepage.
 - `cdn()` wraps every heavy asset path so models and clips can be rehosted with one env var.
 - **The intro cube is a pre-rendered video, not a live scene.** A 112 KB clip decodes on the GPU's video path and starts in two frames; the WebGL version had to fetch a GLB, compile shaders and light a scene before the first frame. If iOS refuses autoplay (Low Power / Low Data Mode), it swaps to an animated WebP, which no autoplay policy applies to.
 
@@ -315,7 +317,7 @@ Mounting a WebGL canvas costs a context, texture uploads and shader compiles —
 | **Desktop** (`high`) | Builds once in idle time right after the intro lifts, then **stays mounted**. | No practical live-context cap, so rebuilding on every return just re-pays the cost as visible pop-in. |
 | **Phones / tablets** (`low`) | Mounts only while near the viewport; released when far away. | iOS evicts the **oldest** context under pressure, leaving it frozen on its last frame. |
 
-Warm-ups are staggered (`stagger` ms) so two canvases never compile in the same idle slot. While off-screen a canvas runs `frameloop="demand"` — **not** `"never"` (see Gotchas) — so a warm-up still renders once to compile, then idles.
+Warm-ups are staggered (`stagger` ms) so two canvases never compile in the same idle slot. After a **client-side (header) navigation** they wait a further 4s for the new page to settle (`markSoftNavigation()`, flagged from `LayoutChrome` during render); a warm build compiles a whole scene in one 600ms+ main-thread block, which otherwise lands exactly as the page appears. While off-screen a canvas runs `frameloop="demand"` — **not** `"never"` (see Gotchas) — so a warm-up still renders once to compile, then idles.
 
 ### The globe (`src/components/ui/3d-globe.tsx`, used by `Global.tsx`)
 
@@ -330,9 +332,20 @@ Based on the Aceternity 3D globe, reworked:
 
 Visual values in the shaders were chosen by rendering them side by side (phone dark, phone light, desktop) with R3F's ACES tone mapping — not by eye in the editor. Change them the same way.
 
+### The contact globe (`src/components/ui/wireframe-dotted-globe.tsx`)
+
+A d3 orthographic wireframe with halftone land dots. The land outline and ~13k dots are **precomputed** into `public/data/land-110m.json` and `land-dots.json` (Natural Earth 110m, 1.28° grid) and cached for the session; building them in the browser meant ~20k point-in-polygon tests in one blocking task. Dots draw in one path with far-side culling; auto-rotate repaints at 30fps.
+
 ### The forge cube (`CubeScroller.tsx`)
 
 Auto-spins and can be grabbed and thrown, like the contact-page globe. It used to be scroll-scrubbed across a 320vh sticky track with rotation quantized to 94 steps; that caused the stepped motion, a blank canvas until a click forced a frame, and the dead space below the section.
+
+## The services page
+
+- **Colour:** `/services` runs on the exact brand cobalt. `.svc-theme` on its `<main>` sets `--color-accent` and `--color-accent-2` to `#1B4FFF`; blue *text* uses `--svc-ink` (`#6B8CFF` on dark for AA, `#1B4FFF` on light).
+- **Diagrams** (`ServiceVisual.tsx`) are CSS/SVG and animate only while near the viewport: `LiveFrame` sets `data-live`, and `[data-live="false"]` pauses everything inside.
+- **Sticky previews** (catalogue panel, chapter visuals) depend on `body { overflow-x: clip }` — see Gotchas.
+- `EngagementPipeline.tsx` animates the four engagement steps (CSS only; reduced motion shows the finished state).
 
 ## Iconography
 
@@ -358,6 +371,7 @@ If you change the storage key or the default, change it in **both**.
 - **Focus:** a visible `--color-accent-2` ring, `outline-offset: 3px`, on every interactive element.
 - **Cursor:** the custom `CursorFollower` dot replaces the native cursor on the page body **only**. Links, buttons and `[role="button"]` keep a real pointer — the dot is spring-damped, so it trails where you actually are, and relying on it over controls makes them feel unclickable.
 - `prefers-reduced-motion` is respected by every animation system.
+- **Touch:** Tailwind v4's `hover:` only applies on hover-capable pointers, so nothing sticks after a tap, but touch users then get no feedback. Key controls mirror hover with `active:`; hand-written `:hover` CSS must sit inside `@media (hover: hover)`; pointer-driven effects (Magnetic) ignore non-mouse pointers.
 - Skip link, semantic landmarks, `aria-live` on the theme toggle, `sr-only` text for icon-only controls.
 
 ---
@@ -368,7 +382,8 @@ Content is typed data in `src/lib`, not CMS-driven. Edit the data, not the compo
 
 | File | Holds |
 |---|---|
-| `data.ts` | Services, products, industries, differentiators, stats, presence, backers, collaborators, case studies, contact |
+| `services.ts` | The `/services` catalogue: `SERVICE_GROUPS` (4 groups, 11 services), diagrams, proof, `SHIFTS`, `ENGAGEMENT`, `STACK`, `STANDARDS` |
+| `data.ts` | Services (homepage summary), products, industries, differentiators, stats, presence, backers, collaborators, case studies, contact |
 | `team.ts` | Leadership, engineering and advisors — portraits, bios, skills |
 | `legal.ts` | Terms, Privacy, registered-entity identifiers, retained counsel |
 | `states.ts` | India presence — per-state blurbs, cities, reach |
@@ -377,6 +392,8 @@ Content is typed data in `src/lib`, not CMS-driven. Edit the data, not the compo
 | `schema.ts` | Organization and WebSite JSON‑LD |
 
 Infrastructure: `gsap.ts` (Lenis↔ScrollTrigger bridge), `perf.ts` (device tiering), `useWarmMount.ts` (WebGL mount lifecycle), `cdn.ts`, `antispam.ts`, `feedback.ts` (audio bus), `cn.ts`.
+
+**Proof and metrics follow `PRODUCT.md`:** claim only what has shipped, label in-build work as in build, never invent figures. The homepage "THE IDEA" panel (`kinetic/AIInferenceVis.tsx`) shows an *example* policy clause becoming a decision table for that reason; it replaced a neural-net console with made-up accuracy and latency numbers.
 
 **Client testimonials** live in `src/components/sections/ClientTestimonials.tsx` (`CLIENT_TESTIMONIALS`). Real, approved quotes from named clients only — the upstream 21st.dev block ships invented people, and those must never be published. Drafts awaiting approval belong in `.planning/`, outside `src/`, so they cannot ship by accident.
 
@@ -403,6 +420,9 @@ Metadata API throughout, with `metadataBase` from `SITE_URL`. Per-route canonica
 3. Below-the-fold visuals lazy-load; every canvas pauses off-screen via `IntersectionObserver` (`frameloop="demand"`), and mounts through `useWarmMount`.
 4. Assets go through `cdn()`.
 5. Theme resolves before first paint (no FOUC).
+6. Nothing runs every frame at idle unless it must. Canvases are frame-capped (`FrameCap`), the dust field draws at 30fps in batched fills, the cursor loop sleeps when the pointer is still, and CSS decoration never loops a paint-bound property (the headline sheen plays twice, then rests).
+7. No `backdrop-filter` over animated content: the GPU re-blurs the region every frame the content behind it moves.
+8. Static data that is expensive to derive is precomputed into `public/data`, not built in the browser.
 
 ---
 
@@ -424,6 +444,10 @@ Each of these cost real debugging time. Read before touching the relevant area.
 - **OrbitControls sets `touch-action: none`**, so a full-width canvas traps phone users mid-page. Reset it to `pan-y` after the controls connect.
 - **A fixed camera distance with a vertical FOV** sizes the scene to the pane's *height* — portrait panes clip it on both sides. Fit to the smaller dimension.
 - **Don't request a new asset URL on the proxied `app.` host before its deploy finishes.** Cloudflare caches the 404. When checking a fresh deploy, cache-bust with a query string, or version the filename.
+- **`overflow-x: hidden` on `body` breaks `position: sticky`** for the whole site: it makes body a scroll container, so sticky elements stick to it and never engage. Use `overflow-x: clip`.
+- **shadcn's `@theme` mappings can override site tokens.** `--color-accent: var(--accent)` and `--color-muted: var(--muted)` resolved to near-white and turned every cobalt fill and muted label white-on-white in dark mode. They are deliberately not mapped; shadcn primitives read `var(--accent)` / `var(--muted)` directly.
+- **Child effects run before the parent's.** A flag a page's effects need (e.g. "this was a soft navigation") cannot be set in a parent `useEffect`; it would be one navigation late.
+- **A tap fires one synthetic `mousemove` and no `mouseleave`.** Anything that tracks the mouse (magnetic buttons) sticks off-centre on touch unless it checks `pointerType`.
 - **iOS blocks inline video autoplay outright in Low Power / Low Data Mode** — no muted/playsInline combination beats it. Have a non-video fallback.
 
 ## Deployment
