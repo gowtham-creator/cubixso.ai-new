@@ -301,6 +301,7 @@ Helpers: `Reveal` (mask-wipe + lift), `WordReveal`, `Scramble`, `Magnetic`, `use
 
 The governing rule: **no 3D in the shared bundle.** Every WebGL component is `next/dynamic({ ssr: false })` and only mounts when it will actually render. A static import in the root-layout chain puts the whole 3D stack on *every* route.
 
+- **Sections the homepage imports statically split in two**: a light wrapper (gating, fallback, layout box) and a `*Canvas.tsx` scene loaded via `next/dynamic` (`HeroGlassCube` → `HeroGlassCubeCanvas`, `CubeScroller` → `CubeScrollerCanvas`). Never import `three`/`@react-three/*` in the wrapper, not even for a type or constant; `useGLTF.preload` belongs in the scene chunk, not the section.
 - `hasWebGL()` / `detectTier()` (`src/lib/perf.ts`) gate quality; `CanvasBoundary` catches context failures so a dead GPU never white-screens a page.
 - Bloom and the env cubemap are **desktop-only** — they are the expensive parts.
 - `dpr` capped at 1.5 for the hero cube, scroll cube and footer mascot on every tier (they are viewport-sized or always on); the globe keeps 2 on desktop, 1.5 on phones.
