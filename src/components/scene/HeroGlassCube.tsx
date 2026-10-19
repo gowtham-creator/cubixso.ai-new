@@ -101,7 +101,7 @@ export function HeroGlassCube({
   // ~1.5s after hydration, clear of hydration's own long task and ~3s before
   // the (≈4.5s) reveal, leaving the module parsed when the curtain lifts. Only
   // the expensive part, mounting the Canvas, still waits for the reveal, then
-  // just long enough (~400ms) to let the reveal transition's frames go first;
+  // just long enough (~400ms, plain timer) to let the reveal transition's frames go first;
   // the canvas's own fade-in hides the pop. With no intro (repeat visit in the
   // session) afterReveal fires at once, so the mount takes the first idle slot.
   const [armed, setArmed] = useState(false);
@@ -122,7 +122,31 @@ export function HeroGlassCube({
     // exists to avoid. A slightly later cube beats a stuttering reveal.
     const nav = navigator as Navigator & { connection?: { saveData?: boolean } };
     const weak = (navigator.hardwareConcurrency || 0) <= 4 || nav.connection?.saveData === true;
-    const offArm = afterReveal(() => setArmed(true), weak ? 1000 : 400);
+    // Capable phones on a first visit mount on a plain timer + one frame, not
+    // afterReveal's idle callback: waiting for idle *after* the 400ms delay
+    // added ~350ms of variable latency (measured 0.73–0.75s to canvas) on a
+    // page that is already quiet right after the reveal. Weak devices and
+    // repeat visits (no intro) keep the idle-gated afterReveal path.
+    let seen = false;
+    try { seen = sessionStorage.getItem("cubixso.seen") === "1"; } catch { /* private mode */ }
+    let offArm: () => void;
+    if (weak || seen) {
+      offArm = afterReveal(() => setArmed(true), weak ? 1000 : 400);
+    } else {
+      let timer: number | undefined;
+      let raf: number | undefined;
+      const onReveal = () => {
+        timer = window.setTimeout(() => {
+          raf = requestAnimationFrame(() => setArmed(true));
+        }, 400);
+      };
+      window.addEventListener("cubixso:revealed", onReveal, { once: true });
+      offArm = () => {
+        window.removeEventListener("cubixso:revealed", onReveal);
+        if (timer !== undefined) window.clearTimeout(timer);
+        if (raf !== undefined) cancelAnimationFrame(raf);
+      };
+    }
     return () => {
       window.clearTimeout(prefetch);
       if (idle !== undefined) w.cancelIdleCallback?.(idle);
