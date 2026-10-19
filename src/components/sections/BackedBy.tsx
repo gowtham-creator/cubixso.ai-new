@@ -38,6 +38,11 @@ const LOGOS = [
   { src: "/partners/wadhwani.png", name: "Wadhwani Foundation" },
 ];
 
+// Served through the image optimizer (resized to the 32px-tall chip). These
+// went out `unoptimized`: several source PNGs are print-size (dpiit.png is
+// 7876x2620, msft.png 4032x1701), so every first load pulled ~2.9 MB of logos
+// at high priority — fighting the intro video and the hydration JS for
+// bandwidth — and decoded >100 MB of bitmaps, a real problem on iPhones.
 function LogoChip({ src, name }: { src: string; name: string }) {
   return (
     <div className="flex h-[58px] w-[150px] shrink-0 items-center justify-center rounded-2xl border border-black/5 bg-white/90 px-6 [html[data-theme=dark]_&]:border-white/10">
@@ -47,7 +52,6 @@ function LogoChip({ src, name }: { src: string; name: string }) {
         width={120}
         height={36}
         loading="eager"
-        unoptimized
         className="h-8 w-auto max-w-full object-contain"
       />
     </div>

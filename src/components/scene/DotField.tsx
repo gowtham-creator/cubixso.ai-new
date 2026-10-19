@@ -93,9 +93,17 @@ export function DotField() {
     };
     fit();
 
+    // Held still while the intro curtain is up: the curtain is opaque, yet the
+    // field was redrawn 30x a second underneath it — a full-screen canvas
+    // upload per frame competing with the intro on phones. One frame is
+    // painted now (so the field is there when the curtain lifts); the drift
+    // starts on the reveal. Nobody can see 4 seconds of 1-4px/sec drift missed.
+    let held = false;
+    try { held = sessionStorage.getItem("cubixso.seen") !== "1"; } catch { /* private mode */ }
+
     let raf = 0, last = 0, running = true;
     const draw = (now: number) => {
-      if (running && !reduced) raf = requestAnimationFrame(draw);
+      if (running && !reduced && !held) raf = requestAnimationFrame(draw);
       if (last && now - last < FRAME_MS - 1) return;
       const dt = last ? Math.min(0.1, (now - last) / 1000) : 0.016;
       last = now;
@@ -124,11 +132,17 @@ export function DotField() {
       if (document.hidden) { running = false; cancelAnimationFrame(raf); }
       else if (!reduced) { running = true; last = 0; raf = requestAnimationFrame(draw); }
     };
+    const onReveal = () => {
+      held = false;
+      if (running && !reduced) { cancelAnimationFrame(raf); last = 0; raf = requestAnimationFrame(draw); }
+    };
+    if (held) window.addEventListener("cubixso:revealed", onReveal, { once: true });
     window.addEventListener("resize", fit);
     document.addEventListener("visibilitychange", onVis);
     return () => {
       running = false;
       cancelAnimationFrame(raf);
+      window.removeEventListener("cubixso:revealed", onReveal);
       window.removeEventListener("resize", fit);
       document.removeEventListener("visibilitychange", onVis);
     };

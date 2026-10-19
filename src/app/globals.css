@@ -682,3 +682,14 @@ html:not([data-theme="light"]) .apple-glow {
   50%      { filter: drop-shadow(0 0 4px rgba(255,255,255,1))   drop-shadow(0 0 20px rgba(175,210,250,0.85)); }
 }
 @media (prefers-reduced-motion: reduce) { .apple-glow { animation: none !important; } }
+
+/* Nav sound-toggle equaliser bars (AudioToggle). Transform-only so the loop
+   runs on the compositor; it plays on every page for the whole visit. */
+.cbx-eq { animation: cbx-eq 1.2s ease-in-out infinite both; }
+@keyframes cbx-eq {
+  0%   { transform: scaleY(0.35); }
+  25%  { transform: scaleY(1); }
+  50%  { transform: scaleY(0.55); }
+  75%  { transform: scaleY(0.85); }
+  100% { transform: scaleY(0.4); }
+}

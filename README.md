@@ -423,6 +423,7 @@ Metadata API throughout, with `metadataBase` from `SITE_URL`. Per-route canonica
 6. Nothing runs every frame at idle unless it must. Canvases are frame-capped (`FrameCap`), the dust field draws at 30fps in batched fills, the cursor loop sleeps when the pointer is still, and CSS decoration never loops a paint-bound property (the headline sheen plays twice, then rests).
 7. No `backdrop-filter` over animated content: the GPU re-blurs the region every frame the content behind it moves.
 8. Static data that is expensive to derive is precomputed into `public/data`, not built in the browser.
+9. The intro curtain is opaque, so nothing should work underneath it: on phones/tablets WebGL canvases build only after `cubixso:revealed` (`afterReveal`), loops wait for the reveal or the viewport, and partner/raster images go through `next/image` (never `unoptimized` on a print-size source).
 
 ---
 
@@ -449,6 +450,7 @@ Each of these cost real debugging time. Read before touching the relevant area.
 - **Child effects run before the parent's.** A flag a page's effects need (e.g. "this was a soft navigation") cannot be set in a parent `useEffect`; it would be one navigation late.
 - **A tap fires one synthetic `mousemove` and no `mouseleave`.** Anything that tracks the mouse (magnetic buttons) sticks off-centre on touch unless it checks `pointerType`.
 - **iOS blocks inline video autoplay outright in Low Power / Low Data Mode** — no muted/playsInline combination beats it. Have a non-video fallback.
+- **`<Ph>` icons ship as a subset** (`src/components/icons/ph-subset.json`; the full Phosphor set was 4.4 MB of JS on every page). A new `<Ph name>` goes into `scripts/ph-subset.mjs`, then `node scripts/ph-subset.mjs`; otherwise it silently fetches from the Iconify API at runtime.
 
 ## Deployment
 

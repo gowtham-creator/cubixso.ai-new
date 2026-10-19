@@ -24,7 +24,8 @@ import { EffectComposer, Bloom, ChromaticAberration } from "@react-three/postpro
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { useTheme } from "@/components/providers/ThemeProvider";
-import { useDeviceTier, hasWebGL } from "@/lib/perf";
+import { useDeviceTier, detectTier, hasWebGL } from "@/lib/perf";
+import { afterReveal } from "@/lib/useWarmMount";
 import { CanvasBoundary } from "@/components/util/CanvasBoundary";
 import { FrameCap } from "@/components/scene/FrameCap";
 
@@ -142,6 +143,19 @@ function CubeRig({ dark, fit = 0.92 }: { dark: boolean; fit?: number }) {
   );
 }
 
+// Reports once the first frame has been drawn. That frame carries the shader +
+// environment compile, so fading the canvas in only after it means the cube
+// eases in fully formed rather than popping in after an empty beat.
+function FirstFrame({ onDrawn }: { onDrawn: () => void }) {
+  const done = useRef(false);
+  useFrame(() => {
+    if (done.current) return;
+    done.current = true;
+    requestAnimationFrame(onDrawn); // next tick = after this frame's render
+  });
+  return null;
+}
+
 // Static fallback glyph — a tasteful CSS cube wireframe with the cobalt Y,
 // shown when WebGL is unavailable so the hero never renders a blank/broken
 // canvas. Pure CSS/SVG, theme-adaptive, no GPU required.
@@ -193,6 +207,21 @@ export function HeroGlassCube({
   const [lost, setLost] = useState(false);
   useEffect(() => setWebgl(hasWebGL()), []);
   const low = tier === "low";
+
+  // Phones/tablets build the canvas only once the intro curtain has lifted and
+  // the headline has landed. Building it during the intro — WebGL context, R3F
+  // scene, physical-material shaders, environment map — measured 0.7s + 0.9s of
+  // main-thread stalls on a cold mobile load (4x CPU), right in the intro's
+  // first second when the wordmark and keywords animate: the loader lag. It
+  // then rendered 30fps behind the opaque curtain for nothing. Desktop keeps
+  // building at once, hidden by the curtain. Starts false on the server and
+  // the first client render so both agree.
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (detectTier() !== "low") { setArmed(true); return; }
+    return afterReveal(() => setArmed(true), 1600);
+  }, []);
+  const [drawn, setDrawn] = useState(false);
 
   // On mobile/tablet the Canvas is constrained to a small box (see Hero), so the
   // cube's bloom would clip at the box edge and show a faint rectangle. Scale the
@@ -271,7 +300,7 @@ export function HeroGlassCube({
         // rebuild there bought nothing and cost a visible pop-in on every
         // scroll back to the top. High-tier devices now keep the canvas mounted
         // for the life of the page and simply pause its frameloop.
-        ) : low && !near ? null : (
+        ) : !armed || (low && !near) ? null : (
         <CanvasBoundary fallback={<StaticCubeFallback dark={dark} />}>
         <Canvas
           key={gen}
@@ -283,8 +312,16 @@ export function HeroGlassCube({
             camera.lookAt(0, 0, 0);
             gl.domElement.addEventListener("webglcontextlost", (e) => { e.preventDefault(); setLost(true); }, { once: true });
           }}
-          style={{ position: "absolute", inset: 0 }}
+          // Low tier arrives after the reveal, in view, so it fades in once
+          // drawn. Desktop builds under the curtain and needs no fade.
+          style={{
+            position: "absolute",
+            inset: 0,
+            opacity: low && !drawn ? 0 : 1,
+            transition: low ? "opacity 0.9s ease" : undefined,
+          }}
         >
+          <FirstFrame onDrawn={() => setDrawn(true)} />
           <FrameCap fps={low ? 30 : 60} active={active} />
           <ambientLight intensity={dark ? 0.35 : 0.7} />
           <directionalLight position={[4, 6, 3]} intensity={dark ? 0.7 : 1.1} color="#eaf0ff" />

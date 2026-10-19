@@ -108,19 +108,20 @@ export function AudioToggle() {
     >
       {/* Animated bars — three rectangles that pulse when sound is on */}
       <span className="inline-flex items-end gap-[2px] w-[14px] h-[12px]" aria-hidden>
+        {/* CSS keyframes (.cbx-eq in globals.css), not a framer loop: this
+            sits in the nav on every page with sound ON by default, and the
+            infinite framer scaleY wrote three inline styles every frame for the
+            whole visit — the busiest per-frame writer measured under the intro.
+            A CSS transform animation runs on the compositor instead. */}
         {[0, 1, 2].map((i) => (
-          <motion.span
+          <span
             key={i}
-            className="block w-[3px] rounded-sm bg-current"
-            animate={on && !reduced
-              ? { scaleY: [0.35, 1, 0.55, 0.85, 0.4], originY: 1 }
-              : { scaleY: on ? 0.85 : 0.35 }
-            }
-            transition={on && !reduced
-              ? { duration: 1.2, repeat: Infinity, ease: "easeInOut", delay: i * 0.12 }
-              : { duration: 0.3 }
-            }
-            style={{ height: "100%" }}
+            className={`block w-[3px] origin-bottom rounded-sm bg-current ${on && !reduced ? "cbx-eq" : "transition-transform duration-300"}`}
+            style={{
+              height: "100%",
+              transform: `scaleY(${on ? 0.85 : 0.35})`, // resting value; .cbx-eq overrides
+              animationDelay: `${i * 0.12}s`,
+            }}
           />
         ))}
       </span>

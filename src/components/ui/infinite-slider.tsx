@@ -1,7 +1,7 @@
 'use client';
 import { cn } from '@/lib/utils';
-import { useMotionValue, animate, motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useMotionValue, animate, motion, useInView } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
 import useMeasure from 'react-use-measure';
 
 type InfiniteSliderProps = {
@@ -28,8 +28,14 @@ export function InfiniteSlider({
   const translation = useMotionValue(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [key, setKey] = useState(0);
+  // The loop is JS-driven (framer writes the transform every frame), so it
+  // kept the main thread busy for the whole visit — offscreen and under the
+  // intro curtain included. Run it only near the viewport.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(wrapRef, { margin: '200px' });
 
   useEffect(() => {
+    if (!inView) return;
     let controls;
     const size = direction === 'horizontal' ? width : height;
     const contentSize = size + gap;
@@ -70,6 +76,7 @@ export function InfiniteSlider({
     isTransitioning,
     direction,
     reverse,
+    inView,
   ]);
 
   const hoverProps = durationOnHover
@@ -86,7 +93,7 @@ export function InfiniteSlider({
     : {};
 
   return (
-    <div className={cn('overflow-hidden', className)}>
+    <div ref={wrapRef} className={cn('overflow-hidden', className)}>
       <motion.div
         className='flex w-max'
         style={{

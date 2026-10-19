@@ -66,16 +66,24 @@ export function useDeviceTier(): DeviceTier {
  * Probe for a usable WebGL context on a throwaway canvas. SSR-safe: returns
  * true on the server so server markup matches (the client re-checks after
  * mount). Returns false only when context creation genuinely fails.
+ *
+ * Probed ONCE per page and the probe context is released at once. Each call
+ * used to create a real WebGL context that was never freed — three per
+ * homepage load, mid-intro — and iOS Safari counts live contexts toward its
+ * cap until GC, evicting the oldest (a real canvas) when it runs out.
  */
+let webglProbe: boolean | undefined;
 export function hasWebGL(): boolean {
   if (typeof document === "undefined") return true;
+  if (webglProbe !== undefined) return webglProbe;
   try {
     const canvas = document.createElement("canvas");
-    const gl =
-      canvas.getContext("webgl") ||
-      canvas.getContext("experimental-webgl");
-    return !!gl;
+    const gl = (canvas.getContext("webgl") ||
+      canvas.getContext("experimental-webgl")) as WebGLRenderingContext | null;
+    webglProbe = !!gl;
+    gl?.getExtension("WEBGL_lose_context")?.loseContext();
   } catch {
-    return false;
+    webglProbe = false;
   }
+  return webglProbe;
 }
