@@ -28,8 +28,13 @@ import { useWarmMount } from "@/lib/useWarmMount";
 // here shipped the whole 3D stack in the initial JS, downloading during the
 // intro for a section far below the fold. It now loads when `showCanvas`
 // first turns true (desktop: idle after reveal; phones: near the viewport).
+// Shares its entry with the hero canvas so three ships once (see homeCanvases).
 const CubeScrollerCanvas = dynamic(
-  () => import("@/components/scene/CubeScrollerCanvas"),
+  () =>
+    import("@/components/scene/homeCanvases").then((m) => {
+      m.preloadScrollerModel();
+      return m.CubeScrollerCanvas;
+    }),
   { ssr: false, loading: () => null },
 );
 

@@ -4,7 +4,7 @@
 // environment and bloom. Split out because CubeScroller is statically imported
 // by the homepage, which put three / R3F / drei / postprocessing in the
 // initial JS even though this section sits far below the fold. Only
-// CubeScroller imports this, through next/dynamic.
+// CubeScroller loads this, via next/dynamic through scene/homeCanvases.
 
 import { Suspense, useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
@@ -18,10 +18,13 @@ import { AUTO_SPIN, BASE_TILT, type Drag } from "@/components/sections/CubeScrol
 const MODEL = cdn("/models/cubixso-cube.glb");
 const DRACO = cdn("/draco/");
 
-// Start the GLB + Draco decoder fetch the moment this chunk evaluates. It used
-// to run at CubeScroller's module scope, i.e. on every homepage load during
-// the intro; now it fires only once the canvas is actually about to mount.
-useGLTF.preload(MODEL, DRACO);
+// Start the GLB + Draco decoder fetch. CubeScroller calls this when it loads
+// the canvas, i.e. only once the canvas is actually about to mount. Not module
+// scope: this chunk is shared with the hero canvas (scene/homeCanvases), which
+// loads at reveal and would otherwise pull the model during the hero's warm-up.
+export function preloadScrollerModel() {
+  useGLTF.preload(MODEL, DRACO);
+}
 
 function ScrubCube({
   dragRef,

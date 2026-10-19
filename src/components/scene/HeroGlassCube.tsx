@@ -26,7 +26,9 @@ const ACCENT = "#1B4FFF";       // electric cobalt — the Y
 // referenced straight from the HTML, so they downloaded at ~250ms alongside the
 // intro loader. Loading renders nothing: the sized box below holds the layout,
 // exactly as it does before `armed`.
-const loadCanvas = () => import("@/components/scene/HeroGlassCubeCanvas");
+// Shares its entry with CubeScroller's canvas so three ships once (see homeCanvases).
+const loadCanvas = () =>
+  import("@/components/scene/homeCanvases").then((m) => m.HeroGlassCubeCanvas);
 const HeroGlassCubeCanvas = dynamic(loadCanvas, { ssr: false, loading: () => null });
 
 // Static fallback glyph — a tasteful CSS cube wireframe with the cobalt Y,
