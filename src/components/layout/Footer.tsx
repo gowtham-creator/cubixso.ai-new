@@ -255,14 +255,21 @@ export function Footer() {
           Shrink-wrapped, the gradient maps to the wordmark itself. The 0.04em
           paddingLeft cancels the trailing letter-space (tracking applies after
           every glyph, including the last), which would otherwise leave the
-          wordmark reading a hair left of true centre. */}
+          wordmark reading a hair left of true centre.
+
+          paddingRight 0.08em: the tracking is NEGATIVE, so the last glyph's
+          ink overhangs the shrink-wrapped box by ~0.04em, and background-clip
+          :text only paints inside the box — without this the final "o" is
+          shaved flat on its right edge. 0.08em covers the overhang and leaves
+          equal gaps either side (0.04 left = 0.08 - 0.04 right), so it stays
+          centred. */}
       <div
         aria-hidden
         className="pointer-events-none select-none overflow-hidden border-t border-(--color-line) px-4 pt-6 text-center"
       >
         <span
           className="inline-block bg-clip-text font-display font-semibold leading-[0.78] tracking-[-0.04em] text-transparent [-webkit-background-clip:text] [background-image:linear-gradient(100deg,var(--color-cobalt-glow),var(--color-cobalt)_45%,var(--color-deep-blue))] [html[data-theme=light]_&]:[background-image:linear-gradient(100deg,var(--color-cobalt),var(--color-deep-blue)_60%,var(--color-cobalt))]"
-          style={{ fontSize: "clamp(72px, 19vw, 320px)", marginBottom: "-0.14em", paddingLeft: "0.04em" }}
+          style={{ fontSize: "clamp(72px, 19vw, 320px)", marginBottom: "-0.14em", paddingLeft: "0.04em", paddingRight: "0.08em" }}
         >
           Cubixso
         </span>
