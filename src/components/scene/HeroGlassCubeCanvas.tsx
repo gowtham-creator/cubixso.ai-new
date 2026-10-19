@@ -190,7 +190,7 @@ export default function HeroGlassCubeCanvas({
         position: "absolute",
         inset: 0,
         opacity: low && !drawn ? 0 : 1,
-        transition: low ? "opacity 0.9s ease" : undefined,
+        transition: low ? "opacity 0.35s ease-out" : undefined,
       }}
     >
       <FirstFrame onDrawn={onDrawn} />

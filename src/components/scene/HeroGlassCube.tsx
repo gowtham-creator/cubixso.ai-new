@@ -16,7 +16,6 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { useDeviceTier, detectTier, hasWebGL } from "@/lib/perf";
-import { afterReveal } from "@/lib/useWarmMount";
 import { CanvasBoundary } from "@/components/util/CanvasBoundary";
 
 const ACCENT = "#1B4FFF";       // electric cobalt — the Y
@@ -98,12 +97,13 @@ export function HeroGlassCube({
   //
   // Phones split the work. Downloading and parsing the chunk is cheap — no
   // React tree, no WebGL context, no shaders — so it happens in idle time
-  // ~1.5s after hydration, clear of hydration's own long task and ~3s before
+  // ~0.6s after hydration, clear of hydration's own long task and well before
   // the (≈4.5s) reveal, leaving the module parsed when the curtain lifts. Only
-  // the expensive part, mounting the Canvas, still waits for the reveal, then
-  // just long enough (~400ms, plain timer) to let the reveal transition's frames go first;
-  // the canvas's own fade-in hides the pop. With no intro (repeat visit in the
-  // session) afterReveal fires at once, so the mount takes the first idle slot.
+  // the expensive part, mounting the Canvas, waits for the reveal, and then
+  // only two frames, so the reveal's first frame paints and the cube follows
+  // within milliseconds (user: the cube must appear "in ms", not ~0.4-1.6s
+  // later). With no intro (repeat visit in the session) it mounts after two
+  // frames as well.
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (detectTier() !== "low") { setArmed(true); return; }
@@ -115,38 +115,32 @@ export function HeroGlassCube({
     const prefetch = window.setTimeout(() => {
       if (w.requestIdleCallback) idle = w.requestIdleCallback(() => { void loadCanvas(); }, { timeout: 1500 });
       else void loadCanvas();
-    }, 1500);
-    // Quad-core-or-less phones and Data Saver users get ~1s instead: on those
-    // the shader compile is the longest single stall of the page, and landing
-    // it inside the reveal's last frames is exactly the jank this deferral
-    // exists to avoid. A slightly later cube beats a stuttering reveal.
+    }, 600);
+    // Mount two frames after the reveal (or after hydration on a repeat visit,
+    // when there is no curtain). No fixed delay and no idle wait: the chunk is
+    // already parsed, so the canvas appears within a few frames. Weak phones
+    // (<=4 cores / Data Saver) get one short 150ms beat so the shader compile
+    // does not land on the reveal's very first frame.
     const nav = navigator as Navigator & { connection?: { saveData?: boolean } };
     const weak = (navigator.hardwareConcurrency || 0) <= 4 || nav.connection?.saveData === true;
-    // Capable phones on a first visit mount on a plain timer + one frame, not
-    // afterReveal's idle callback: waiting for idle *after* the 400ms delay
-    // added ~350ms of variable latency (measured 0.73–0.75s to canvas) on a
-    // page that is already quiet right after the reveal. Weak devices and
-    // repeat visits (no intro) keep the idle-gated afterReveal path.
     let seen = false;
     try { seen = sessionStorage.getItem("cubixso.seen") === "1"; } catch { /* private mode */ }
-    let offArm: () => void;
-    if (weak || seen) {
-      offArm = afterReveal(() => setArmed(true), weak ? 1000 : 400);
-    } else {
-      let timer: number | undefined;
-      let raf: number | undefined;
-      const onReveal = () => {
-        timer = window.setTimeout(() => {
-          raf = requestAnimationFrame(() => setArmed(true));
-        }, 400);
-      };
-      window.addEventListener("cubixso:revealed", onReveal, { once: true });
-      offArm = () => {
-        window.removeEventListener("cubixso:revealed", onReveal);
-        if (timer !== undefined) window.clearTimeout(timer);
-        if (raf !== undefined) cancelAnimationFrame(raf);
-      };
-    }
+    let timer: number | undefined;
+    let raf1: number | undefined;
+    let raf2: number | undefined;
+    const arm = () => {
+      timer = window.setTimeout(() => {
+        raf1 = requestAnimationFrame(() => { raf2 = requestAnimationFrame(() => setArmed(true)); });
+      }, weak ? 150 : 0);
+    };
+    if (seen) arm();
+    else window.addEventListener("cubixso:revealed", arm, { once: true });
+    const offArm = () => {
+      window.removeEventListener("cubixso:revealed", arm);
+      if (timer !== undefined) window.clearTimeout(timer);
+      if (raf1 !== undefined) cancelAnimationFrame(raf1);
+      if (raf2 !== undefined) cancelAnimationFrame(raf2);
+    };
     return () => {
       window.clearTimeout(prefetch);
       if (idle !== undefined) w.cancelIdleCallback?.(idle);
