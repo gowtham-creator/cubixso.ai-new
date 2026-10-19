@@ -94,15 +94,40 @@ export function HeroGlassCube({
   //
   // Arming on desktop is what starts the lazy chunk download — after hydration
   // rather than from the HTML, so it no longer races the intro's own JS but is
-  // still built well before the curtain lifts. Phones fetch the chunk in idle
-  // time right after the reveal so it is already on hand when the 1.6s timer
-  // arms the canvas, keeping their timing exactly as before.
+  // still built well before the curtain lifts.
+  //
+  // Phones split the work. Downloading and parsing the chunk is cheap — no
+  // React tree, no WebGL context, no shaders — so it happens in idle time
+  // ~1.5s after hydration, clear of hydration's own long task and ~3s before
+  // the (≈4.5s) reveal, leaving the module parsed when the curtain lifts. Only
+  // the expensive part, mounting the Canvas, still waits for the reveal, then
+  // just long enough (~400ms) to let the reveal transition's frames go first;
+  // the canvas's own fade-in hides the pop. With no intro (repeat visit in the
+  // session) afterReveal fires at once, so the mount takes the first idle slot.
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (detectTier() !== "low") { setArmed(true); return; }
-    const offFetch = afterReveal(() => { void loadCanvas(); });
-    const offArm = afterReveal(() => setArmed(true), 1600);
-    return () => { offFetch(); offArm(); };
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    let idle: number | undefined;
+    const prefetch = window.setTimeout(() => {
+      if (w.requestIdleCallback) idle = w.requestIdleCallback(() => { void loadCanvas(); }, { timeout: 1500 });
+      else void loadCanvas();
+    }, 1500);
+    // Quad-core-or-less phones and Data Saver users get ~1s instead: on those
+    // the shader compile is the longest single stall of the page, and landing
+    // it inside the reveal's last frames is exactly the jank this deferral
+    // exists to avoid. A slightly later cube beats a stuttering reveal.
+    const nav = navigator as Navigator & { connection?: { saveData?: boolean } };
+    const weak = (navigator.hardwareConcurrency || 0) <= 4 || nav.connection?.saveData === true;
+    const offArm = afterReveal(() => setArmed(true), weak ? 1000 : 400);
+    return () => {
+      window.clearTimeout(prefetch);
+      if (idle !== undefined) w.cancelIdleCallback?.(idle);
+      offArm();
+    };
   }, []);
   const [drawn, setDrawn] = useState(false);
 
