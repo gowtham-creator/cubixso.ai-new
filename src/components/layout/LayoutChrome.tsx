@@ -18,9 +18,15 @@ import { detectTier } from "@/lib/perf";
 // three/fiber/drei into the shared bundle site-wide — parsed and executed before
 // any page could become interactive, for a decorative element that is purely
 // below-the-fold garnish. Lazy + client-only: pages hydrate first, the mascot
-// arrives after.
+// arrives after. Goes through the shared 3D entry so the homepage doesn't fetch
+// a separate copy of three for it; the GLB preload runs here, only once the
+// mascot is actually being loaded (high tier), not when the hero pulls the entry.
 const SplineMascot = dynamic(
-  () => import("@/components/scene/SplineMascot").then((m) => m.SplineMascot),
+  () =>
+    import("@/components/scene/homeCanvases").then((m) => {
+      m.preloadMascotModel();
+      return m.SplineMascot;
+    }),
   { ssr: false },
 );
 

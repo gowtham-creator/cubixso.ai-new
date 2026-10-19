@@ -181,4 +181,9 @@ export function SplineMascot() {
   );
 }
 
-useGLTF.preload(MODEL_URL, DRACO_URL);
+// Called by LayoutChrome's loader right before the mascot mounts, not at module
+// scope: this module now lives in the shared 3D entry (scene/homeCanvases), so a
+// top-level preload would fetch the mascot GLB whenever the hero canvas loads.
+export function preloadMascotModel() {
+  useGLTF.preload(MODEL_URL, DRACO_URL);
+}

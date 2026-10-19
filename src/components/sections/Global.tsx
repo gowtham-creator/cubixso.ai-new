@@ -94,9 +94,10 @@ const GLOBE_CONFIG_HIGH: Globe3DConfig = { ...GLOBE_BASE, ...TEX_HIGH };
 const GLOBE_CONFIG_LOW: Globe3DConfig = { ...GLOBE_BASE, ...TEX_LOW };
 
 // Client + WebGL only — load lazily, never on the server. The placeholder has
-// the globe's exact footprint so nothing shifts when it swaps in.
+// the globe's exact footprint so nothing shifts when it swaps in. Loaded through
+// the shared 3D entry: its own import() emitted a second copy of three.
 const Globe3D = dynamic(
-  () => import("@/components/ui/3d-globe").then((m) => m.Globe3D),
+  () => import("@/components/scene/homeCanvases").then((m) => m.Globe3D),
   { ssr: false, loading: () => <div className={GLOBE_FRAME} aria-hidden /> },
 );
 
@@ -124,7 +125,7 @@ export function Global() {
   useEffect(() => {
     const tex = tier === "low" ? TEX_LOW : TEX_HIGH;
     return afterReveal(() => {
-      void import("@/components/ui/3d-globe").then((m) =>
+      void import("@/components/scene/homeCanvases").then((m) =>
         m.preloadGlobeTextures(Object.values(tex)),
       );
     });
