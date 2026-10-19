@@ -101,10 +101,18 @@ export function DotField() {
     let held = false;
     try { held = sessionStorage.getItem("cubixso.seen") !== "1"; } catch { /* private mode */ }
 
+    // Frozen while the page is scrolling: a redraw re-uploads the full-screen
+    // canvas AND forces every glass panel above it to re-blur its backdrop, on
+    // the frames where scroll already has the GPU busiest. A 1-4px/sec drift
+    // that halts while everything else moves is invisible.
+    let scrolledAt = 0;
+    const onScroll = () => { scrolledAt = performance.now(); };
+
     let raf = 0, last = 0, running = true;
     const draw = (now: number) => {
       if (running && !reduced && !held) raf = requestAnimationFrame(draw);
       if (last && now - last < FRAME_MS - 1) return;
+      if (now - scrolledAt < 160) { last = now; return; }
       const dt = last ? Math.min(0.1, (now - last) / 1000) : 0.016;
       last = now;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -138,10 +146,12 @@ export function DotField() {
     };
     if (held) window.addEventListener("cubixso:revealed", onReveal, { once: true });
     window.addEventListener("resize", fit);
+    window.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("visibilitychange", onVis);
     return () => {
       running = false;
       cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
       window.removeEventListener("cubixso:revealed", onReveal);
       window.removeEventListener("resize", fit);
       document.removeEventListener("visibilitychange", onVis);

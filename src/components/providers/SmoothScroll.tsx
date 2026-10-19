@@ -24,13 +24,19 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const lenis = new Lenis({
+      // lerp drives the wheel smoothing (frame-rate independent). Lenis ignores
+      // duration/easing whenever lerp is set, so they only document intent.
       lerp: 0.14,                                    // snappier than default 0.1
       duration: 0.9,
       // Cubic ease-out — quick onset, fast settle
       easing: (t) => 1 - Math.pow(1 - t, 3),
       smoothWheel: true,
       wheelMultiplier: 1,
-      touchMultiplier: 1.5,
+      // Touch stays NATIVE on purpose: the OS's own momentum scroll runs on the
+      // compositor and never waits on a busy main thread, whereas syncTouch
+      // would re-drive every finger frame from JS. (touchMultiplier only
+      // applies under syncTouch, so it is gone.)
+      syncTouch: false,
     });
     setLenis(lenis);
 

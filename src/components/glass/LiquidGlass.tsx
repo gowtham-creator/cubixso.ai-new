@@ -41,6 +41,7 @@ import {
   type ReactNode,
 } from "react";
 import { tick, click } from "@/lib/feedback";
+import { detectTier } from "@/lib/perf";
 
 export type GlassTier = "nav" | "panel" | "lens" | "chip";
 
@@ -282,6 +283,8 @@ function GlassStyles() {
   useEffect(() => {
     if (injected) return;
     injected = true;
+    // Flags low-tier devices for the GLASS-LITE recipe in GLASS_CSS.
+    if (detectTier() === "low") document.documentElement.dataset.glass = "lite";
     setMount(true);
   }, []);
   if (!mount) return null;
@@ -446,6 +449,16 @@ const GLASS_CSS = `
 @media (prefers-reduced-motion: reduce){
   .lg-glass::before{ animation:none !important; opacity:0 !important; }
   .lg-glass,.lg-cta{ transition:none; }
+}
+
+/* ── GLASS-LITE — low tier (phones, tablets, few-core laptops) ──────────────
+   ~50 glass surfaces on the homepage each re-blur their backdrop on every
+   scroll frame, many over the animated dot canvas — GPU work weak GPUs pay
+   for in dropped frames. One small blur, no saturate/brightness passes, and no
+   SVG displacement on the lens. Beats every per-tier/per-instance recipe. */
+:root[data-glass="lite"] .lg-glass{
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
 }
 
 /* ── FALLBACK — no backdrop-filter / low-DPR: flat color-mix + 1px hairline ── */

@@ -34,7 +34,7 @@ import { LiquidGlass } from "@/components/glass/LiquidGlass";
 import { GlassLensFilter } from "@/components/glass/GlassLensFilter";
 import { Reveal } from "@/components/scroll/Reveal";
 import { useDepthParallax } from "@/components/scroll/useDepthParallax";
-import { gsap, ScrollTrigger } from "@/lib/gsap";
+import { gsap } from "@/lib/gsap";
 
 const PHRASE = [
   "What",
@@ -67,10 +67,6 @@ const LENS_ID = "kinetic-inference-lens";
 const LENS_REST = 18;
 const LENS_PEAK = 40;
 
-// The scrubbed confidence readout converges here at full pin progress —
-// matches the AIInferenceVis internal target so both modes read the same.
-const CONFIDENCE_TARGET = 99.74;
-
 // Pin runs only where it can't trap anyone: pointer-accurate desktop with
 // motion allowed. Mobile + reduced-motion flow normally (task rule §4).
 const PIN_MEDIA = "(min-width: 768px) and (prefers-reduced-motion: no-preference)";
@@ -82,12 +78,9 @@ export function KineticStack() {
   // LiquidGlass.onViewChange so the displacement map + canvas RAF idle off-screen.
   const [inView, setInView] = useState(false);
 
-  // Live displacement strength — rippled up on each inference pulse, eased back
-  // down to rest by a single RAF. Held in a ref for the loop; mirrored to state
-  // only when it changes enough to matter (keeps re-renders rare).
-  const scaleRef = useRef(LENS_REST);
-  const [lensScale, setLensScale] = useState(LENS_REST);
-  const rippleRef = useRef(0); // 0..1 envelope of the most recent pulse
+  // 0..1 envelope of the most recent inference pulse; <LensRipple> eases the
+  // displacement strength from it.
+  const rippleRef = useRef(0);
 
   // ── Pin state ──────────────────────────────────────────────────────────
   const sectionRef = useRef<HTMLElement>(null);
@@ -96,10 +89,8 @@ export function KineticStack() {
   const stackPlaneRef = useRef<HTMLDivElement>(null); // free-parallax wrappers —
   const lensPlaneRef = useRef<HTMLDivElement>(null); //  cleared when pin owns motion
   // True while the ScrollTrigger pin owns this section's motion (desktop, no
-  // reduced-motion). Suspends the free depth-parallax planes + switches the
-  // confidence readout to the scrubbed value.
+  // reduced-motion). Suspends the free depth-parallax planes.
   const [pinActive, setPinActive] = useState(false);
-  const [scrubConfidence, setScrubConfidence] = useState(0);
 
   // A pulse kicks the ripple envelope to 1; the RAF decays it and maps it onto
   // the displacement scale. Reduced-motion holds the lens perfectly still.
@@ -107,31 +98,6 @@ export function KineticStack() {
     if (reduced) return;
     rippleRef.current = 1;
   }, [reduced]);
-
-  // Single RAF that relaxes the ripple → displacement scale while the lens is
-  // visible. Paused (and never started) when off-screen or reduced-motion, so
-  // the most expensive surface on the page costs nothing at rest.
-  useEffect(() => {
-    if (!inView || reduced) {
-      // Settle to rest so the frozen lens is the clean resting pose.
-      scaleRef.current = LENS_REST;
-      setLensScale(LENS_REST);
-      return;
-    }
-    let raf = 0;
-    const loop = () => {
-      // Exponential decay of the pulse envelope.
-      rippleRef.current *= 0.9;
-      const target = LENS_REST + (LENS_PEAK - LENS_REST) * rippleRef.current;
-      // Critically-ish damped approach so the ripple reads as a soft swell.
-      scaleRef.current += (target - scaleRef.current) * 0.25;
-      const next = Math.round(scaleRef.current * 10) / 10;
-      setLensScale((prev) => (Math.abs(prev - next) > 0.05 ? next : prev));
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [inView, reduced]);
 
   // ── THE PIN — one scrubbed timeline, desktop-only, reduced-motion-exempt ──
   useEffect(() => {
@@ -184,20 +150,9 @@ export function KineticStack() {
         });
       });
 
-      // Confidence readout still interpolates with the section's own progress,
-      // just without owning a pin. Quantized to 0.25% so setState only fires
-      // when the displayed value actually moves.
-      ScrollTrigger.create({
-        trigger: section,
-        start: "top 70%",
-        end: "bottom 60%",
-        scrub: true,
-        invalidateOnRefresh: true,
-        onUpdate: (self) => {
-          const next = Math.round(self.progress * CONFIDENCE_TARGET * 4) / 4;
-          setScrubConfidence((prev) => (prev === next ? prev : next));
-        },
-      });
+      // (A scrubbed "confidence" ScrollTrigger used to setState here on every
+      // scroll frame, re-rendering this whole section mid-scroll for a value
+      // AIInferenceVis no longer draws. Removed.)
 
       // Lens panel counter-drift — a gentle parallax while the section
       // passes, driven by the section's own scroll range now that there is no
@@ -225,7 +180,6 @@ export function KineticStack() {
       // inline styles + hand motion back to the depth-parallax planes.
       return () => {
         setPinActive(false);
-        setScrubConfidence(0);
         gsap.set(words, { clearProps: "opacity,transform" });
         if (lensDrift) gsap.set(lensDrift, { clearProps: "transform" });
       };
@@ -263,12 +217,7 @@ export function KineticStack() {
     >
       {/* Tier-3 lens filter <defs> — rendered once near its consuming surface.
           scale ripples per inference pulse; paused/static off-screen + reduced. */}
-      <GlassLensFilter
-        id={LENS_ID}
-        scale={lensScale}
-        paused={!lensActive}
-        animate={lensActive}
-      />
+      <LensRipple active={lensActive} rippleRef={rippleRef} />
 
       {/* section-03 signature — a soft azure/teal ambient (luxury-palette pick,
           stored in design-system/luxury-palettes.md), distinct from the cobalt
@@ -373,7 +322,6 @@ export function KineticStack() {
                   bare
                   paused={!lensActive}
                   onPulse={handlePulse}
-                  confidence={pinActive ? scrubConfidence : null}
                 />
               </LiquidGlass>
             </div>
@@ -391,5 +339,53 @@ export function KineticStack() {
         </motion.p>
       </div>
     </section>
+  );
+}
+
+// The lens filter + its ripple RAF live in their own component so a ripple
+// re-renders only this tiny <svg>, not the whole section (15 animated words,
+// the glass panel, the console) up to every frame while the lens is in view.
+function LensRipple({
+  active,
+  rippleRef,
+}: {
+  active: boolean;
+  rippleRef: { current: number };
+}) {
+  const scaleRef = useRef(LENS_REST);
+  const [lensScale, setLensScale] = useState(LENS_REST);
+
+  // Single RAF that relaxes the ripple → displacement scale while the lens is
+  // visible. Paused (and never started) when off-screen or reduced-motion, so
+  // the most expensive surface on the page costs nothing at rest.
+  useEffect(() => {
+    if (!active) {
+      // Settle to rest so the frozen lens is the clean resting pose.
+      scaleRef.current = LENS_REST;
+      setLensScale(LENS_REST);
+      return;
+    }
+    let raf = 0;
+    const loop = () => {
+      // Exponential decay of the pulse envelope.
+      rippleRef.current *= 0.9;
+      const target = LENS_REST + (LENS_PEAK - LENS_REST) * rippleRef.current;
+      // Critically-ish damped approach so the ripple reads as a soft swell.
+      scaleRef.current += (target - scaleRef.current) * 0.25;
+      const next = Math.round(scaleRef.current * 10) / 10;
+      setLensScale((prev) => (Math.abs(prev - next) > 0.05 ? next : prev));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [active, rippleRef]);
+
+  return (
+    <GlassLensFilter
+      id={LENS_ID}
+      scale={lensScale}
+      paused={!active}
+      animate={active}
+    />
   );
 }

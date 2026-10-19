@@ -20,8 +20,10 @@ export function ScrollRail() {
 
   // Fill scale 0→1 maps directly to progress.
   const scaleY = pMotion;
-  // Tip glow follows the leading edge: 0% (top) → 100% (bottom).
-  const tipTop = useTransform(pMotion, (p) => `${(p * 100).toFixed(2)}%`);
+  // Tip glow follows the leading edge: 0% (top) → 100% (bottom). Moved by
+  // translating a full-height carrier (its 100% = the rail's height) rather
+  // than animating `top`, which re-ran layout on every scroll frame.
+  const tipY = useTransform(pMotion, (p) => `${(p * 100).toFixed(2)}%`);
 
   return (
     <div
@@ -40,15 +42,18 @@ export function ScrollRail() {
       />
       {/* Leading-tip bloom — a tiny accent-2 glow riding the fill edge. */}
       <motion.div
-        className="absolute left-1/2 h-6 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full motion-reduce:hidden"
-        style={{
-          top: tipTop,
-          background: "var(--color-accent-2)",
-          boxShadow:
-            "0 0 8px var(--color-accent-2), 0 0 16px color-mix(in oklab, var(--color-accent-2) 60%, transparent)",
-          willChange: "top",
-        }}
-      />
+        className="absolute inset-0 motion-reduce:hidden"
+        style={{ y: tipY, willChange: "transform" }}
+      >
+        <div
+          className="absolute left-1/2 top-0 h-6 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            background: "var(--color-accent-2)",
+            boxShadow:
+              "0 0 8px var(--color-accent-2), 0 0 16px color-mix(in oklab, var(--color-accent-2) 60%, transparent)",
+          }}
+        />
+      </motion.div>
     </div>
   );
 }
