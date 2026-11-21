@@ -17,6 +17,7 @@
 // GPU-only (transform/opacity/filter), reduced-motion safe via LiquidGlass +
 // matchMedia. The bar still slips up out of view on deep scroll-down for air.
 
+import { Wordmark } from "./Wordmark";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -247,9 +248,7 @@ export function Nav() {
               className="inline-flex shrink-0 items-center gap-2.5 text-(--color-fg) hover:text-(--color-accent-2) transition-colors"
             >
               <BrandGlyph />
-              <span className="font-display text-[19px] md:text-[22px] font-semibold tracking-[-0.015em] leading-none">
-                Cubixso<span className="text-(--color-accent-2)">.</span>
-              </span>
+              <Wordmark className="h-[20px] md:h-[23px] w-auto" />
             </Link>
 
             {/* Route links — desktop. flex-1 + justify-center keeps the row
