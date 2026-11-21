@@ -66,8 +66,7 @@ export const BACKERS = [
 
 export const CONTACT = {
   email: "contact@cubixso.com",
-  phone1: "+91 83745 63012",
-  phone2: "+91 92469 01689",
+  phone: "+91 92469 01689",
   location: "T-Hub & WeWork · Hyderabad · IN",
 } as const;
 

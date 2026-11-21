@@ -105,11 +105,8 @@ export function Contact({ bare = false }: { bare?: boolean } = {}) {
                   <Icon3D name="call-in" size={32} float glow className="-my-2 shrink-0" />
                 </dt>
                 <dd className="mt-2 text-(--color-fg)">
-                  <a href="tel:+918374563012" className="block hover:text-(--color-accent-2) transition-colors">
-                    {CONTACT.phone1}
-                  </a>
                   <a href="tel:+919246901689" className="block hover:text-(--color-accent-2) transition-colors">
-                    {CONTACT.phone2}
+                    {CONTACT.phone}
                   </a>
                 </dd>
               </div>

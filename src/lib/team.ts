@@ -26,13 +26,13 @@ export const TEAM: TeamMember[] = [
   {
     slug: "nayini-gowtham-reddy",
     name: "Nayini Gowtham Reddy",
-    role: "Founder & Managing Director",
+    role: "AI Consultant (Director Level)",
     group: "Executive",
     initials: "GR",
     photo: "/team/nayini-gowtham-reddy.jpg",
     bio: [
-      "Gowtham founded Cubixso.ai with a single conviction: the autonomous enterprise is not a distant future. It is an engineering problem, and it can be owned end-to-end. From T-HUB Hyderabad, he leads a studio that designs, builds, and operates generative-AI systems for organisations that need outcomes, not experiments.",
-      "Under his direction Cubixso has shipped agentic platforms, retrieval systems, and LLM operations across fintech, education, construction, media, and the judiciary, each engagement carried from first whiteboard to production telemetry by one accountable team.",
+      "Gowtham is an AI consultant at director level with Cubixso.ai. His view is that the autonomous enterprise is not a distant future. It is an engineering problem, and it can be owned end-to-end. From T-HUB Hyderabad, he advises on and shapes the generative-AI systems the studio designs, builds, and operates for organisations that need outcomes, not experiments.",
+      "He has guided Cubixso engagements that shipped agentic platforms, retrieval systems, and LLM operations across fintech, education, construction, media, and the judiciary, each engagement carried from first whiteboard to production telemetry by one accountable team.",
     ],
     links: [{ label: "Contact", href: "/contact" }],
   },

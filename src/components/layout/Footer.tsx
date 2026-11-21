@@ -161,20 +161,12 @@ export function Footer() {
                 {CONTACT.email}
               </a>
               <a
-                href={`tel:${CONTACT.phone1.replace(/\s/g, "")}`}
+                href={`tel:${CONTACT.phone.replace(/\s/g, "")}`}
                 onPointerEnter={hoverTick}
                 className="inline-flex w-fit items-center gap-2 transition-colors hover:text-(--color-fg)"
               >
                 <Ph name="phone" weight="thin" size={14} />
-                {CONTACT.phone1}
-              </a>
-              <a
-                href={`tel:${CONTACT.phone2.replace(/\s/g, "")}`}
-                onPointerEnter={hoverTick}
-                className="inline-flex w-fit items-center gap-2 transition-colors hover:text-(--color-fg)"
-              >
-                <Ph name="phone" weight="thin" size={14} />
-                {CONTACT.phone2}
+                {CONTACT.phone}
               </a>
               <span className="inline-flex items-center gap-2">
                 <Ph name="map-pin" weight="thin" size={14} />
